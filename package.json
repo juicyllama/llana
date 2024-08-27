@@ -1,0 +1,41 @@
+{
+	"name": "@juicyllama/llana",
+	"version": "0.0.0",
+	"description": "JuicyLlama Llana CLI",
+	"author": {
+		"name": "JuicyLlama Studio",
+		"email": "studio@juicyllama.com",
+		"url": "https://juicyllama.com"
+	},
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/juicyllama/llana"
+	},
+	"bugs": "https://llana.io",
+	"license": "BSD-4-Clause",
+	"readmeFilename": "README.md",
+	"bin": {
+		"llana": "./cli.ts"
+	},
+	"scripts": {
+		"build": "tsc",
+		"format": "prettier --write .",
+		"lint": "eslint --fix",
+		"start": "ts-node --esm cli.ts"
+	},
+	"dependencies": {
+		"@types/node": "^20.6.5",
+		"child-process-promise": "^2.2.1",
+		"ipt": "^3.2.0",
+		"read-pkg": "^5.2.0",
+		"simple-output": "^2.2.1",
+		"yargs": "^15.4.1"
+	},
+	"devDependencies": {
+		"@types/child-process-promise": "^2.2.5"
+	}
+}

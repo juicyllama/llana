@@ -1,0 +1,56 @@
+{
+    "compilerOptions": {
+
+        "outDir": "./dist",
+        "rootDir": "./",
+
+        /* Base Options */
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "target": "es6",
+        //"verbatimModuleSyntax": true,
+        "resolveJsonModule": true,
+        "moduleDetection": "force",
+        //"allowJs": true,
+
+        /* Strictness */
+       //"strict": true, //We need to look at enabling this and fixing errors
+        //"noUncheckedIndexedAccess": true, //We need to look at enabling this and fixing errors
+
+        /* Transpiling with typescript */
+        "module": "commonjs", //to move to NodeNext when NestJs allows
+       // "moduleResolution": "Node", //to move to NodeNext when NestJs allows
+        "sourceMap": true,
+        
+        /* MonoRepo */
+       // "composite": true,
+       // "declarationMap": true,
+
+        /* Others */
+        "preserveSymlinks": true,
+        "declaration": true,
+        "removeComments": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        "noLib": false,
+      
+        "types": [
+            "node",
+            "jest",
+			"multer",
+        ],
+    },
+    "include": [
+        "**/*.ts",
+    ],
+    "exclude": [
+        "**/node_modules",
+		"**/dist",
+        "**/*spec.ts",
+        "**/*.test.spec.ts",
+        "**/*.test.paused.ts",
+        "**/*.test.config.ts"
+    ]
+}
