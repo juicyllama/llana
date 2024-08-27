@@ -1,0 +1,77 @@
+#
+# GitHub Actions workflow.
+#
+# Releases the package to npm when a push into main is detected.
+# * Bump version number
+# * Release to NPM
+#
+
+name: 'Release Package: Llana'
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+jobs:
+
+    release:
+        name: 'Release Package: CLI'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+
+            -   name: 'Checkout'
+                uses: actions/checkout@v4
+                with:
+                    token: ${{ secrets.GH_CI_CD_RELEASE }}
+
+            -   name: 'Install Node.js'
+                uses: actions/setup-node@v4
+                with:
+                    node-version: 18.18.2
+
+            -   name: 'Install pnpm'
+                uses: pnpm/action-setup@v3
+                with:
+                    version: 8
+                    run_install: false
+
+            -   name: Get pnpm store directory
+                shell: bash
+                run: |
+                    echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+            -   uses: actions/cache@v4
+                name: Setup pnpm cache
+                with:
+                    path: ${{ env.STORE_PATH }}
+                    key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+                    restore-keys: |
+                        ${{ runner.os }}-pnpm-store-
+
+            -   name: 'Install dependencies'
+                run: pnpm install --shamefully-hoist --no-frozen-lockfile
+
+            -   run: git stash
+            -   run: git pull --force
+
+            -   name: 'Version Bump'
+                uses: phips28/gh-action-bump-version@master
+                env:
+                    GITHUB_TOKEN: ${{ secrets.GH_CI_CD_RELEASE }}
+                    PACKAGEJSON_DIR: common/cli
+                with:
+                    major-wording: 'JLMAJOR'
+                    minor-wording: 'feature,feat'
+                    patch-wording: 'patch,fixes,fix,misc,docs,refactor'    # Providing patch-wording will override commits
+                    commit-message: 'Release Package: CLI Bump Version [skip ci]'
+                    skip-tag: true
+
+            -   name: 'Authenticate with NPM'
+                run: echo -e "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+
+            -   name: 'Publishing package'
+                run: pnpm publish --no-git-checks --access public

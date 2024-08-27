@@ -1,7 +1,7 @@
 {
 	"name": "@juicyllama/llana",
 	"version": "0.0.0",
-	"description": "JuicyLlama Llana CLI",
+	"description": "Low-code API Generator, Use your schema.sql to automatically populate a CRUD+ API typescript application",
 	"author": {
 		"name": "JuicyLlama Studio",
 		"email": "studio@juicyllama.com",

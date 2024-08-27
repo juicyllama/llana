@@ -5,4 +5,9 @@
 
 Visit [Llana.io](https://llana.io) for full installation instructions, documentation and community. 
 
+
+### Installation 
+
+npm i -g @juicyllama/llana
+
 </div>
