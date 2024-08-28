@@ -1,12 +1,12 @@
-import { cli_error, cli_success } from './utils/logging'
-import mysql from 'mysql2/promise';
-import { get } from './utils/env'
-import { deconstructMysqlConnectionString } from './utils/database'
+import { cli_error, cli_success } from './utils/logging.js'
+import mysql, { ConnectionOptions } from 'mysql2/promise';
+import { get } from './utils/env.js'
+import { deconstructMysqlConnectionString } from './utils/database.js'
 
-export async function query(sql: string) {
+export async function query(sql: string, options?: ConnectionOptions ) {
 
 	try{
-		const connection = await dbConnection()
+		const connection = await dbConnection(options)
 		return await connection.query(sql)
 	}
 	catch (e: any) {
@@ -16,7 +16,7 @@ export async function query(sql: string) {
 
 }
 
-export async function dbConnection(options?: { database?: string }) {
+export async function dbConnection(options?: ConnectionOptions) {
 
 	try{
 		const connectionString = get('MYSQL')

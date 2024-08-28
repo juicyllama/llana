@@ -7,7 +7,7 @@
         /* Base Options */
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "target": "es6",
+        "target": "es2022",
         //"verbatimModuleSyntax": true,
         "resolveJsonModule": true,
         "moduleDetection": "force",
@@ -18,8 +18,8 @@
         //"noUncheckedIndexedAccess": true, //We need to look at enabling this and fixing errors
 
         /* Transpiling with typescript */
-        "module": "commonjs", //to move to NodeNext when NestJs allows
-       // "moduleResolution": "Node", //to move to NodeNext when NestJs allows
+        "module": "NodeNext", //to move to NodeNext when NestJs allows
+        "moduleResolution": "NodeNext", //to move to NodeNext when NestJs allows
         "sourceMap": true,
         
         /* MonoRepo */

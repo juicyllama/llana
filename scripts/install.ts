@@ -1,24 +1,26 @@
-import { cli_log } from '../helpers/utils/logging'
-import { installNestJs } from '../helpers/install/nestjs'
-import { installLlana } from '../helpers/install/llana'
-import { configDatabase } from '../helpers/install/configure'
-import { setupFiles } from '../helpers/app/code'
+import { cli_success } from '../helpers/utils/logging.js'
+import { installDependancies } from '../helpers/install/dependancies.js'
+import { configDatabase } from '../helpers/install/configure.js'
+import { setupFiles } from '../helpers/app/code.js'
+import { validateConnection } from '../helpers/database.js'
+import { exec } from 'child-process-promise'
 
 export async function install() {
-	
-	cli_log(`Installing NestJS`)
-	await installNestJs()
-
-	cli_log(`Llana CLI`)
-	await installLlana()
-
-	cli_log(`Setup Application Code`)
+	await installDependancies()
 	await setupFiles()
-
-	cli_log(`Configure Application`)
 	await configDatabase()
+	await validateConnection()
 
-	cli_log(`Installation complete!`)
+	const clear_packagex = `rm -rf node_modules`
+	await exec(clear_packagex)
+
+	const clean_install = `npm install`
+	await exec(clean_install)
+
+	const llana_link = `npm link @juicyllama/llana`
+	await exec(llana_link)
+	
+	cli_success(`Installation complete!`)
 
 	process.exit(0)
 }

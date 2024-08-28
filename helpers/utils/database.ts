@@ -7,6 +7,8 @@ interface ConnectionOptions {
 }  
 
 export function deconstructMysqlConnectionString(connectionString: string): ConnectionOptions {
+
+    //@ts-ignore
     const regex = /^mysql:\/\/(?<user>.*?):(?<password>.*?)@(?<host>.*?):(?<port>\d+)\/(?<database>.*?)$/;
     const match = connectionString.match(regex);
   

@@ -1,7 +1,6 @@
-import { cli_error } from '../utils/logging'
+import { cli_error } from '../utils/logging.js'
 import prompt from 'prompt-sync'
-import { exec } from 'child-process-promise'
-import { get } from '../utils/env'
+import { get, set } from '../utils/env.js'
 
 export async function configDatabase() {
 
@@ -10,7 +9,7 @@ export async function configDatabase() {
 		const value = get(key);
 
 		if (value) {
-			if (value.trim() === '') {
+			if (value.trim() === '') {	
 			   await promptForDatabase(key);
 			} 
 		} else {
@@ -26,6 +25,5 @@ export async function configDatabase() {
 
 async function promptForDatabase(key: string) {
 	const database = prompt()('Please enter your database connection string (mysql://user:pass@host:port/database): ')
-		const updateMysqlEnvValue = `sed -i '' 's#^${key}=.*#${key}="${database}"#' .env`
-		await exec(updateMysqlEnvValue)	
+	set(key, database)
 }

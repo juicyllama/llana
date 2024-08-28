@@ -4,11 +4,10 @@ import os from 'os'
 import yargs from 'yargs'
 import ipt from 'ipt'
 import { version } from './package.json'
-import { cli_error, cli_log } from './helpers/utils/logging'
-import { Script } from './enums/scripts.enums'
-import { install } from './scripts/install'
-import { boot } from './scripts/boot'
-import { sync } from './scripts/sync'
+import { cli_error, cli_log } from './helpers/utils/logging.js'
+import { Script } from './enums/scripts.enums.js'
+import { install } from './scripts/install.js'
+import { boot } from './scripts/boot.js'
 
 const sep = os.EOL
 
@@ -31,9 +30,6 @@ async function runScript(script: Script) {
 		case Script.install:
 			await install()
 			break
-		case Script.sync:
-			await sync()
-			break
 
 		default:
 			cli_error(`Script ${script} not implemented`)
@@ -42,7 +38,7 @@ async function runScript(script: Script) {
 }
 
 async function run() {
-	cli_log(`Llana Cli v${version}`)
+	cli_log(`Llana v${version}`)
 
 	const { argv } = yargs(getMainArgs())
 
@@ -63,4 +59,4 @@ async function run() {
 	}
 }
 
-run()
+await run()

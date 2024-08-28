@@ -1,7 +1,8 @@
 {
     "name": "@juicyllama/llana",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Low-code API Generator: Use your database schema to automatically create and maintain a NestJs CRUD+ API application",
+    "type": "module",
     "author": {
         "name": "JuicyLlama Studio",
         "email": "studio@juicyllama.com",
@@ -21,12 +22,11 @@
     "bin": {
         "llana": "./cli.ts"
     },
-    "postInstall": "npm link && llana boot && llana install",
     "scripts": {
         "build": "tsc",
         "format": "prettier --write .",
         "lint": "eslint --fix",
-        "start": "ts-node --esm cli.ts"
+        "start": "npx tsx cli.ts"
     },
     "dependencies": {
         "child-process-promise": "^2.2.1",
@@ -41,6 +41,7 @@
     },
     "devDependencies": {
         "@types/child-process-promise": "^2.2.6",
-        "@types/node": "^22.5.1"
+        "@types/node": "^22.5.1",
+        "tsx": "^4.19.0"
     }
 }
