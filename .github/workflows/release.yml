@@ -42,7 +42,6 @@ jobs:
                 uses: phips28/gh-action-bump-version@master
                 env:
                     GITHUB_TOKEN: ${{ secrets.GH_CI_CD_RELEASE }}
-                    PACKAGEJSON_DIR: common/cli
                 with:
                     major-wording: 'JLMAJOR'
                     minor-wording: 'feature,feat'
