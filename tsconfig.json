@@ -37,9 +37,7 @@
         "noLib": false,
       
         "types": [
-            "node",
-            "jest",
-			"multer",
+            "node"
         ],
     },
     "include": [
@@ -51,6 +49,7 @@
         "**/*spec.ts",
         "**/*.test.spec.ts",
         "**/*.test.paused.ts",
-        "**/*.test.config.ts"
+        "**/*.test.config.ts",
+        "**/src/**",
     ]
 }

@@ -1,7 +1,7 @@
 {
 	"name": "@juicyllama/llana",
 	"version": "0.0.1",
-	"description": "Low-code API Generator, Use your schema.sql to automatically populate a CRUD+ API typescript application",
+	"description": "Low-code API Generator: Use your database schema to automatically create and maintain a NestJs CRUD+ API application",
 	"author": {
 		"name": "JuicyLlama Studio",
 		"email": "studio@juicyllama.com",
@@ -21,6 +21,7 @@
 	"bin": {
 		"llana": "./cli.ts"
 	},
+	"postInstall": "npm link && llana boot && llana install",
 	"scripts": {
 		"build": "tsc",
 		"format": "prettier --write .",
@@ -28,14 +29,18 @@
 		"start": "ts-node --esm cli.ts"
 	},
 	"dependencies": {
-		"@types/node": "^20.6.5",
 		"child-process-promise": "^2.2.1",
+		"dotenv": "^16.4.5",
 		"ipt": "^3.2.0",
-		"read-pkg": "^5.2.0",
-		"simple-output": "^2.2.1",
-		"yargs": "^15.4.1"
+		"mysql2": "^3.11.0",
+		"mysql2-promise": "^0.1.4",
+		"prompt-sync": "^4.2.0",
+		"read-pkg": "^9.0.1",
+		"simple-output": "^3.0.0",
+		"yargs": "^17.7.2"
 	},
 	"devDependencies": {
-		"@types/child-process-promise": "^2.2.5"
+		"@types/child-process-promise": "^2.2.6",
+		"@types/node": "^22.5.1"
 	}
 }

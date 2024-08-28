@@ -14,13 +14,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const os_1 = __importDefault(require("os"));
-const yargs_1 = __importDefault(require("yargs/yargs"));
+const yargs_1 = __importDefault(require("yargs"));
 const ipt_1 = __importDefault(require("ipt"));
 const package_json_1 = require("./package.json");
-const logging_1 = require("./helpers/logging");
-const scripts_enums_1 = require("./scripts.enums");
+const logging_1 = require("./helpers/utils/logging");
+const scripts_enums_1 = require("./enums/scripts.enums");
 const install_1 = require("./scripts/install");
 const boot_1 = require("./scripts/boot");
+const sync_1 = require("./scripts/sync");
 const sep = os_1.default.EOL;
 function getMainArgs() {
     let i = -1;
@@ -36,19 +37,24 @@ function getMainArgs() {
 function runScript(script) {
     return __awaiter(this, void 0, void 0, function* () {
         switch (script) {
+            case scripts_enums_1.Script.boot:
+                yield (0, boot_1.boot)();
+                break;
             case scripts_enums_1.Script.install:
                 yield (0, install_1.install)();
                 break;
+            case scripts_enums_1.Script.sync:
+                yield (0, sync_1.sync)();
+                break;
             default:
                 (0, logging_1.cli_error)(`Script ${script} not implemented`);
-                break;
+                process.exit(0);
         }
     });
 }
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         (0, logging_1.cli_log)(`Llana Cli v${package_json_1.version}`);
-        yield (0, boot_1.boot)();
         const { argv } = (0, yargs_1.default)(getMainArgs());
         if (argv['_'].length > 0) {
             yield runScript(scripts_enums_1.Script[argv['_'][0]]);
@@ -63,9 +69,9 @@ function run() {
             }))
                 .catch(() => {
                 (0, logging_1.cli_error)(`Error building interactive interface`);
+                process.exit(0);
             });
         }
-        process.exit(0);
     });
 }
 run();

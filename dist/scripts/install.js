@@ -8,36 +8,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.install = void 0;
-const logging_1 = require("../helpers/logging");
-const ssl_1 = require("../helpers/ssl");
-const docker_1 = require("../helpers/docker");
-const fs_1 = __importDefault(require("fs"));
+const logging_1 = require("../helpers/utils/logging");
+const nestjs_1 = require("../helpers/install/nestjs");
+const llana_1 = require("../helpers/install/llana");
+const configure_1 = require("../helpers/install/configure");
+const code_1 = require("../helpers/app/code");
 function install() {
     return __awaiter(this, void 0, void 0, function* () {
-        const json = JSON.parse(fs_1.default.readFileSync('package.json', 'utf-8'));
-        const project = json.llana;
-        if (project.apps) {
-            (0, logging_1.cli_log)(`Found ${project.apps.length} apps in package.json`);
-            for (const app of project.apps) {
-                if (app.domain) {
-                    if (app.ssl) {
-                        yield (0, ssl_1.setupSSL)(app);
-                    }
-                }
-            }
-        }
-        if (project.doppler) {
-            (0, logging_1.cli_error)(`Doppler needs to be run manually for now`);
-        }
-        if (project.docker) {
-            yield (0, docker_1.setupDocker)(project);
-        }
-        (0, logging_1.cli_log)(`Install complete!`);
+        (0, logging_1.cli_log)(`Installing NestJS`);
+        yield (0, nestjs_1.installNestJs)();
+        (0, logging_1.cli_log)(`Llana CLI`);
+        yield (0, llana_1.installLlana)();
+        (0, logging_1.cli_log)(`Setup Application Code`);
+        yield (0, code_1.setupFiles)();
+        (0, logging_1.cli_log)(`Configure Application`);
+        yield (0, configure_1.configDatabase)();
+        (0, logging_1.cli_log)(`Installation complete!`);
+        process.exit(0);
     });
 }
 exports.install = install;

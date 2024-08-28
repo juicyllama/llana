@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.boot = void 0;
-const pkm_1 = require("../helpers/pkm");
+const pkm_1 = require("../helpers/utils/pkm");
 function boot() {
     return __awaiter(this, void 0, void 0, function* () {
         yield (0, pkm_1.checkIfInstalled)('jq', 'brew');
@@ -18,7 +18,11 @@ function boot() {
         yield (0, pkm_1.checkIfInstalled)('pnpm', 'npm');
         yield (0, pkm_1.checkIfInstalled)('npx', 'pnpm');
         yield (0, pkm_1.checkIfInstalled)('ts-node', 'pnpm');
+        yield (0, pkm_1.checkIfInstalled)('ntl', 'npm');
+        yield (0, pkm_1.checkIfInstalled)('mysql', 'npm');
+        process.exit(0);
     });
 }
 exports.boot = boot;
+boot();
 //# sourceMappingURL=boot.js.map

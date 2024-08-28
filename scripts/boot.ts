@@ -7,4 +7,9 @@ export async function boot() {
         await checkIfInstalled('npx', 'pnpm')
         await checkIfInstalled('ts-node', 'pnpm')
         await checkIfInstalled('ntl', 'npm')
+        await checkIfInstalled('mysql', 'npm')
+
+        process.exit(0)
 }
+
+boot()

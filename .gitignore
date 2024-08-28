@@ -1,0 +1,17 @@
+# User-specific stuff:
+.idea/**
+
+# Visual Studio
+*.psess
+*.vsp
+*.vspx
+*.sap
+*.e2e
+*.coverage
+*.coveragexml
+
+node_modules
+dist
+.env
+.webpack
+.serverless/**/*.zip

@@ -1,7 +1,7 @@
 import { exec } from 'child-process-promise'
 import { cli_error, cli_log, cli_success } from './logging';
 
-export async function checkIfInstalled(app: string, pkm: 'brew' | 'npm' | 'pnpm', global = true) {
+export async function checkIfInstalled(app: string, pkm: 'brew' | 'npm' | 'pnpm', global = true, dev = false) {
 
     try{
 		let command 
@@ -23,11 +23,11 @@ export async function checkIfInstalled(app: string, pkm: 'brew' | 'npm' | 'pnpm'
 	catch (e: any) {
         console.log(e)
 		cli_log(`${app} is not installed via ${pkm}`)
-        await install(app, pkm)
+        await install(app, pkm, global, dev)
 	}
 }
 
-export async function install(app: string, pkm: 'brew' | 'npm' | 'pnpm', global = true) {
+export async function install(app: string, pkm: 'brew' | 'npm' | 'pnpm', global = true, dev = false) {
 
     let command 
 
@@ -36,10 +36,10 @@ export async function install(app: string, pkm: 'brew' | 'npm' | 'pnpm', global 
                 command = `brew install ${app}`
                 break;
             case 'npm':
-                command = `npm i ${global ? '-g' : ''} ${app}`
+                command = `npm i ${global ? '-g' : ''} ${dev ? '-save-dev' : ''} ${app}`
                 break;
             case 'pnpm':
-                command = `pnpm i ${global ? '-g' : ''} ${app}`
+                command = `pnpm i ${global ? '-g' : ''} ${dev ? '-save-dev' : ''} ${app}`
                 break;
         }
 
