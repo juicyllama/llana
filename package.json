@@ -1,6 +1,6 @@
 {
 	"name": "@juicyllama/llana",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"description": "Low-code API Generator: Use your database schema to automatically create and maintain a NestJs CRUD+ API application",
 	"type": "module",
 	"author": {
