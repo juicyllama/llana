@@ -26,7 +26,8 @@
 		"build": "tsc",
 		"format": "prettier --write .",
 		"lint": "eslint --fix",
-		"start": "npx tsx cli.ts"
+		"start": "tsc --noEmit && node --loader ts-node/esm ./cli.ts",
+		"link": "npm link"
 	},
 	"dependencies": {
 		"child-process-promise": "^2.2.1",

@@ -5,8 +5,6 @@ export async function boot() {
         await install('jq', 'brew', true);
     if (!await checkIfInstalled('pnpm'))
         await install('pnpm', 'npm', true);
-    if (!await checkIfInstalled('tsx'))
-        await install('pnpm', 'npm', true);
     if (!await checkIfInstalled('npx', 'pnpm'))
         await install('npx', 'pnpm', true);
     if (!await checkIfInstalled('ts-node'))
