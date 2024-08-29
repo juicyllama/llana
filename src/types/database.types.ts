@@ -5,6 +5,21 @@ export enum DatabaseNaming {
     //CAMEL_CASE = "CAMEL_CASE" TODO: support camel case
 }
 
+export enum WhereOperator {
+    EQUALS = "=",
+    NOT_EQUALS = "!=",
+    LESS_THAN = "<",
+    LESS_THAN_OR_EQUAL = "<=",
+    GREATER_THAN = ">",
+    GREATER_THAN_OR_EQUAL = ">=",
+    LIKE = "LIKE",
+    NOT_LIKE = "NOT LIKE",
+    IN = "IN",
+    NOT_IN = "NOT IN",
+    IS_NULL = "IS NULL",
+    IS_NOT_NULL = "IS NOT NULL"
+}
+
 export enum ImportMode {
 	CREATE = 'CREATE',
 	UPSERT = 'UPSERT',

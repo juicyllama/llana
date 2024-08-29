@@ -2,8 +2,6 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { context, Logger } from "./Logger";
 import { DatabaseType, MySQLSchema } from "../types/database.types";
-import { EntitySchema, EntitySchemaColumnOptions } from "typeorm";
-
 @Injectable()
 export class Schema {
 	constructor(

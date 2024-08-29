@@ -63,11 +63,46 @@ We have implemented CRUD+ principles
   - TODO: Bulk
 
 
-### Read Single (By ID)
+### Read One (By ID)
 
 Endpoint: `*/:id`
 
-Available Params: 
+Available Query Params: 
 
 - filters
 - relations 
+
+Example Request:
+
+```
+GET /users/1?fields=role,id,content.id&relations=content
+```
+
+Example Response: 
+
+```
+{"role":"ADMIN","id":1,"content":[{"id":3},{"id":2},{"id":1}]}
+```
+
+### Read All
+
+Endpoint: `*/list`
+
+Available Query Params: 
+
+- filters
+- relations 
+- limit
+- offset
+- page (either `next` or `previous` from existing result - helps with pagination)
+
+
+```
+GET /users/list
+```
+
+Example Response: 
+
+```
+
+```

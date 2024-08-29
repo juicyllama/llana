@@ -50,6 +50,7 @@ export class Query {
 	 */
 
 	async raw(table_name: string, command: string): Promise<any> {
+		this.logger.debug(`[Query][Raw][${table_name}] ${command}`)
 		const repository = new Repository(Base, this.entityManager)
 		repository.metadata.tableName = table_name;
 		repository.metadata.tablePath = table_name;

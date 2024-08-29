@@ -5,6 +5,7 @@ import { UrlToTable } from './helpers/Database';
 import { Query } from './helpers/Query';
 import { Schema } from './helpers/Schema';
 import { GetResponseObject, ListResponseObject } from './types/response.types';
+import { Authentication } from './helpers/Authentication';
 
 @Controller()
 export class GetController {
@@ -12,7 +13,8 @@ export class GetController {
     private readonly service: GetService,
     private readonly logger: Logger,
     private readonly query: Query,
-    private readonly schema: Schema
+    private readonly schema: Schema,
+    private readonly authentication: Authentication
   ) {
       logger.setContext(context)
     }
@@ -44,6 +46,14 @@ export class GetController {
 
   @Get('*/:id')
   async get(@Req() req, @Res() res): Promise<GetResponseObject> {
+
+    //TODO: move auth down
+    const auth = await this.authentication.auth(req)
+    if(!auth.valid){
+      return res.status(403).send(auth.message)
+    }
+
+
    
     const table_name = UrlToTable(req.originalUrl, 1)
 
@@ -54,13 +64,13 @@ export class GetController {
     }catch(e){
         return res.status(404).send('Endpoint not found')
     }
+  
+    //TODO: move auth here....
 
-    //this.logger.log('req', {params: req.params, query: req.query})
-    //this.logger.log('schema', {schema})
-    
-    //TODO: apply restrictions or return 403
-
-
+    //const auth = await this.authentication.auth(req)
+    // if(!auth.valid){
+    //     return res.status(403).send(auth.message)
+    // }
 
     //validate :id field
     const column = schema.columns.find(column => column.Key === 'PRI').Field
