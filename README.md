@@ -5,6 +5,8 @@
 
 Visit [JuicyLlama > Tools > Llana](https://juicyllama.com/tools/llana) for full installation instructions, documentation and community. 
 
+TODO: move docs to JL Website
+
 ## Installation 
 
 ```bash
@@ -37,3 +39,35 @@ By default the API Key expect a table named `users` with the field `api_key`, yo
 You can update `src/config/restrictions.config.ts` to enforce different types of restrictions on data access.
 
 </div>
+
+
+## Endpoints
+
+We have implemented CRUD+ principles
+
+- TODO: Create
+  - TODO: Single
+  - TODO: Bulk
+- Read 
+  - Single (by primary key)
+  - Multiple
+  - TODO: Charting
+- TODO: Update
+  - TODO: Single
+  - TODO: Bulk
+- TODO: Upsert
+  - TODO: Single
+  - TODO: Bulk
+- TODO: Delete
+  - TODO: Single
+  - TODO: Bulk
+
+
+### Read Single (By ID)
+
+Endpoint: `*/:id`
+
+Available Params: 
+
+- filters
+- relations 

@@ -1,4 +1,4 @@
-import {Controller, Get, Req, Res} from '@nestjs/common';
+import {Controller, Get, Param, Req, Res} from '@nestjs/common';
 import { GetService } from './app.service.get';
 import { Logger, context } from './helpers/Logger';
 import { UrlToTable } from './helpers/Database';
@@ -35,6 +35,10 @@ export class GetController {
   async list(@Req() req, @Res() res): Promise<ListResponseObject> {
 
     this.logger.log('List')
+
+
+    //TODO: for list validate limit and offset
+
     return this.service.list();
   }
 
@@ -42,8 +46,6 @@ export class GetController {
   async get(@Req() req, @Res() res): Promise<GetResponseObject> {
    
     const table_name = UrlToTable(req.originalUrl, 1)
-
-    this.logger.log('table_name', {table_name})
 
     let schema
     
@@ -53,39 +55,47 @@ export class GetController {
         return res.status(404).send('Endpoint not found')
     }
 
-    this.logger.log('schema', {schema})
-    const entitySchema = this.schema.create(table_name, schema)
-    this.logger.log('entitySchema', {entitySchema})
+    //this.logger.log('req', {params: req.params, query: req.query})
+    //this.logger.log('schema', {schema})
     
     //TODO: apply restrictions or return 403
 
-    //validate :id field
-    const columns = <any[]>entitySchema.options.columns
-    const column = columns.find(column => column.primary)
 
-    switch(column.type){
-        case 'int':
-            if(isNaN(parseInt(req.params.id))){
-                return res.status(400).send('Invalid id')
-            }
-            break
-        case 'varchar':
-            if(req.params.id.length > column.length){
-                return res.status(400).send('Invalid id')
-            }
-            break
-        default:
-            return res.status(400).send('Invalid id')
+
+    //validate :id field
+    const column = schema.columns.find(column => column.Key === 'PRI').Field
+    if(!column){
+        return res.status(400).send(`No primary key found for table ${table_name}`)
     }
 
-    //TODO: valiate fields[] and relations[]
-
-    //TODO: for list validate limit and offset
+    const validateKey = this.schema.validateColumnData(schema, column, req.params.id)
+    if(!validateKey.valid){
+        return res.status(400).send(validateKey.message)
+    }
     
+    let validateFields
+    if(req.query.fields){
+      validateFields = this.schema.validateFields(schema, req.query.fields)
+      if(!validateFields.valid){
+          return res.status(400).send(validateFields.message)
+      }
+    }
 
-    return res.status(200).send(await this.service.get(table_name, entitySchema, req.params.id))
+    let validateRelations
+    if(req.query.relations){
+      validateRelations = this.schema.validateRelations(schema, req.query.relations)
+      if(!validateRelations.valid){
+          return res.status(400).send(validateRelations.message)
+      }
+    }
 
-    //TODO: tests 
+    return res.status(200).send(await this.service.get({
+      schema, 
+      key: req.params.id,
+      fields: req.query.fields, 
+      relations: req.query.relations
+    }))
+
   }
 
 

@@ -1,36 +1,12 @@
-import { ComparisonOperator, Enums, Env, getMySQLTimeInterval } from '@juicyllama/utils'
-import { castArray, isNil, omitBy } from 'lodash'
 import {
-	And,
-	DeepPartial,
 	EntityManager,
-	EntitySchema,
-	Equal,
-	FindManyOptions,
-	FindOneOptions,
-	FindOperator,
-	FindOptionsWhere,
-	FindOptionsWhereProperty,
-	In,
-	InsertResult,
-	IsNull,
-	LessThan,
-	LessThanOrEqual,
-	Like,
-	MoreThan,
-	MoreThanOrEqual,
-	Not,
-	ObjectLiteral,
 	Repository,
 } from 'typeorm'
-import { SelectQueryBuilder } from 'typeorm/query-builder/SelectQueryBuilder'
-import { ApiProperty } from '@nestjs/swagger'
-import { Entries, TypeOrm } from './TypeOrm'
-import { Inject, Injectable } from '@nestjs/common'
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm'
+import { Injectable } from '@nestjs/common'
+import { InjectEntityManager } from '@nestjs/typeorm'
 import { Base } from './BaseEntity'
 import { Logger, context } from './Logger'
-import { DatabaseType, MySQLSchemaObject } from 'src/types/database.types'
+import { DatabaseType, MySQLSchema } from 'src/types/database.types'
 import { ConfigService } from '@nestjs/config'
 import { Schema } from './Schema'
 
@@ -39,9 +15,9 @@ export class Query {
 	constructor(
 		private readonly configService: ConfigService,
 		@InjectEntityManager() private entityManager: EntityManager,
-		private readonly logger: Logger
+		private readonly logger: Logger,
+		private readonly schema: Schema
 	) {
-
 		this.logger.setContext(context)
 	}
 
@@ -51,31 +27,35 @@ export class Query {
 	 * @param table_name
 	 */
 
-	async getSchema(table_name: string): Promise<MySQLSchemaObject[]> {
+	async getSchema(table_name: string): Promise<MySQLSchema> {
 
 		switch(this.configService.get<string>('database.type')){
 			case DatabaseType.MYSQL:
-				return await this.raw(table_name, `DESCRIBE ${table_name}`)
+				const columns = await this.raw(table_name, `DESCRIBE ${table_name}`)
+				const relations = await this.raw(table_name, `SELECT TABLE_NAME as 'table',COLUMN_NAME as 'column',CONSTRAINT_NAME as 'key' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = '${table_name}'`)
+				return {
+					table: table_name,
+					columns: columns,
+					relations: relations
+				}
 			default:
-				this.logger.error(`[Query][GetSchema] Database type ${this.configService.get<string>('database.type')} not supported`)
+				this.logger.error(`[Query][GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`)
 		}	
 	}
 
     /**
-	 * Perform a raw SQL query
+	 * Perform a raw query on the database
 	 * @param repository
 	 * @param sql
 	 */
 
-	async raw(table_name: string, sql: string) {
-
+	async raw(table_name: string, command: string): Promise<any> {
 		const repository = new Repository(Base, this.entityManager)
-
 		repository.metadata.tableName = table_name;
 		repository.metadata.tablePath = table_name;
-		
-		this.logger.debug(`[Query][Raw][${table_name}] ${sql}`)
-		return await repository.query(sql)
+		const result = await repository.query(command)
+		this.logger.debug(`[Query][Raw][${table_name}] ${command}`, {result})
+		return result
 	}
 
 	/**
@@ -85,25 +65,42 @@ export class Query {
 	 * @param {string[]} [relations]
 	 */
 
-	async findOneById(
-		table_name: string,
-		schema: EntitySchema<unknown>,
+	async findOneById(options: {
+		schema: MySQLSchema,
 		key: string,
-		fields?: string[],
-		relations?: string[],
-	): Promise<any> {
+		fields?: string,
+		relations?: string,
+	}): Promise<any> {
 
-		//TODO: handle relations 
+		const table_name = this.schema.getTableName(options.schema)
+		const primary_key = this.schema.getPrimaryKey(options.schema)
 
-		this.logger.debug(`[Query][findOneById][${table_name}] ${this.getPrimaryKey(schema)}: ${key}`)
+		this.logger.debug(`[Query][Find][One][Id][${table_name}]`, {
+			primary_key,
+			fields: options.fields,
+			relations: options.relations,
+		})
 
-		const SQL = `SELECT ${fields?.length ? fields.join(',') : '*'} FROM ${table_name} WHERE ${this.getPrimaryKey(schema)} = ${key}`
+		switch(this.configService.get<string>('database.type')){
+			case DatabaseType.MYSQL:
 
-		const result = await this.raw(table_name, SQL)
+				//filter root fields
+				const fields = options.fields?.split(',').filter(field => !field.includes('.'))
 
-		this.logger.debug(`[Query][findOneById][${table_name}] ${this.getPrimaryKey(schema)}: ${key}`, result)
+				let command = `SELECT ${table_name}.${fields?.length ? fields.join(`, ${table_name}.`) : '*'} FROM ${table_name} `
+				command += `WHERE ${primary_key} = ${options.key} LIMIT 1`
 
-		return result
+				const command_result = await this.raw(table_name, command)
+				let result = command_result[0]
+
+				result = await this.addRelations(options, result)
+
+				return result
+
+			default:
+				this.logger.error(`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`)
+				return {}
+		}	
 
 	}
 
@@ -543,27 +540,6 @@ export class Query {
 // 		const sql_drop = `DROP TABLE IF EXISTS ${table_name}`
 // 		await this.raw(repository, table_name, sql_drop)
 // 	}
-
-	/**
-	 * @param repository
-	 * @returns The primary key's name of the table
-	 */
-	getPrimaryKey(schema: EntitySchema): string {
-
-		console.log('pk', schema)
-
-
-		// const pk = schema.columns.find(column => {
-		// 	if (column.isPrimary) {
-		// 		return column
-		// 	}
-		// })?.propertyName
-		// if (!pk) {
-		// 	throw new Error('no primary key was found')
-		// }
-		// return pk
-		return 'id'
-	}
 
 
 // 	/**
@@ -1064,5 +1040,20 @@ export class Query {
 // 		return [inputString]
 // 	}
 // }
+
+
+	async addRelations(options, result){
+		if(options.relations?.split(',').length){
+			for(const relation of options.relations.split(',')){
+				const schema_relation = options.schema.relations.find(r => r.table === relation)
+				const primary_key_relation = this.schema.getPrimaryKey(options.schema)
+				const fields = options.fields?.split(',').filter(field => field.includes(schema_relation.table+'.'))
+				let rel_command = `SELECT ${fields?.length ? fields.join(`, `) : '*'} FROM ${relation} `
+				rel_command += `WHERE ${schema_relation.column} = ${options.key} ORDER BY ${primary_key_relation} DESC LIMIT ${this.configService.get<string>('database.relations.limit')} OFFSET 0 `
+				result[relation] = await this.raw(relation, rel_command)
+			}
+		}
+		return result
+	}
 
 }

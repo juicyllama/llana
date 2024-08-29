@@ -2,6 +2,7 @@ import { registerAs } from '@nestjs/config'
 import { TypeOrmModuleOptions } from '@nestjs/typeorm'
 import 'dotenv/config'
 import { Base } from './BaseEntity';
+import { EntitySchema, EntitySchemaColumnOptions } from 'typeorm';
 
 export function deconstructMysqlConnectionString(connectionString: string): Partial<TypeOrmModuleOptions> {
     const regex = /^mysql:\/\/(?<username>.*?):(?<password>.*?)@(?<host>.*?):(?<port>\d+)\/(?<database>.*?)$/;

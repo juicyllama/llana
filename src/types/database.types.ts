@@ -56,11 +56,23 @@ export enum DatabaseType {
     ORACLE = 'oracle'
 }
 
-export interface MySQLSchemaObject {
-    "Field": string,
-    "Type": string,
-    "Null": "YES"|"NO",
-    "Key": string,
-    "Default": null | string,
-    "Extra": unknown
+export interface MySQLSchema {
+    table: string,
+    columns: MySQLSchemaColumns[],
+    relations: MySQLSchemaRelations[]
+}
+
+export interface MySQLSchemaColumns {
+    Field: string,
+    Type: string,
+    Null: "YES"|"NO",
+    Key: string,
+    Default: null | string,
+    Extra: unknown
+}
+
+export interface MySQLSchemaRelations {
+    "table": string,
+    "column": string,
+    "key": string
 }

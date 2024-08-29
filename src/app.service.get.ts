@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Query } from './helpers/Query';
 import { Logger, context } from './helpers/Logger';
-import { EntitySchema } from 'typeorm';
 import { GetResponseObject, ListResponseObject } from './types/response.types';
+import { MySQLSchema } from './types/database.types';
 
 @Injectable()
 export class GetService {
@@ -13,8 +13,8 @@ export class GetService {
   logger.setContext(context)
 }
 
-  async get(table_name: string, schema: EntitySchema<unknown>, key: string, fields?: string[], relations?: string[]): Promise<GetResponseObject> { 
-    return await this.query.findOneById(table_name, schema, key, fields, relations)
+  async get(options: {schema: MySQLSchema, key: string, fields?: string, relations?: string}): Promise<GetResponseObject> { 
+    return await this.query.findOneById(options)
   }
 
   async list(): Promise<ListResponseObject> {
