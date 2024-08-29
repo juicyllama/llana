@@ -1,0 +1,32 @@
+version: "3.9"
+services:
+    llana-mysql:
+        image: mysql:8.0
+        container_name: llana-mysql
+        ports:
+            - "3306:3306"
+        environment:
+            MYSQL_ROOT_PASSWORD: pass
+            MYSQL_DATABASE: llana
+        command: --init-file /mysql/init.sql
+        volumes:
+            - llana-mysql-data:/var/lib/mysql
+            - ./.docker/setup.sql:/mysql/init.sql
+        networks:
+            - llana-network
+    llana-redis:
+        image: redis:6.2.5
+        container_name: llana-redis
+        ports:
+            - "6379:6379"
+        networks:
+            - llana-network
+
+networks:
+    llana-network:
+        driver: bridge
+        name: llana-network
+
+volumes:
+    llana-mysql-data:
+        driver: local

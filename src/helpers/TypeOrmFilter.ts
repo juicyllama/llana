@@ -1,4 +1,4 @@
-import { Env, Logger } from '@juicyllama/utils'
+import { Logger } from '@nestjs/common'
 import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common'
 import { TypeORMError } from 'typeorm'
 
@@ -19,7 +19,7 @@ export class TypeOrmFilter implements ExceptionFilter {
 
 		response.status(500).json({
 			status: 500,
-			error: Env.IsDev() ? `[LLANA][${code}] ${message} (${details})` : '[LLANA] Database Error',
+			error: 'Database Error',
 		})
 	}
 }

@@ -2,7 +2,6 @@
 	"name": "@juicyllama/llana",
 	"version": "0.0.4",
 	"description": "Low-code API Generator: Use your database schema to automatically create and maintain a NestJs CRUD+ API application",
-	"type": "module",
 	"author": {
 		"name": "JuicyLlama Studio",
 		"email": "studio@juicyllama.com",
@@ -19,30 +18,73 @@
 	"bugs": "https://llana.io",
 	"license": "BSD-4-Clause",
 	"readmeFilename": "README.md",
-	"bin": {
-		"llana": "./cli.ts"
-	},
 	"scripts": {
-		"build": "tsc",
-		"format": "prettier --write .",
-		"lint": "eslint --fix",
-		"start": "tsc --noEmit && node --loader ts-node/esm ./cli.ts",
-		"link": "npm link"
+		"prebuild": "rimraf dist",
+		"build": "nest build",
+		"format": "prettier --write \"**/*.ts\"",
+		"start": "nest start",
+		"start:dev": "nest start --watch",
+		"start:debug": "nest start --debug --watch",
+		"test": "jest"
 	},
 	"dependencies": {
-		"child-process-promise": "^2.2.1",
-		"dotenv": "^16.4.5",
-		"ipt": "^3.2.0",
+		"@juicyllama/utils": "^0.10.4",
+		"@nestjs/common": "^10.3.2",
+		"@nestjs/config": "^3.2.3",
+		"@nestjs/core": "^10.3.2",
+		"@nestjs/platform-express": "^10.3.2",
+		"@nestjs/serve-static": "^4.0.2",
+		"@nestjs/swagger": "^7.4.0",
+		"@nestjs/typeorm": "^10.0.2",
+		"class-validator": "^0.14.1",
+		"jwt-simple": "^0.5.6",
+		"lodash": "^4.17.21",
 		"mysql2": "^3.11.0",
-		"mysql2-promise": "^0.1.4",
-		"prompt-sync": "^4.2.0",
-		"read-pkg": "^9.0.1",
-		"simple-output": "^3.0.0",
-		"yargs": "^17.7.2"
+		"reflect-metadata": "^0.2.2",
+		"rxjs": "^7.8.1",
+		"typeorm": "^0.3.20"
 	},
 	"devDependencies": {
-		"@types/child-process-promise": "^2.2.6",
-		"@types/node": "^22.5.1",
-		"tsx": "^4.19.0"
+		"@faker-js/faker": "^8.4.1",
+		"@nestjs/cli": "^10.3.1",
+		"@nestjs/schematics": "^10.1.0",
+		"@nestjs/testing": "^10.3.2",
+		"@swc/cli": "^0.3.9",
+		"@swc/core": "^1.4.0",
+		"@types/express": "^4.17.21",
+		"@types/jest": "^29.5.12",
+		"@types/node": "^20.11.16",
+		"@types/supertest": "^6.0.2",
+		"@typescript-eslint/eslint-plugin": "^6.21.0",
+		"@typescript-eslint/parser": "^6.21.0",
+		"eslint": "^8.56.0",
+		"eslint-config-prettier": "^9.1.0",
+		"eslint-plugin-prettier": "^5.1.3",
+		"jest": "^29.7.0",
+		"prettier": "^3.2.5",
+		"source-map-support": "^0.5.21",
+		"supertest": "^6.3.4",
+		"ts-jest": "^29.1.2",
+		"ts-loader": "^9.5.1",
+		"ts-node": "^10.9.2",
+		"tsconfig-paths": "^4.2.0",
+		"typescript": "^5.3.3"
+	},
+	"jest": {
+		"moduleFileExtensions": [
+			"js",
+			"json",
+			"ts"
+		],
+		"rootDir": "src",
+		"testRegex": ".*\\.spec\\.ts$",
+		"transform": {
+			"^.+\\.(t|j)s$": "ts-jest"
+		},
+		"collectCoverageFrom": [
+			"**/*.(t|j)s"
+		],
+		"coverageDirectory": "../coverage",
+		"testEnvironment": "node"
 	}
 }

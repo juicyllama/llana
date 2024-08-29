@@ -1,16 +1,26 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule } from '@nestjs/config';
+import { GetController } from './app.controller.get';
+import { GetService } from './app.service.get';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { databaseConfig } from './configs/database.config';
-import { Logger } from '@juicyllama/utils';
+import { databaseConfig } from './helpers/Database';
 import { Query } from './helpers/Query';
+import { Logger } from './helpers/Logger';
+import { DataSource } from 'typeorm';
+import database from './config/database.config';
+import { Schema } from './helpers/Schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot(databaseConfig()),
+    ConfigModule.forRoot({
+      load: [database],
+    }),
+    TypeOrmModule.forRoot(databaseConfig())
   ],
-  controllers: [AppController],
-  providers: [AppService, Logger, Query],
+  controllers: [GetController],
+  providers: [GetService, Query, Schema, Logger],
+  exports: [GetService, Query, Schema, Logger]
 })
-export class AppModule {}
+export class AppModule {
+  constructor(private dataSource: DataSource) {}
+}

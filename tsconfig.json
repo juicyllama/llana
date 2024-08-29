@@ -1,55 +1,16 @@
 {
-    "compilerOptions": {
-
-        "outDir": "./dist",
-        "rootDir": "./",
-
-        /* Base Options */
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "target": "es2022",
-        //"verbatimModuleSyntax": true,
-        "resolveJsonModule": true,
-        "moduleDetection": "force",
-        //"allowJs": true,
-
-        /* Strictness */
-       //"strict": true, //We need to look at enabling this and fixing errors
-        //"noUncheckedIndexedAccess": true, //We need to look at enabling this and fixing errors
-
-        /* Transpiling with typescript */
-        "module": "NodeNext", //to move to NodeNext when NestJs allows
-        "moduleResolution": "NodeNext", //to move to NodeNext when NestJs allows
-        "sourceMap": true,
-        
-        /* MonoRepo */
-       // "composite": true,
-       // "declarationMap": true,
-
-        /* Others */
-        "preserveSymlinks": true,
-        "declaration": true,
-        "removeComments": true,
-        "emitDecoratorMetadata": true,
-        "experimentalDecorators": true,
-        "allowSyntheticDefaultImports": true,
-        "forceConsistentCasingInFileNames": true,
-        "noLib": false,
-      
-        "types": [
-            "node"
-        ],
-    },
-    "include": [
-        "**/*.ts",
-    ],
-    "exclude": [
-        "**/node_modules",
-		"**/dist",
-        "**/*spec.ts",
-        "**/*.test.spec.ts",
-        "**/*.test.paused.ts",
-        "**/*.test.config.ts",
-        "**/src/**",
-    ]
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true
+  }
 }
