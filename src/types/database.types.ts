@@ -54,21 +54,17 @@ export interface ChartResult {
 }
 
 export enum DatabaseType {
+    ORACLE = 'oracle',
     MYSQL = 'mysql',
-    POSTGRES = 'postgres',
-    MARIADB = 'mariadb',
-    SQLITE = 'sqlite',
-    MONGODB = 'mongodb',
-    CASSANDRA = 'cassandra',
-    COUCHBASE = 'couchbase',
-    COUCHDB = 'couchdb',
-    DYNAMODB = 'dynamodb',
-    REDIS = 'redis',
-    NEO4J = 'neo4j',
-    ELASTICSEARCH = 'elasticsearch',
-    INFLUXDB = 'influxdb',
     MSSQL = 'mssql',
-    ORACLE = 'oracle'
+    POSTGRES = 'postgres',
+    MONGODB = 'mongodb',
+    REDIS = 'redis',
+    SNOWFLAKE = 'snowflake',
+    ELASTICSEARCH = 'elasticsearch',
+    SQLITE = 'sqlite',
+    CASSANDRA = 'cassandra',
+    MARIADB = 'mariadb',
 }
 
 export interface MySQLSchema {
