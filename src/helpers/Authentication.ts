@@ -4,7 +4,8 @@ import { context, Logger } from "./Logger";
 import { Restriction, RestrictionLocation, RestrictionType } from "src/types/restrictions.types";
 import { AuthAPIKey } from "src/types/auth.types";
 import { Query } from "./Query";
-import { DatabaseType } from "../types/database.types";
+import { WhereOperator } from "../types/database.types";
+import { Schema } from "./Schema";
 
 @Injectable()
 export class Authentication {
@@ -12,6 +13,7 @@ export class Authentication {
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
         private readonly query: Query,
+        private readonly schema: Schema,
 	) {
 		this.logger.setContext(context)
 	}
@@ -25,8 +27,6 @@ export class Authentication {
 
         const restrictions = this.configService.get<Restriction[]>('restrictions')
 
-        console.log('restrictions', restrictions)
-
         if(!restrictions){
             return {
                 valid: true
@@ -39,7 +39,6 @@ export class Authentication {
         }
 
         for(const restriction of restrictions){
-
             if(auth_passed.valid) continue
 
             if(!restriction.type){
@@ -164,46 +163,19 @@ export class Authentication {
                         continue
                     }
 
-                    let database_api_key
+                    const schema = await this.schema.getSchema(api_key_config.table)
+                    const result = await this.query.findOne({
+                        schema,
+                        where: [{
+                            column: api_key_config.column,
+                            operator: WhereOperator.EQUALS,
+                            value: req_api_key
+                        }]
 
-                    switch (this.configService.get<string>('database.type')) {
-                        case DatabaseType.MYSQL:
-
-                            let command = `SELECT ${api_key_config.column} FROM ${api_key_config.table} WHERE ${api_key_config.column} = '${req_api_key}' `
-                            if (api_key_config.where?.length) {
-                                command += `AND ${api_key_config.where.map(where => `${where.column} ${where.operator} ${where.value ?? ''}`).join(' AND ')}`
-                            }
-
-                            let mysql_result 
-
-                            try{
-                                mysql_result = await this.query.raw(api_key_config.table, command)
-                            }catch(e){
-                                auth_passed = { valid: false, message: 'System error: API Key lookup failed' }
-                                continue
-                            }
-
-                            if (!mysql_result){
-                                auth_passed = { valid: false, message: 'System error: API Key lookup failed' }
-                                continue
-                            } 
-                            
-                            //Entry not found - return unauthorized immediately
-                            if (!mysql_result[0] || !mysql_result[0][api_key_config.column]) {
-                                return { valid: false, message: 'Unathorized' }
-                            }
-
-                            database_api_key = mysql_result[0][api_key_config.column]
-                            break
-
-                        default:
-                            this.logger.error(`[Schema][reate] Database type ${this.configService.get<string>('database.type')} not supported`)
-                            auth_passed = { valid: false, message: 'System error: Database type not supported' }
-                            continue
-                    }
+                    })
 
                     //key does not match - return unauthorized immediately
-                    if(!database_api_key || database_api_key !== req_api_key){
+                    if(!result || !result[api_key_config.column] || result[api_key_config.column] !== req_api_key){
                         return { valid: false, message: 'Unathorized' }
                     }
 
@@ -234,9 +206,7 @@ export class Authentication {
 
                     //TODO: Implement JWT authentication
 
-
-                    continue
-                    break     
+                    continue   
             
             }
 

@@ -1,3 +1,4 @@
+import exp from "constants"
 import { FindManyOptions } from "typeorm"
 
 export enum DatabaseNaming {
@@ -18,6 +19,24 @@ export enum WhereOperator {
     NOT_IN = "NOT IN",
     IS_NULL = "IS NULL",
     IS_NOT_NULL = "IS NOT NULL"
+}
+
+export enum DatabaseColumnType {
+    INT = 'int',
+    SMALLINT = 'smallint',
+    BIGINT = 'bigint',
+    FLOAT = 'float',
+    DOUBLE = 'double',
+    DECIMAL = 'decimal',
+    CHAR = 'char',
+    VARCHAR = 'varchar',
+    TEXT = 'text',
+    BLOB = 'blob',
+    BOOLEAN = 'boolean',
+    DATE = 'date',
+    TIME = 'time',
+    DATETIME = 'datetime',
+    TIMESTAMP = 'timestamp',
 }
 
 export enum ImportMode {
@@ -67,23 +86,60 @@ export enum DatabaseType {
     MARIADB = 'mariadb',
 }
 
-export interface MySQLSchema {
+export interface DatabaseSchema {
     table: string,
-    columns: MySQLSchemaColumns[],
-    relations: MySQLSchemaRelations[]
+    columns: DatabaseSchemaColumn[],
+    relations: DatabaseSchemaRelation[]
 }
 
-export interface MySQLSchemaColumns {
-    Field: string,
-    Type: string,
-    Null: "YES"|"NO",
-    Key: string,
-    Default: null | string,
-    Extra: unknown
+
+
+export interface DatabaseSchemaColumn {
+    field: string,
+    type: DatabaseColumnType,
+    nullable: boolean,
+    required: boolean,
+    primary_key: boolean,
+    unique_key: boolean,
+    foreign_key: boolean,
+    default?: any,
+    extra?: any
 }
 
-export interface MySQLSchemaRelations {
-    "table": string,
-    "column": string,
-    "key": string
+export interface DatabaseSchemaRelation {
+    table: string,
+    column: string,
+    key: string
+}
+
+export interface DatabaseFindOneByIdOptions extends DatabaeseFindOptions {
+    id: string,
+}
+
+export interface DatabaseFindOneOptions extends DatabaeseFindOptions {
+    where: {
+        column: string,
+        operator: WhereOperator,
+        value: string
+    }[]
+}
+
+export interface DatabaseFindManyOptions extends DatabaeseFindOptions {
+    where?: {
+        column: string,
+        operator: WhereOperator,
+        value: string
+    }[],
+    limit?: number,
+    offset?: number,
+    order?: {
+        column: string,
+        direction: 'ASC' | 'DESC'
+    }
+}
+
+export interface DatabaeseFindOptions {
+    schema: DatabaseSchema,
+    fields?: string,
+    relations?: string,
 }

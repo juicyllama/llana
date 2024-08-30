@@ -45,40 +45,31 @@ export class GetController {
   }
 
   @Get('*/:id')
-  async get(@Req() req, @Res() res): Promise<GetResponseObject> {
+  async getById(@Req() req, @Res() res): Promise<GetResponseObject> {
 
-    //TODO: move auth down
-    const auth = await this.authentication.auth(req)
-    if(!auth.valid){
-      return res.status(403).send(auth.message)
-    }
-
-
-   
     const table_name = UrlToTable(req.originalUrl, 1)
 
     let schema
     
     try{
-        schema = await this.query.getSchema(table_name)
+        schema = await this.schema.getSchema(table_name)
     }catch(e){
         return res.status(404).send('Endpoint not found')
     }
   
-    //TODO: move auth here....
-
-    //const auth = await this.authentication.auth(req)
-    // if(!auth.valid){
-    //     return res.status(403).send(auth.message)
-    // }
+    const auth = await this.authentication.auth(req)
+    if(!auth.valid){
+        return res.status(403).send(auth.message)
+    }
 
     //validate :id field
-    const column = schema.columns.find(column => column.Key === 'PRI').Field
-    if(!column){
+    const primary_key = this.schema.getPrimaryKey(schema)
+
+    if(!primary_key){
         return res.status(400).send(`No primary key found for table ${table_name}`)
     }
 
-    const validateKey = this.schema.validateColumnData(schema, column, req.params.id)
+    const validateKey = this.schema.validateColumnData(schema, primary_key, req.params.id)
     if(!validateKey.valid){
         return res.status(400).send(validateKey.message)
     }
@@ -99,14 +90,24 @@ export class GetController {
       }
     }
 
-    return res.status(200).send(await this.service.get({
+    return res.status(200).send(await this.service.getById({
       schema, 
-      key: req.params.id,
+      id: req.params.id,
       fields: req.query.fields, 
       relations: req.query.relations
     }))
 
   }
 
+  @Get('*')
+  async getOne(@Req() req, @Res() res): Promise<ListResponseObject> {
+
+    this.logger.log('Get One')
+
+
+    //TODO: for list validate limit and offset
+
+    return this.service.list();
+  }
 
 }

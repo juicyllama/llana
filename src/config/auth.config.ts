@@ -2,8 +2,6 @@ import { registerAs } from '@nestjs/config'
 import { AuthAPIKey, AuthJWT, AuthPasswordEncryption } from '../types/auth.types'
 import { WhereOperator } from '../types/database.types'
 
-
-
 export default registerAs('auth', () => ({
         api_key: <AuthAPIKey>{
         table: "users",

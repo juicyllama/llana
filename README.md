@@ -9,28 +9,33 @@ Visit [JuicyLlama > Tools > Llana](https://juicyllama.com/tools/llana) for full 
 
 We currently support the following databases:
 
-- [ ] ORACLE (Help Wanted)
-- [ ] MYSQL (In Progress)
+- [ ] [ORACLE](https://expressjs.com/en/guide/database-integration.html#oracle) (Help Wanted)
+- [ ] [MYSQL](https://expressjs.com/en/guide/database-integration.html#mysql) (In Progress)
 - [ ] MSSQL (Help Wanted)
-- [ ] POSTGRES (Help Wanted)
-- [ ] MONGODB (Help Wanted)
-- [ ] REDIS (Help Wanted)
+- [ ] [POSTGRES](https://expressjs.com/en/guide/database-integration.html#postgresql) (Help Wanted)
+- [ ] [MONGODB](https://expressjs.com/en/guide/database-integration.html#mongodb) (Help Wanted)
+- [ ] [REDIS](https://expressjs.com/en/guide/database-integration.html#redis) (Help Wanted)
 - [ ] SNOWFLAKE (Help Wanted)
-- [ ] ELASTICSEARCH (Help Wanted)
-- [ ] SQLITE (Help Wanted)
-- [ ] CASSANDRA (Help Wanted)
+- [ ] [ELASTICSEARCH](https://expressjs.com/en/guide/database-integration.html#elasticsearch) (Help Wanted)
+- [ ] [SQLITE](https://expressjs.com/en/guide/database-integration.html#sqlite) (Help Wanted)
+- [ ] [CASSANDRA](https://expressjs.com/en/guide/database-integration.html#cassandra) (Help Wanted)
 - [ ] MARIADB (Help Wanted)
 
 
 # TODO:
 
 - [ ] integrate JWT token support
-- [ ] setup auth endpoints
+- [ ] setup auth login endpoint
 - [ ] finish endpoint support for mysql 
 - [ ] add full testing
 - [ ] move docs to JL Website
+- [ ] containerize and publish to docker
 - [ ] use on first external client project
-- [ ] look at adding more database integrations (postgres, etc)
+- [ ] Adding more database integrations (postgres, etc)
+- [ ] Build integrations with workflow automation tooling (n8n, zapier, make, etc)
+- [ ] Publish on Daily.dev, ProductHunt, etc 
+- [ ] Scope Llana cloud option for non-technical users
+
 
 ## Installation 
 
@@ -47,13 +52,13 @@ Replace the database connection string `DATABASE_URI` in the `.env` file.
 
 ### Authentication 
 
-We provide 3 special extra endpoints which are not generated based on your database schema. 
+We provide a special extra endpoint, the only one not generated based on your database schema. 
 
 * `/auth/login`
-* `/auth/logout`
-* `/auth/reset`
 
-By defualt, these expect a table named `users` with the fields `email` and `password`, you can override these settings in in the `src/config/auth.config.ts` file.
+This endpoint will take the users login credentials and return back a JWT token, which can be used as authentication for other endpoints (see Restrictions below).
+
+By defualt, this expects a table named `users` with the fields `email` and `password`, you can override these settings in in the `src/config/auth.config.ts` file.
 
 ### Restrictions
 

@@ -1,14 +1,34 @@
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { context, Logger } from "./Logger";
-import { DatabaseType, MySQLSchema } from "../types/database.types";
+import { DatabaseSchema, DatabaseType } from "../types/database.types";
+import { ConfigService } from "@nestjs/config";
+import { MySQL } from "../databases/mysql.database";
+
 @Injectable()
 export class Schema {
 	constructor(
-		private readonly configService: ConfigService,
-		private readonly logger: Logger
+		private readonly logger: Logger,
+        private readonly configService: ConfigService,
+        private readonly mysql: MySQL
 	) {
 		this.logger.setContext(context)
+	}
+
+    /**
+	 * Get Table Schema
+	 */
+
+	async getSchema(table_name: string): Promise<DatabaseSchema> {
+		try{
+			switch(this.configService.get<string>('database.type')){
+				case DatabaseType.MYSQL:
+					return await this.mysql.getSchema(table_name)
+				default:
+					this.logger.error(`[Query][GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`)
+			}	
+		}catch(e){
+			this.logger.error(`[Query][GetSchema] ${e.message}`)
+		}
 	}
 
     /**
@@ -16,41 +36,24 @@ export class Schema {
      * @param schema
      */
 
-    getTableName(schema: MySQLSchema): string {
-
-		switch(this.configService.get<string>('database.type')){
-			case DatabaseType.MYSQL:
-                return schema.table    
-
-			default:
-				this.logger.error(`[Schema][reate] Database type ${this.configService.get<string>('database.type')} not supported`)
-                return null
-		}	
-	}
+    getTableName(schema: DatabaseSchema): string {
+        return schema.table
+    }
 
     /**
 	 * The primary key's name of the table
 	 */
-	getPrimaryKey(schema: MySQLSchema): string {
-
-        switch(this.configService.get<string>('database.type')){
-			case DatabaseType.MYSQL:
-                
-                return schema.columns.find(column => {
-                    if (column.Key === 'PRI') {
+	getPrimaryKey(schema: DatabaseSchema): string {
+        return schema.columns.find(column => {
+                    if (column.primary_key) {
                         return column
                     }
-                }).Field
+                }).field
+	}
+    
+    validateColumnData(schema: DatabaseSchema, column: string, value: any): {valid: boolean, message?: string} {
 
-			default:
-				this.logger.error(`[Schema][reate] Database type ${this.configService.get<string>('database.type')} not supported`)
-                return null
-	    }
-    }
-
-    validateColumnData(schema: MySQLSchema, column: string, value: any): {valid: boolean, message?: string} {
-
-        const col = schema.columns.find(col => col.Field === column)
+        const col = schema.columns.find(col => col.field === column)
 
         if(!col){
             return {
@@ -59,20 +62,20 @@ export class Schema {
             }
         }
 
-        if(col.Type.includes('int')){
+        if(col.type.includes('int')){
             if(isNaN(parseInt(value))){
                 return {
                     valid: false, 
-                    message: `Invalid integer ${value} for column ${col.Field}`
+                    message: `Invalid integer ${value} for column ${col.field}`
                 }
             }
         }
 
-        else if(col.Type.includes('varchar')){
+        else if(col.type.includes('varchar')){
             if(typeof value !== 'string'){
                 return {
                     valid: false,
-                    message: `Invalid varchar ${value} for column ${col.Field}`
+                    message: `Invalid varchar ${value} for column ${col.field}`
                 }
             }
         }
@@ -92,7 +95,7 @@ export class Schema {
         }
     }
     
-    validateFields(schema: MySQLSchema, fields: string): {valid: boolean, message?: string, data?: string[]} {
+    validateFields(schema: DatabaseSchema, fields: string): {valid: boolean, message?: string, data?: string[]} {
 
         const table_name = this.getTableName(schema)
 
@@ -100,7 +103,7 @@ export class Schema {
             const array = fields.split(',').filter(field => !field.includes('.'))
 
             for(let field of array){
-                if(!schema.columns.find((col) => col.Field === field)){
+                if(!schema.columns.find((col) => col.field === field)){
                     return {
                         valid: false,
                         message: `Field ${field} not found in table schema for ${table_name}`
@@ -120,7 +123,7 @@ export class Schema {
         }
     }
 
-    validateRelations(schema: MySQLSchema, relations: string): {valid: boolean, message?: string, data?: string[]} {
+    validateRelations(schema: DatabaseSchema, relations: string): {valid: boolean, message?: string, data?: string[]} {
 
         const table_name = this.getTableName(schema)
 

@@ -1,107 +1,78 @@
-import {
-	EntityManager,
-	Repository,
-} from 'typeorm'
 import { Injectable } from '@nestjs/common'
-import { InjectEntityManager } from '@nestjs/typeorm'
-import { Base } from './BaseEntity'
 import { Logger, context } from './Logger'
-import { DatabaseType, MySQLSchema } from 'src/types/database.types'
+import { DatabaseType, DatabaseSchema, DatabaseFindOneByIdOptions, DatabaseFindOneOptions } from '../types/database.types'
 import { ConfigService } from '@nestjs/config'
 import { Schema } from './Schema'
+import { MySQL } from '../databases/mysql.database'
 
 @Injectable()
 export class Query {
 	constructor(
 		private readonly configService: ConfigService,
-		@InjectEntityManager() private entityManager: EntityManager,
 		private readonly logger: Logger,
-		private readonly schema: Schema
+		private readonly schema: Schema,
+		private readonly mysql: MySQL,
 	) {
 		this.logger.setContext(context)
 	}
 
 	/**
-	 * Get Table Schema
-	 * @param repository
-	 * @param table_name
-	 */
-
-	async getSchema(table_name: string): Promise<MySQLSchema> {
-
-		switch(this.configService.get<string>('database.type')){
-			case DatabaseType.MYSQL:
-				const columns = await this.raw(table_name, `DESCRIBE ${table_name}`)
-				const relations = await this.raw(table_name, `SELECT TABLE_NAME as 'table',COLUMN_NAME as 'column',CONSTRAINT_NAME as 'key' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = '${table_name}'`)
-				return {
-					table: table_name,
-					columns: columns,
-					relations: relations
-				}
-			default:
-				this.logger.error(`[Query][GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`)
-		}	
-	}
-
-    /**
-	 * Perform a raw query on the database
-	 * @param repository
-	 * @param sql
-	 */
-
-	async raw(table_name: string, command: string): Promise<any> {
-		this.logger.debug(`[Query][Raw][${table_name}] ${command}`)
-		const repository = new Repository(Base, this.entityManager)
-		repository.metadata.tableName = table_name;
-		repository.metadata.tablePath = table_name;
-		const result = await repository.query(command)
-		this.logger.debug(`[Query][Raw][${table_name}] ${command}`, {result})
-		return result
-	}
-
-	/**
 	 * Find record by primary key id
-	 * @param {Repository} repository
-	 * @param {id} id
-	 * @param {string[]} [relations]
 	 */
 
-	async findOneById(options: {
-		schema: MySQLSchema,
-		key: string,
-		fields?: string,
-		relations?: string,
-	}): Promise<any> {
+	async findOneById(options: DatabaseFindOneByIdOptions): Promise<any> {
 
 		const table_name = this.schema.getTableName(options.schema)
 		const primary_key = this.schema.getPrimaryKey(options.schema)
 
 		this.logger.debug(`[Query][Find][One][Id][${table_name}]`, {
+			id: options.id,
 			primary_key,
 			fields: options.fields,
 			relations: options.relations,
 		})
 
-		switch(this.configService.get<string>('database.type')){
-			case DatabaseType.MYSQL:
+		try {
+			switch(this.configService.get<string>('database.type')){
+				case DatabaseType.MYSQL:
+					return await this.mysql.findOneById(options, table_name, primary_key)
+				default:
+					this.logger.error(`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`)
+					return {}
+			}	
+		} catch (e) {
+			this.logger.error(`[Query][Find][One][Id][${table_name}] ${e.message}`)
+			return {}
+		}
 
-				//filter root fields
-				const fields = options.fields?.split(',').filter(field => !field.includes('.'))
+	}
 
-				let command = `SELECT ${table_name}.${fields?.length ? fields.join(`, ${table_name}.`) : '*'} FROM ${table_name} `
-				command += `WHERE ${primary_key} = ${options.key} LIMIT 1`
+	/**
+	 * Find single record
+	 */
 
-				const command_result = await this.raw(table_name, command)
-				let result = command_result[0]
+	async findOne(options: DatabaseFindOneOptions): Promise<any> {
 
-				result = await this.addRelations(options, result)
+		const table_name = this.schema.getTableName(options.schema)
 
-				return result
+		this.logger.debug(`[Query][Find][One][${table_name}]`, {
+			fields: options.fields,
+			relations: options.relations,
+			where: options.where,
+		})
 
-			default:
-				this.logger.error(`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`)
-				return {}
-		}	
+		try {
+			switch(this.configService.get<string>('database.type')){
+				case DatabaseType.MYSQL:
+					return await this.mysql.findOne(options)
+				default:
+					this.logger.error(`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`)
+					return {}
+			}	
+		} catch (e) {
+			this.logger.error(`[Query][Find][One][${table_name}] ${e.message}`)
+			return {}
+		}
 
 	}
 
@@ -1043,18 +1014,6 @@ export class Query {
 // }
 
 
-	async addRelations(options, result){
-		if(options.relations?.split(',').length){
-			for(const relation of options.relations.split(',')){
-				const schema_relation = options.schema.relations.find(r => r.table === relation)
-				const primary_key_relation = this.schema.getPrimaryKey(options.schema)
-				const fields = options.fields?.split(',').filter(field => field.includes(schema_relation.table+'.'))
-				let rel_command = `SELECT ${fields?.length ? fields.join(`, `) : '*'} FROM ${relation} `
-				rel_command += `WHERE ${schema_relation.column} = ${options.key} ORDER BY ${primary_key_relation} DESC LIMIT ${this.configService.get<string>('database.relations.limit')} OFFSET 0 `
-				result[relation] = await this.raw(relation, rel_command)
-			}
-		}
-		return result
-	}
+	
 
 }
