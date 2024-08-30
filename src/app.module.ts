@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { GetController } from './app.controller.get';
-import { GetService } from './app.service.get';
+import { FindService } from './app.service.find';
 import { Query } from './helpers/Query';
 import { Logger } from './helpers/Logger';
 import { Schema } from './helpers/Schema';
@@ -10,6 +10,7 @@ import auth from './config/auth.config';
 import database from './config/database.config';
 import restrictions from './config/restrictions.config';
 import { MySQL } from './databases/mysql.database';
+import { Pagination } from './helpers/Pagination';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { MySQL } from './databases/mysql.database';
     }),
   ],
   controllers: [GetController],
-  providers: [GetService, Authentication, Query, Schema, Logger, MySQL],
-  exports: [GetService, Authentication, Query, Schema, Logger, MySQL],
+  providers: [FindService, Authentication, Query, Schema, Pagination, Logger, MySQL],
+  exports: [FindService, Authentication, Query, Schema, Pagination, Logger, MySQL],
 })
 export class AppModule {}

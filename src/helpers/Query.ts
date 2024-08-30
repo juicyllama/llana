@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { Logger, context } from './Logger'
-import { DatabaseType, DatabaseSchema, DatabaseFindOneByIdOptions, DatabaseFindOneOptions } from '../types/database.types'
+import { DatabaseType, DatabaseFindByIdOptions, DatabaseFindOneOptions, DatabaseFindManyOptions } from '../types/database.types'
 import { ConfigService } from '@nestjs/config'
 import { Schema } from './Schema'
 import { MySQL } from '../databases/mysql.database'
+import { ListResponseObject } from '../types/response.types'
 
 @Injectable()
 export class Query {
@@ -20,7 +21,7 @@ export class Query {
 	 * Find record by primary key id
 	 */
 
-	async findOneById(options: DatabaseFindOneByIdOptions): Promise<any> {
+	async findById(options: DatabaseFindByIdOptions): Promise<any> {
 
 		const table_name = this.schema.getTableName(options.schema)
 		const primary_key = this.schema.getPrimaryKey(options.schema)
@@ -35,7 +36,7 @@ export class Query {
 		try {
 			switch(this.configService.get<string>('database.type')){
 				case DatabaseType.MYSQL:
-					return await this.mysql.findOneById(options, table_name, primary_key)
+					return await this.mysql.findById(options, table_name, primary_key)
 				default:
 					this.logger.error(`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`)
 					return {}
@@ -72,6 +73,41 @@ export class Query {
 		} catch (e) {
 			this.logger.error(`[Query][Find][One][${table_name}] ${e.message}`)
 			return {}
+		}
+
+	}
+
+	/**
+	 * Find multiple records
+	 */
+
+	async findMany(options: DatabaseFindManyOptions): Promise<ListResponseObject> {
+
+		//TODO: implement pagination - pagination helper in response 
+		//TODO: handle `page` and `limit` query params
+
+		const table_name = this.schema.getTableName(options.schema)
+
+		this.logger.debug(`[Query][Find][Many][${table_name}]`, {
+			fields: options.fields,
+			relations: options.relations,
+			where: options.where,
+			limit: options.limit,
+			offset: options.offset,
+			order: options.order,
+		})
+
+		try {
+			switch(this.configService.get<string>('database.type')){
+				case DatabaseType.MYSQL:
+					return await this.mysql.findMany(options)
+				default:
+					this.logger.error(`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`)
+					return null
+			}	
+		} catch (e) {
+			this.logger.error(`[Query][Find][Many][${table_name}] ${e.message}`)
+			return null
 		}
 
 	}

@@ -21,8 +21,7 @@ We currently support the following databases:
 - [ ] [CASSANDRA](https://expressjs.com/en/guide/database-integration.html#cassandra) (Help Wanted)
 - [ ] MARIADB (Help Wanted)
 
-
-# TODO:
+## TODO:
 
 - [ ] integrate JWT token support
 - [ ] setup auth login endpoint
@@ -72,41 +71,87 @@ By default restrictions will apply to all endpoints, you can add exclusions to t
 
 </div>
 
+## Building Requests
+
+### Fields
+
+You can specify which fields you would like to return, defualts to `*`
+
+Example `?fields=id,name,content.id`
+
+Note, if you pass deep fields (table.column) then you must pass the table as a relation also.
+
+### Relations
+
+You can fetch deeper content by passing relations, assuming their is a forign key connection it will return the deep result.
+
+Example `?relations=content`
+
+### Pagination 
+
+- page (either `next` or `prev` from existing result - helps with pagination)
+
+### Filtering
+
+format is column[operator]=value with operator being from the enum WhereOperator 
+      
+Example: `?id=1&first_name[equals]=John&age[gte]=21&content.deleted_at[null]`
+
+
+### Ordering Results
+
+format is order[direction]=column
+
+`?order[ASC]=name&order[DESC]=id&order[ASC]=content.title`
+
+
 ## Endpoints
 
 We have implemented CRUD+ principles
 
-- TODO: Create
-  - TODO: Single
-  - TODO: Bulk
-- Read 
-  - Single (by primary key)
-  - Multiple
-  - TODO: Charting
-- TODO: Update
-  - TODO: Single
-  - TODO: Bulk
-- TODO: Upsert
-  - TODO: Single
-  - TODO: Bulk
-- TODO: Delete
-  - TODO: Single
-  - TODO: Bulk
+- TODO: Create (POST)
+  - TODO: Single `*/`
+  - TODO: Bulk `*/bulk`
+- Read (GET)
+  - Find By Id `*/:id`
+  - FindOne `*/`
+  - Multiple `*/list`
+  - TODO: Charting `*/chart`
+- TODO: Update (PUT)
+  - TODO: Single `*/:id`
+  - TODO: Bulk `*/bulk`
+- TODO: Upsert (PATCH)
+  - TODO: Single `*/:id`
+  - TODO: Bulk `*/bulk`
+- TODO: Delete (DELETE)
+  - TODO: Single `*/:id`
+  - TODO: Bulk `*/bulk`
 
 
 ### Read One (By ID)
 
 Endpoint: `*/:id`
 
-Available Query Params: 
+Example Request:
 
-- filters
-- relations 
+```
+GET `/users/1?fields=role,id,content.id&relations=content`
+```
+
+Example Response: 
+
+```
+{"role":"ADMIN","id":1,"content":[{"id":3},{"id":2},{"id":1}]}
+```
+
+### Read One
+
+Endpoint: `*/`
 
 Example Request:
 
 ```
-GET /users/1?fields=role,id,content.id&relations=content
+GET `/users/1?fields=role,id,content.id&relations=content`
 ```
 
 Example Response: 
@@ -119,17 +164,8 @@ Example Response:
 
 Endpoint: `*/list`
 
-Available Query Params: 
-
-- filters
-- relations 
-- limit
-- offset
-- page (either `next` or `previous` from existing result - helps with pagination)
-
-
 ```
-GET /users/list
+GET `/users/list/XXXXXX`
 ```
 
 Example Response: 

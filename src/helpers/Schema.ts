@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { context, Logger } from "./Logger";
-import { DatabaseSchema, DatabaseType } from "../types/database.types";
+import { DatabaseSchema, DatabaseType, DatabaseWhere, WhereOperator } from "../types/database.types";
 import { ConfigService } from "@nestjs/config";
 import { MySQL } from "../databases/mysql.database";
+import { ValidateResponse } from "src/types/schema.types";
 
 @Injectable()
 export class Schema {
@@ -53,7 +54,7 @@ export class Schema {
     
     validateColumnData(schema: DatabaseSchema, column: string, value: any): {valid: boolean, message?: string} {
 
-        const col = schema.columns.find(col => col.field === column)
+        const col = schema.columns.find(col => col.field === column) 
 
         if(!col){
             return {
@@ -71,7 +72,12 @@ export class Schema {
             }
         }
 
-        else if(col.type.includes('varchar')){
+        else if(
+            col.type.includes('varchar') || 
+            col.type.includes('text') || 
+            col.type.includes('char') || 
+            col.type.includes('enum')
+        ){
             if(typeof value !== 'string'){
                 return {
                     valid: false,
@@ -81,13 +87,11 @@ export class Schema {
         }
 
        else {
-
-            console.error(`[validateColumnData] Column type ${schema.columns[column].type} not integrated`)
+            console.error(`[validateColumnData] Column type ${col.type} not integrated`)
                 return {
                     valid: false,
-                    message: 'System Erorr: Column type not integrated'
+                    message: `System Erorr: Column type ${col.type} not integrated`
                 }
-
        }
 
         return {
@@ -95,7 +99,7 @@ export class Schema {
         }
     }
     
-    validateFields(schema: DatabaseSchema, fields: string): {valid: boolean, message?: string, data?: string[]} {
+    validateFields(schema: DatabaseSchema, fields: string): ValidateResponse {
 
         const table_name = this.getTableName(schema)
 
@@ -113,7 +117,7 @@ export class Schema {
         
             return {
                 valid: true,
-                data: array
+                params: array
             }
         }catch(e){
             return {
@@ -123,7 +127,12 @@ export class Schema {
         }
     }
 
-    validateRelations(schema: DatabaseSchema, relations: string): {valid: boolean, message?: string, data?: string[]} {
+
+    /**
+     * Validate relations by ensuring that the relation exists in the schema
+     */
+
+    async validateRelations(schema: DatabaseSchema, relations: string): Promise<ValidateResponse> {
 
         const table_name = this.getTableName(schema)
 
@@ -137,11 +146,13 @@ export class Schema {
                         message: `Relation ${relation} not found in table schema for ${table_name} `
                     }
                 }
+                schema.relations.find((col) => col.table === relation).schema = await this.getSchema(relation)
             }
         
             return {
                 valid: true,
-                data: array
+                params: array,
+                schema: schema
             }
         }catch(e){
             return {
@@ -152,5 +163,101 @@ export class Schema {
     
     }
 
+    /**
+     * Validate params for where builder, format is column[operator]=value with operator being from the enum WhereOperator 
+     * 
+     * Example: ?id[equals]=1&name=John&age[gte]=21
+     */
+
+    validateWhereParams(schema: DatabaseSchema, params: any): ValidateResponse {
+
+        const where = []
+
+        for(const param in params){
+
+            let [column, operator] = param.split('[').filter(part => part !== '')
+            if(!operator){
+                operator = 'equals'
+            }
+
+            if(column.includes('.')){
+                continue
+            }
+
+            const value = params[param]
+
+            if(['fields', 'limit', 'offset[ASC]', 'order[DESC]', 'page', 'relations'].includes(column)){
+                continue
+            }
+  
+            if(!schema.columns.find(col => col.field === column)){
+                return {
+                    valid: false,
+                    message: `Column ${column} not found in schema`
+                }
+            }
+
+            if(!Object.values(WhereOperator).includes(WhereOperator[operator])){
+                return {
+                    valid: false,
+                    message: `Operator ${operator} not found`
+                }
+            }
+
+            const validation = this.validateColumnData(schema, column, value)
+
+            if(!validation.valid){
+                return validation
+            }
+
+            where.push({
+                column,
+                operator: WhereOperator[operator],
+                value
+            })
+        }
+
+        return {
+            valid: true,
+            where
+        }
+    }
+
+    /**
+     * Validate order params, format is order[direction]=column
+     * 
+     * Example: ?order[ASC]=name&order[DESC]=id&order[ASC]=content.title`
+     */
+    
+    validateOrder(schema: DatabaseSchema, params: any): {valid: boolean, message?: string} {
+
+        for(const param in params){
+
+            if(param !== 'order[ASC]' && param !== 'order[DESC]') continue
+
+            const [direction] = param.split('[').filter(part => part !== '')
+            const value = params[param]
+
+            if(!['ASC', 'DESC'].includes(direction)){
+                return {
+                    valid: false,
+                    message: `Direction ${direction} not found`
+                }
+            }
+
+            if(!schema.columns.find(col => col.field === value)){
+                return {
+                    valid: false,
+                    message: `Column ${value} not found in schema`
+                }
+            }
+        }
+
+        return {
+            valid: true
+        }
+
+    }
+   
 
 }

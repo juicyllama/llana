@@ -168,7 +168,7 @@ export class Authentication {
                         schema,
                         where: [{
                             column: api_key_config.column,
-                            operator: WhereOperator.EQUALS,
+                            operator: WhereOperator.equals,
                             value: req_api_key
                         }]
 

@@ -8,7 +8,7 @@ export default registerAs('auth', () => ({
         column: "api_key",
         where: [{
             column: "deleted_at",
-            operator: WhereOperator.IS_NULL,
+            operator: WhereOperator.null,
         }]
     },
     jwt_token: <AuthJWT>{
@@ -17,7 +17,7 @@ export default registerAs('auth', () => ({
         password_encryption: AuthPasswordEncryption.ARGON2,
         where: [{
             column: "deleted_at",
-            operator: WhereOperator.IS_NULL,
+            operator: WhereOperator.null,
         }]
     }   
 }))

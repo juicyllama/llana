@@ -7,18 +7,18 @@ export enum DatabaseNaming {
 }
 
 export enum WhereOperator {
-    EQUALS = "=",
-    NOT_EQUALS = "!=",
-    LESS_THAN = "<",
-    LESS_THAN_OR_EQUAL = "<=",
-    GREATER_THAN = ">",
-    GREATER_THAN_OR_EQUAL = ">=",
-    LIKE = "LIKE",
-    NOT_LIKE = "NOT LIKE",
-    IN = "IN",
-    NOT_IN = "NOT IN",
-    IS_NULL = "IS NULL",
-    IS_NOT_NULL = "IS NOT NULL"
+    equals = "=",
+    not_equals = "!=",
+    lt = "<",
+    lte = "<=",
+    gt = ">",
+    gte = ">=",
+    like = "LIKE",
+    not_like = "NOT LIKE",
+    in = "IN",
+    not_in = "NOT IN",
+    null = "IS NULL",
+    not_null = "IS NOT NULL"
 }
 
 export enum DatabaseColumnType {
@@ -88,11 +88,16 @@ export enum DatabaseType {
 
 export interface DatabaseSchema {
     table: string,
+    primary_key: string,
     columns: DatabaseSchemaColumn[],
     relations: DatabaseSchemaRelation[]
 }
 
-
+export interface DatabaseWhere {
+    column: string,
+    operator: WhereOperator,
+    value: string
+}
 
 export interface DatabaseSchemaColumn {
     field: string,
@@ -109,19 +114,16 @@ export interface DatabaseSchemaColumn {
 export interface DatabaseSchemaRelation {
     table: string,
     column: string,
-    key: string
+    key: string,
+    schema?: DatabaseSchema 
 }
 
-export interface DatabaseFindOneByIdOptions extends DatabaeseFindOptions {
+export interface DatabaseFindByIdOptions extends DatabaeseFindOptions {
     id: string,
 }
 
 export interface DatabaseFindOneOptions extends DatabaeseFindOptions {
-    where: {
-        column: string,
-        operator: WhereOperator,
-        value: string
-    }[]
+    where: DatabaseWhere[]
 }
 
 export interface DatabaseFindManyOptions extends DatabaeseFindOptions {
