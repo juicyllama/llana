@@ -8,3 +8,8 @@ export interface ValidateResponse {
     params?: string[],
     schema?: DatabaseSchema
 }
+
+export interface SortCondition {
+    column: string,
+    operator: 'ASC' | 'DESC'
+}

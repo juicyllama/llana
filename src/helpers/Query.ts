@@ -6,6 +6,7 @@ import { Schema } from './Schema'
 import { MySQL } from '../databases/mysql.database'
 import { ListResponseObject } from '../types/response.types'
 
+
 @Injectable()
 export class Query {
 	constructor(
@@ -83,9 +84,6 @@ export class Query {
 
 	async findMany(options: DatabaseFindManyOptions): Promise<ListResponseObject> {
 
-		//TODO: implement pagination - pagination helper in response 
-		//TODO: handle `page` and `limit` query params
-
 		const table_name = this.schema.getTableName(options.schema)
 
 		this.logger.debug(`[Query][Find][Many][${table_name}]`, {
@@ -94,7 +92,7 @@ export class Query {
 			where: options.where,
 			limit: options.limit,
 			offset: options.offset,
-			order: options.order,
+			sort: options.sort,
 		})
 
 		try {

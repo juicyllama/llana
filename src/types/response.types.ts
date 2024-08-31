@@ -15,11 +15,13 @@ export type ListResponseObject = {
 	offset: number,
 	limit: number,
 	total: number,
-	page: {
-		navigation: {
+	pagination: {
+		page: {
 			current: string,
 			prev?: string,
-			next?: string
+			next?: string,
+			first?: string,
+			last?: string
 		},
 		total: number
 	},

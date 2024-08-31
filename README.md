@@ -89,6 +89,21 @@ Example `?relations=content`
 
 ### Pagination 
 
+Pass page into requests to load a specific page result, in the `/list` response you will find the following:
+
+```
+"pagination": {
+        "total": number, //total results in this page
+        "page": {
+            "current": string, //the page ref for the current page
+            "prev": string, //the page ref for the previous page (if applicable)
+            "next": string, //the page ref for the next page (if applicable)
+            "first": string,
+            "last": string
+        }
+    },
+```
+
 - page (either `next` or `prev` from existing result - helps with pagination)
 
 ### Filtering
@@ -97,13 +112,11 @@ format is column[operator]=value with operator being from the enum WhereOperator
       
 Example: `?id=1&first_name[equals]=John&age[gte]=21&content.deleted_at[null]`
 
+### Sorting
 
-### Ordering Results
+format is sort={column}.{direction},column.{direction}
 
-format is order[direction]=column
-
-`?order[ASC]=name&order[DESC]=id&order[ASC]=content.title`
-
+`?sort=name.asc,id.desc`
 
 ## Endpoints
 
@@ -165,11 +178,47 @@ Example Response:
 Endpoint: `*/list`
 
 ```
-GET `/users/list/XXXXXX`
+GET `/users/list`
+```
+
+Response Schema: 
+
+```
+{
+    "limit": number, //records returned for this page
+    "offset": number, //the current offset value
+    "total": number, //total records for all pages
+    "pagination": {}, //see pagination
+    "data": [...records]
+}
 ```
 
 Example Response: 
 
 ```
-
+{
+    "limit": 20,
+    "offset": 0,
+    "total": 1,
+    "pagination": {
+        "total": 1,
+        "page": {
+            "current": "eyJsaW1pdCI6MjAsIm9mZnNldCI6MH0=",
+            "prev": null,
+            "next": null,
+            "first": "eyJsaW1pdCI6MjAsIm9mZnNldCI6MH0=",
+            "last": "eyJsaW1pdCI6MjAsIm9mZnNldCI6MH0="
+        }
+    },
+    "data": [
+        {
+            "id": 1,
+            "email": "email@email.com",
+            "password": "**********",
+            "role": "ADMIN",
+            "first_name": "Jon",
+            "last_name": "Doe",
+        }
+    ]
+}
 ```

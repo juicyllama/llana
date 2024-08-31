@@ -3,14 +3,17 @@ import { Connection } from 'mysql2/promise';
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { context, Logger } from '../helpers/Logger'
-import { DatabaseFindByIdOptions, DatabaseFindManyOptions, DatabaseFindOneOptions, DatabaseSchema, DatabaseSchemaColumn, DatabaseWhere } from '../types/database.types';
+import { DatabaseFindByIdOptions, DatabaseFindManyOptions, DatabaseFindOneOptions, DatabaseFindTotalRecords, DatabaseSchema, DatabaseSchemaColumn, DatabaseWhere, WhereOperator } from '../types/database.types';
 import { ListResponseObject } from '../types/response.types';
+import { Pagination } from '../helpers/Pagination';
+import { SortCondition } from 'src/types/schema.types';
 
 @Injectable()
 export class MySQL {
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
+        private readonly pagination: Pagination
 	) {
 		this.logger.setContext(context)
 	}
@@ -128,21 +131,77 @@ export class MySQL {
 
 	async findMany(options: DatabaseFindManyOptions): Promise<ListResponseObject> {
 
+        console.log(options)
+
+
         const table_name = options.schema.table
+
+        const total = await this.findTotalRecords(options)
 
         const fields = options.fields?.split(',').filter(field => !field.includes('.'))
 
 		let command = `SELECT ${table_name}.${fields?.length ? fields.join(`, ${table_name}.`) : '*'} FROM ${table_name} `
+
+        const where = options.where?.filter(where => !where.column.includes('.'))
 		
-        if(options.where?.length){
-            command += `WHERE ${options.where.map(where => `${where.column} ${where.operator} ${where.value ? `'`+ where.value +`'` : ''}`).join(' AND ')} `
+        if(where?.length){
+            command += `WHERE ${where.map(where => `${where.column} ${where.operator} ${where.value ? `'`+ where.value +`'` : ''}`).join(' AND ')} `
         }
 
-        command += ` LIMIT 1`
+        const sort = options.sort.filter(sort => !sort.column.includes('.'))
+
+        if(sort?.length){
+            command += `ORDER BY ${sort.map(sort => `${sort.column} ${sort.operator}`).join(', ')}`            
+        }
+
+        command += ` LIMIT ${options.limit} OFFSET ${options.offset}`
+
+        let results = await this.performQuery(command)
+
+        for(const r in results){
+		    results[r] = await this.addRelations(options, results[r])
+        }
+
+        return {
+            limit: options.limit,
+            offset: options.offset,
+            total,
+            pagination: {
+                total: results.length,
+                page: {
+                    current: this.pagination.current(options.limit, options.offset),
+                    prev: this.pagination.previous(options.limit, options.offset),
+                    next: this.pagination.next(options.limit, options.offset, total),
+                    first: this.pagination.first(options.limit),
+                    last: this.pagination.last(options.limit, total),
+                }
+            },
+            data: results,
+        }  
+
+	}	
+
+    /**
+     * Get total records with where conditions
+     */
+
+    async findTotalRecords(options: DatabaseFindTotalRecords): Promise<number> {
+
+        const table_name = options.schema.table
+
+        let command = `SELECT COUNT(*) as total FROM ${table_name} `
+
+        const where = options.where?.filter(where => !where.column.includes('.'))
+ 
+        if(where?.length){
+            command += `WHERE ${where.map(where => `${where.column} ${where.operator} ${where.value ? `'`+ where.value +`'` : ''}`).join(' AND ')} `
+        }
 
         const results = await this.performQuery(command)
-		return await this.addRelations(options, results[0])
-	}	
+        return results[0].total
+    }
+
+
 
 	
     async addRelations(options: DatabaseFindByIdOptions | DatabaseFindOneOptions | DatabaseFindManyOptions, result: any): Promise<any> {
@@ -154,28 +213,66 @@ export class MySQL {
             const primary_key_id = result[options.schema.columns.find(column => column.primary_key).field]
 
 			for(const relation of options.relations.split(',')){
-				const schema_relation = options.schema.relations.find(r => r.table === relation)
-				const primary_key_relation = options.schema.columns.find(column => column.primary_key).field
+				const schema_relation = options.schema.relations.find(r => r.table === relation).schema
+                const relation_table = options.schema.relations.find(r => r.table === relation)
 				const fields = options.fields?.split(',').filter(field => field.includes(schema_relation.table+'.'))
                 
-                let where: DatabaseWhere[] = [];
-                if ('where' in options && options.where) {
-                  where = options.where.filter(where => where.column.includes(schema_relation.table + '.'));
+                if(fields.length){
+                    // Remove table name from fields
+                    fields.forEach((field, index) => {
+                        fields[index] = field.replace(`${schema_relation.table}.`, '')
+                    })
                 }
 
-                // TODO: move to findMany function
-          
-				let command = `SELECT ${fields?.length ? fields.join(`, `) : '*'} FROM ${relation} `
-				command += `WHERE ${schema_relation.column} = ${primary_key_id} `
+                if(!fields.length){
+                    fields.push(...schema_relation.columns.map(column => column.field))
+                }
                 
-                if(where?.length){
-                    command += `AND ${where.map(w => `${w.column} ${w.operator} ${w.value ? `'`+ w.value +`'` : ''}`).join(' AND ')} `
+                const limit = this.configService.get<number>('database.defaults.relations.limit')
+            
+                let where: DatabaseWhere[] = [{
+                    column: relation_table.column, 
+                    operator: WhereOperator.equals,
+                    value: primary_key_id
+                }]
+                
+                if ('where' in options && options.where) {
+
+                    where = where.concat(options.where.filter(where => where.column.includes(schema_relation.table + '.')))
+                    
+                    for(const w of where){
+                        w.column = w.column.replace(`${schema_relation.table}.`, '')
+                    }
                 }
 
-                command += `ORDER BY ${primary_key_relation} DESC LIMIT ${this.configService.get<string>('database.defaults.relations.limit')} OFFSET 0 `
-		
-                const relation_result = await this.performQuery(command)
-                result[relation] = relation_result 
+                let sort: SortCondition[] = [];
+                if ('sort' in options && options.sort) {
+                    sort = options.sort.filter(sort => sort.column.includes(schema_relation.table + '.'))
+                    for(const s of sort){
+                        s.column = s.column.replace(`${schema_relation.table}.`, '')
+                    }
+                }
+
+                this.logger.debug(`[Query][Find][Many][${options.schema.table}][Relation][${relation}]`, {
+                    fields: fields.join(','),
+                    where,
+                    sort,
+                    limit,
+                    offset: 0
+                })
+                
+                const relation_result = await this.findMany({
+                    schema: schema_relation,
+                    fields: fields.join(','),
+                    where,
+                    sort,
+                    limit,
+                    offset: 0
+                })
+
+                console.log(relation_result)
+				
+                result[relation] = relation_result.data
 			}
 		}
 		return result

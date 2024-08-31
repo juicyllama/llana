@@ -11,6 +11,7 @@ import database from './config/database.config';
 import restrictions from './config/restrictions.config';
 import { MySQL } from './databases/mysql.database';
 import { Pagination } from './helpers/Pagination';
+import { Sort } from './helpers/Sort';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { Pagination } from './helpers/Pagination';
     }),
   ],
   controllers: [GetController],
-  providers: [FindService, Authentication, Query, Schema, Pagination, Logger, MySQL],
-  exports: [FindService, Authentication, Query, Schema, Pagination, Logger, MySQL],
+  providers: [FindService, Authentication, Query, Schema, Pagination, Logger, Sort, MySQL],
+  exports: [FindService, Authentication, Query, Schema, Pagination, Logger, Sort, MySQL],
 })
 export class AppModule {}

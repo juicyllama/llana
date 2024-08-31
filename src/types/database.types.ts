@@ -1,5 +1,6 @@
 import exp from "constants"
 import { FindManyOptions } from "typeorm"
+import { SortCondition } from "./schema.types"
 
 export enum DatabaseNaming {
     SNAKE_CASE = "SNAKE_CASE",
@@ -127,21 +128,19 @@ export interface DatabaseFindOneOptions extends DatabaeseFindOptions {
 }
 
 export interface DatabaseFindManyOptions extends DatabaeseFindOptions {
-    where?: {
-        column: string,
-        operator: WhereOperator,
-        value: string
-    }[],
+    where?: DatabaseWhere[],
     limit?: number,
     offset?: number,
-    order?: {
-        column: string,
-        direction: 'ASC' | 'DESC'
-    }
+    sort?: SortCondition[]
 }
 
 export interface DatabaeseFindOptions {
     schema: DatabaseSchema,
     fields?: string,
     relations?: string,
+}
+
+export interface DatabaseFindTotalRecords {
+    schema: DatabaseSchema,
+    where?: DatabaseWhere[],
 }

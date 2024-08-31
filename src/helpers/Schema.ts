@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { context, Logger } from "./Logger";
-import { DatabaseSchema, DatabaseType, DatabaseWhere, WhereOperator } from "../types/database.types";
+import { DatabaseSchema, DatabaseType, WhereOperator } from "../types/database.types";
 import { ConfigService } from "@nestjs/config";
 import { MySQL } from "../databases/mysql.database";
-import { ValidateResponse } from "src/types/schema.types";
+import { ValidateResponse } from "../types/schema.types";
+import { NON_FIELD_PARAMS } from "../app.constants";
 
 @Injectable()
 export class Schema {
@@ -175,6 +176,8 @@ export class Schema {
 
         for(const param in params){
 
+            if(NON_FIELD_PARAMS.includes(param)) continue
+            
             let [column, operator] = param.split('[').filter(part => part !== '')
             if(!operator){
                 operator = 'equals'
@@ -186,10 +189,6 @@ export class Schema {
 
             const value = params[param]
 
-            if(['fields', 'limit', 'offset[ASC]', 'order[DESC]', 'page', 'relations'].includes(column)){
-                continue
-            }
-  
             if(!schema.columns.find(col => col.field === column)){
                 return {
                     valid: false,
@@ -224,33 +223,45 @@ export class Schema {
     }
 
     /**
-     * Validate order params, format is order[direction]=column
+     * Validate order params, format is sort={column}.{operator},column.{operator},...
      * 
-     * Example: ?order[ASC]=name&order[DESC]=id&order[ASC]=content.title`
+     * Operator is either `asc` or `desc`
+     * 
+     * Example: ?sort=name.asc,id.desc,content.title.asc
      */
     
-    validateOrder(schema: DatabaseSchema, params: any): {valid: boolean, message?: string} {
+    validateOrder(schema: DatabaseSchema, sort: string): {valid: boolean, message?: string} {
 
-        for(const param in params){
+        const array = sort.split(',').filter(sort => !sort.includes('.'))
 
-            if(param !== 'order[ASC]' && param !== 'order[DESC]') continue
+        for(const item of array){
+            const direction = item.lastIndexOf('.')
 
-            const [direction] = param.split('[').filter(part => part !== '')
-            const value = params[param]
-
-            if(!['ASC', 'DESC'].includes(direction)){
+            if(direction === -1){
                 return {
                     valid: false,
-                    message: `Direction ${direction} not found`
+                    message: `Invalid order param ${item}, missing direction, must be either ${item}.asc or ${item}.desc`
                 }
             }
 
-            if(!schema.columns.find(col => col.field === value)){
+            const operator = item.substring(direction)
+
+            if(operator !== 'asc' && operator !== 'desc'){
                 return {
                     valid: false,
-                    message: `Column ${value} not found in schema`
+                    message: `Invalid order operator ${operator}, must be either asc or desc`
                 }
             }
+
+            const column = item.substring(0, direction)
+
+            if(!schema.columns.find(col => col.field === column)){
+                return {
+                    valid: false,
+                    message: `Column ${column} not found in schema`
+                }
+            }
+
         }
 
         return {
@@ -258,6 +269,4 @@ export class Schema {
         }
 
     }
-   
-
 }

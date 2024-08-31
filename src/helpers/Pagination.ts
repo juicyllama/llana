@@ -47,5 +47,33 @@ export class Pagination {
     decodePage(page: string): {limit: number, offset: number} {
         return JSON.parse(Buffer.from(page, 'base64').toString('ascii'))
     }
+
+    current(limit: number, offset: number): string {
+        return this.encodePage({limit: limit, offset: offset})
+    }
+
+    previous(limit: number, offset: number): string {
+        if(offset - limit < 0) return null
+        return this.encodePage({limit: limit, offset: offset - limit})
+    }
+
+    next(limit: number, offset: number, total: number): string {
+        if(offset + limit >= total) return null
+        return this.encodePage({limit: limit, offset: offset + limit})
+    }
+
+    first(limit: number): string {
+        return this.encodePage({limit: limit, offset: 0})
+    }
+
+    last(limit: number, total: number): string {
+        if(total <= limit) return this.encodePage({limit: limit, offset: 0})
+        return this.encodePage({limit: limit, offset: total - limit})
+    }
+
+
+
+
+    
   
 }

@@ -6,6 +6,7 @@ import { Schema } from './helpers/Schema';
 import { GetResponseObject, ListResponseObject } from './types/response.types';
 import { Authentication } from './helpers/Authentication';
 import { Pagination } from './helpers/Pagination';
+import { Sort } from './helpers/Sort';
 
 @Controller()
 export class GetController {
@@ -14,6 +15,7 @@ export class GetController {
 		private readonly service: FindService,
 		private readonly logger: Logger,
 		private readonly schema: Schema,
+		private readonly sort: Sort,
 		private readonly authentication: Authentication
 	) {
 		logger.setContext(context)
@@ -36,12 +38,6 @@ export class GetController {
 	@Get('*/list')
 	async list(@Req() req, @Res() res): Promise<ListResponseObject> {
 
-		const { limit, offset } = this.pagination.get(req.query)
-
-
-		
-		//TODO: implement page - pagination helper to turn page into limit and offset
-
 		const table_name = UrlToTable(req.originalUrl, 1)
 
 		let schema
@@ -56,6 +52,8 @@ export class GetController {
 		if (!auth.valid) {
 			return res.status(403).send(auth.message)
 		}
+
+		const { limit, offset } = this.pagination.get(req.query)
 
 		let validateFields
 		if (req.query.fields) {
@@ -113,6 +111,22 @@ export class GetController {
 
 					validateWhere.where = validateWhere.where.concat(relationshipValidateWhere.where)
 				}
+
+				const relationship_sort_fields = req.query.sort.split(',').filter(key => key.includes(`${relation}.`))
+				if(relationship_sort_fields.length > 0){
+					const validateOrder = this.schema.validateOrder(relation_schema, relationship_sort_fields.join(', '))
+					if (!validateOrder.valid) {
+						return res.status(400).send(validateOrder.message)
+					}
+				}
+			}
+		}
+
+		let validateOrder
+		if (req.query.sort) {
+			validateOrder = this.schema.validateOrder(schema, req.query.sort)
+			if (!validateOrder.valid) {
+				return res.status(400).send(validateOrder.message)
 			}
 		}
 
@@ -120,12 +134,11 @@ export class GetController {
 			schema,
 			fields: req.query.fields,
 			relations: req.query.relations,
-			where: req.query.where,
+			where: validateWhere.where,
 			limit,
 			offset,
-			order: req.query.order
+			sort: this.sort.createSortArray(req.query.sort),
 		}))
-
 	}
 
 	@Get('*/:id')
