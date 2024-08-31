@@ -1,5 +1,13 @@
 import { ApiProperty } from "@nestjs/swagger"
 
+export enum Method {
+	GET = "GET",
+	POST = "POST",
+	PUT = "PUT",
+	PATCH = "PATCH",
+	DELETE = "DELETE"
+}
+
 export type GetResponseObject = any
 
 export type GetQueryObject = {

@@ -52,8 +52,8 @@ export class Authentication {
             //Is the restriction required on the current route?
             let check_required = true
 
-            if(restriction.exclude){
-                for(const exclude of restriction.exclude){
+            if(restriction.routes?.exclude){
+                for(const exclude of restriction.routes.exclude){
                     if(req.originalUrl.includes(exclude)){
                         check_required = false
                     }
@@ -70,8 +70,8 @@ export class Authentication {
                 }
             }
 
-            if(restriction.include){
-                for(const include of restriction.include){
+            if(restriction.routes?.include){
+                for(const include of restriction.routes.include){
                     if(req.originalUrl.includes(include)){
                         check_required = true
                     }

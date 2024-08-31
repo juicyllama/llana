@@ -9,7 +9,10 @@ export interface AuthJWT extends Auth {
         email: string,
         password: string
     },
-    password_encryption: AuthPasswordEncryption,
+    password: {
+        encryption: AuthPasswordEncryption,
+        salt?: string
+    },
 }
 
 export interface Auth {

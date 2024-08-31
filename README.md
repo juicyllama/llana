@@ -23,17 +23,70 @@ We currently support the following databases:
 
 ## TODO:
 
-- [ ] integrate JWT token support
+- [ ] Auto detect relation {relation}.{col} in fields
+
+- [ ] Authentication
+      - [ ] Support hosts?[] to restrict access by url
+      - [ ] Support identity column (in role/permissions)
+      - [ ] Get key table relation working `users_api_keys`
+      - [ ] Role based default permissions, e.g. 
+
+      ```
+        roles: [{
+          role: {role_string},
+          own_records: DELETE,
+          other_records: READ | WRITE
+        }]
+      ```
+
+      - [ ] integrate JWT token support
+
+- [ ] Add Demo Database data to Docker setup file
+
+- [ ] Table based permissions JSON file
+      [{
+        table: {table_name},
+        roles: [{
+          role: {role_string},
+          own_records: READ | WRITE | DELETE,
+          other_records: READ | WRITE | DELETE,
+          identifier_restrictions: [{
+              table: clients,
+              column: client_id,
+              relation: [{
+                type: FK | JOIN
+                table: string
+                column: string,
+              }]
+          }]
+        }]
+      }]
+
+      + add for demo database tables where needed
+
 - [ ] setup auth login endpoint
+
 - [ ] finish endpoint support for mysql 
+
 - [ ] add full testing
+
 - [ ] move docs to JL Website
+
+- [ ] Add redis support for faster performance (e.g. schema caching)
+
 - [ ] containerize and publish to docker
+
 - [ ] use on first external client project
+
 - [ ] Adding more database integrations (postgres, etc)
+
 - [ ] Build integrations with workflow automation tooling (n8n, zapier, make, etc)
+
 - [ ] Publish on Daily.dev, ProductHunt, etc 
+
 - [ ] Scope Llana cloud option for non-technical users
+
+- [ ] Setup / Install service (pay to deploy on your database)
 
 
 ## Installation 
@@ -120,7 +173,7 @@ format is sort={column}.{direction},column.{direction}
 
 ## Endpoints
 
-We have implemented CRUD+ principles
+For every table in your database, you will automatically have access to the following endpoints:
 
 - TODO: Create (POST)
   - TODO: Single `*/`
@@ -222,3 +275,10 @@ Example Response:
     ]
 }
 ```
+
+
+## Docker Demos
+
+Out of the box you can use our docker demo data to play with the system. Here is some helpful information:
+
+Test user, email: `test@test.com` password: `test`

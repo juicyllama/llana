@@ -1,9 +1,14 @@
+import { Method } from "./response.types";
+
 export interface Restriction {
     type: RestrictionType,
     location: RestrictionLocation,
     name: string,
-    include: string[],
-    exclude: string[],
+    hosts?: string[],
+    routes?: {
+        include?: string[],
+        exclude?: string[],
+    }
 }
 
 export enum RestrictionType {

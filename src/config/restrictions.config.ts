@@ -5,10 +5,9 @@ export default registerAs('restrictions', () => (<Restriction[]>[{
     type: RestrictionType.APIKEY,
     location: RestrictionLocation.HEADER,
     name: "x-api-key",
-    include: [],
-    exclude: []
 },{
     type: RestrictionType.JWT,
-    include: [],
-    exclude: ["auth/login"]
+    routes: {
+        exclude: ["auth/login"]
+    }
 }]))
