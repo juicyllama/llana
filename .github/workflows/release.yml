@@ -2,6 +2,10 @@
 # GitHub Actions workflow.
 #
 # Releases the package to npm when a push into main is detected.
+# * Checkout the code
+# * Install Node.js
+# * Install dependencies
+# * Pull the latest changes
 # * Bump version number
 # * Release to NPM
 #

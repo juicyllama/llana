@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { Logger, context } from './Logger'
+import { Logger } from './Logger'
 import { DatabaseType, DatabaseFindByIdOptions, DatabaseFindOneOptions, DatabaseFindManyOptions } from '../types/database.types'
 import { ConfigService } from '@nestjs/config'
 import { Schema } from './Schema'
@@ -14,9 +14,7 @@ export class Query {
 		private readonly logger: Logger,
 		private readonly schema: Schema,
 		private readonly mysql: MySQL,
-	) {
-		this.logger.setContext(context)
-	}
+	) {}
 
 	/**
 	 * Find record by primary key id
@@ -24,7 +22,7 @@ export class Query {
 
 	async findById(options: DatabaseFindByIdOptions): Promise<any> {
 
-		const table_name = this.schema.getTableName(options.schema)
+		const table_name = options.schema.table
 		const primary_key = this.schema.getPrimaryKey(options.schema)
 
 		this.logger.debug(`[Query][Find][One][Id][${table_name}]`, {
@@ -55,13 +53,9 @@ export class Query {
 
 	async findOne(options: DatabaseFindOneOptions): Promise<any> {
 
-		const table_name = this.schema.getTableName(options.schema)
+		const table_name = options.schema.table
 
-		this.logger.debug(`[Query][Find][One][${table_name}]`, {
-			fields: options.fields,
-			relations: options.relations,
-			where: options.where,
-		})
+		this.logger.debug(`[Query][Find][One][${table_name}]`, options)
 
 		try {
 			switch(this.configService.get<string>('database.type')){
@@ -84,7 +78,7 @@ export class Query {
 
 	async findMany(options: DatabaseFindManyOptions): Promise<ListResponseObject> {
 
-		const table_name = this.schema.getTableName(options.schema)
+		const table_name = options.schema.table
 
 		this.logger.debug(`[Query][Find][Many][${table_name}]`, {
 			fields: options.fields,

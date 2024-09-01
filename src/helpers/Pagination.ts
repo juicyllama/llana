@@ -1,16 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { context, Logger } from "./Logger";
 import { GetQueryObject } from "../types/response.types";
 
 @Injectable()
 export class Pagination {
 	constructor(
 		private readonly configService: ConfigService,
-		private readonly logger: Logger,
-	) {
-		this.logger.setContext(context)
-	}
+	) {}
 
     /**
      * Takes the query parameters, configs (for defualts) and returns the limit and offset

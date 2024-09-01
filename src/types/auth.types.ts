@@ -18,10 +18,11 @@ export interface AuthJWT extends Auth {
 export interface Auth {
     table: string,
     where?: {
-        column: string,
-        operator: WhereOperator,
+        column: string
+        operator: WhereOperator
         value?: string
     }[],
+    identity_column?: string // If your identity column is not the table primary key
 }
 
 export enum AuthPasswordEncryption {

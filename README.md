@@ -1,16 +1,16 @@
-<div align="center">
+
   <a href="https://juicyllama.com/" target="_blank">
     <img src="https://juicyllama.com/assets/images/icon.png" width="100" alt="JuicyLlama Logo" />
   </a>
 
 Visit [JuicyLlama > Tools > Llana](https://juicyllama.com/tools/llana) for full installation instructions, documentation and community. 
 
-## Database Support
+## Databases
 
-We currently support the following databases:
+We are working to support all major databases, if you would like to contribute to the open source project and help integrate your faviourt database, checkout our [contribiution guidelines](https://juicyllama.com/developers/contributing).
 
 - [ ] [ORACLE](https://expressjs.com/en/guide/database-integration.html#oracle) (Help Wanted)
-- [ ] [MYSQL](https://expressjs.com/en/guide/database-integration.html#mysql) (In Progress)
+- [x] [MYSQL](https://expressjs.com/en/guide/database-integration.html#mysql) (In Progress)
 - [ ] MSSQL (Help Wanted)
 - [ ] [POSTGRES](https://expressjs.com/en/guide/database-integration.html#postgresql) (Help Wanted)
 - [ ] [MONGODB](https://expressjs.com/en/guide/database-integration.html#mongodb) (Help Wanted)
@@ -21,14 +21,14 @@ We currently support the following databases:
 - [ ] [CASSANDRA](https://expressjs.com/en/guide/database-integration.html#cassandra) (Help Wanted)
 - [ ] MARIADB (Help Wanted)
 
+[See the complete breakdown of which databases are integrated with which endpoints](#database-support)
+
 ## TODO:
 
-- [ ] Auto detect relation {relation}.{col} in fields
-
 - [ ] Authentication
-      - [ ] Support hosts?[] to restrict access by url
-      - [ ] Support identity column (in role/permissions)
-      - [ ] Get key table relation working `users_api_keys`
+
+      - [ ] Auth testing files (hosts, apikey)
+
       - [ ] Role based default permissions, e.g. 
 
       ```
@@ -39,7 +39,11 @@ We currently support the following databases:
         }]
       ```
 
-      - [ ] integrate JWT token support
+      - [ ] Auth testing (role based access)
+
+      - [ ] integrate JWT token support + /login endpoint
+
+      - [ ] Auth testing (user/pass, login)
 
 - [ ] Add Demo Database data to Docker setup file
 
@@ -50,7 +54,10 @@ We currently support the following databases:
           role: {role_string},
           own_records: READ | WRITE | DELETE,
           other_records: READ | WRITE | DELETE,
-          identifier_restrictions: [{
+          identifer_route: 'user_id', // also supports clients.user_clients.user_id
+
+//replaced by identifer_route if possible?
+          <!-- identifier_restrictions: [{
               table: clients,
               column: client_id,
               relation: [{
@@ -58,7 +65,7 @@ We currently support the following databases:
                 table: string
                 column: string,
               }]
-          }]
+          }] -->
         }]
       }]
 
@@ -70,7 +77,7 @@ We currently support the following databases:
 
 - [ ] add full testing
 
-- [ ] move docs to JL Website
+- [ ] Move these docs to juicyllama.com/llana, landing page + docs
 
 - [ ] Add redis support for faster performance (e.g. schema caching)
 
@@ -78,15 +85,23 @@ We currently support the following databases:
 
 - [ ] use on first external client project
 
+- [ ] move remaining items to github issues
+
 - [ ] Adding more database integrations (postgres, etc)
-
-- [ ] Build integrations with workflow automation tooling (n8n, zapier, make, etc)
-
-- [ ] Publish on Daily.dev, ProductHunt, etc 
 
 - [ ] Scope Llana cloud option for non-technical users
 
-- [ ] Setup / Install service (pay to deploy on your database)
+- [ ] Scope out Setup / Install service (pay to deploy on your database)
+
+#### Marketing
+
+- [ ] Build integrations with workflow automation tooling (n8n, zapier, make, etc) and promote on their platforms where possible
+
+- [ ] Publish on Daily.dev, ProductHunt, etc 
+
+- [ ] Commend on Medium posts like: https://javascript.plainenglish.io/my-tech-stack-for-building-web-apps-today-43398556bb4d introducing the plugin
+
+- [ ] Basic PPC campaign
 
 
 ## Installation 
@@ -281,4 +296,14 @@ Example Response:
 
 Out of the box you can use our docker demo data to play with the system. Here is some helpful information:
 
-Test user, email: `test@test.com` password: `test`
+Test user, email: `test@test.com` password: `test` with API key: `Ex@mp1eS$Cu7eAp!K3y`
+
+
+
+## Database Support
+
+| Endpoint | ORACLE | MYSQL | MSSQL | POSTGRES | MONGODB | REDIS | SNOWFLAKE | ELASTICSEARCH | SQLITE | CASSANDRA | MARIADB |
+|---|-|-|-|-|-|-|-|-|-|-|-|
+|GET  */:id` |[ ]|[x]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|
+|POST  */` |[ ]|[x]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|
+|POST  */list` |[ ]|[x]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|

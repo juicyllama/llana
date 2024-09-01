@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Req, Res } from '@nestjs/common';
 import { FindService } from './app.service.find';
-import { Logger, context } from './helpers/Logger';
+import { Logger } from './helpers/Logger';
 import { UrlToTable } from './helpers/Database';
 import { Schema } from './helpers/Schema';
 import { GetResponseObject, ListResponseObject } from './types/response.types';
@@ -17,9 +17,7 @@ export class GetController {
 		private readonly schema: Schema,
 		private readonly sort: Sort,
 		private readonly authentication: Authentication
-	) {
-		logger.setContext(context)
-	}
+	) {}
 
 	@Get('')
 	getDocs(@Res() res): string {
@@ -50,7 +48,7 @@ export class GetController {
 
 		const auth = await this.authentication.auth(req)
 		if (!auth.valid) {
-			return res.status(403).send(auth.message)
+			return res.status(401).send(auth.message)
 		}
 
 		const { limit, offset } = this.pagination.get(req.query)
@@ -63,19 +61,24 @@ export class GetController {
 			}
 		}
 
+		const relations = combineRelations(req.query.relations, validateFields?.relations) 
+
 		const validateWhere = this.schema.validateWhereParams(schema, req.query)
 		if (!validateWhere.valid) {
 			return res.status(400).send(validateWhere.message)
 		}
 
 		let validateRelations
-		if (req.query.relations) {
-			validateRelations = await this.schema.validateRelations(schema, req.query.relations)
+		if (relations) {
+			validateRelations = await this.schema.validateRelations(schema, relations)
+
 			if (!validateRelations.valid) {
 				return res.status(400).send(validateRelations.message)
 			}
 
-			for (const relation of validateRelations.params) {
+			schema = validateRelations.schema
+
+			for (const relation of relations) {
 				const relation_schema = await this.schema.getSchema(relation)
 				if (!relation_schema) {
 					return res.status(400).send(`Relation ${relation} not found`)
@@ -133,7 +136,7 @@ export class GetController {
 		return res.status(200).send(await this.service.findMany({
 			schema,
 			fields: req.query.fields,
-			relations: req.query.relations,
+			relations,
 			where: validateWhere.where,
 			limit,
 			offset,
@@ -156,7 +159,7 @@ export class GetController {
 
 		const auth = await this.authentication.auth(req)
 		if (!auth.valid) {
-			return res.status(403).send(auth.message)
+			return res.status(401).send(auth.message)
 		}
 
 		//validate :id field
@@ -179,19 +182,23 @@ export class GetController {
 			}
 		}
 
+		const relations = combineRelations(req.query.relations, validateFields?.relations) 
+
 		let validateRelations
-		if (req.query.relations) {
-			validateRelations = await this.schema.validateRelations(schema, req.query.relations)
+		if (relations) {
+			validateRelations = await this.schema.validateRelations(schema, relations)
 			if (!validateRelations.valid) {
 				return res.status(400).send(validateRelations.message)
 			}
+
+			schema = validateRelations.schema
 		}
 
 		return res.status(200).send(await this.service.findById({
 			schema,
 			id: req.params.id,
 			fields: req.query.fields,
-			relations: req.query.relations
+			relations
 		}))
 
 	}
@@ -211,7 +218,7 @@ export class GetController {
 
 		const auth = await this.authentication.auth(req)
 		if (!auth.valid) {
-			return res.status(403).send(auth.message)
+			return res.status(401).send(auth.message)
 		}
 
 		let validateFields
@@ -222,19 +229,23 @@ export class GetController {
 			}
 		}
 
+		const relations = combineRelations(req.query.relations, validateFields?.relations) 
+
 		const validateWhere = this.schema.validateWhereParams(schema, req.query)
 		if (!validateWhere.valid) {
 			return res.status(400).send(validateWhere.message)
 		}
 
 		let validateRelations
-		if (req.query.relations) {
-			validateRelations = await this.schema.validateRelations(schema, req.query.relations)
+		if (relations) {
+			validateRelations = await this.schema.validateRelations(schema, relations)
 			if (!validateRelations.valid) {
 				return res.status(400).send(validateRelations.message)
 			}
 
-			for (const relation of validateRelations.params) {
+			schema = validateRelations.schema
+
+			for (const relation of relations) {
 				const relation_schema = await this.schema.getSchema(relation)
 				if (!relation_schema) {
 					return res.status(400).send(`Relation ${relation} not found`)
@@ -276,10 +287,25 @@ export class GetController {
 		return res.status(200).send(await this.service.findOne({
 			schema,
 			fields: req.query.fields,
-			relations: req.query.relations,
+			relations,
 			where: validateWhere.where
 		}))
 
 	}
+
+}
+
+function combineRelations(query: string, validatedFieldRelations: string[]): string[] {
+	const relations = query ? query.split(',') : []
+
+	if (validatedFieldRelations) {
+		validatedFieldRelations.forEach(relation => {
+			if (!relations.includes(relation)) {
+				relations.push(relation)
+			}
+		})
+	}
+	
+	return relations
 
 }

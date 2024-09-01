@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Docker",
+            "type": "shell",
+            "command": "npm run start:docker",
+            "windows": {
+                "command": "npm run start:docker"
+            },
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            // "runOptions": {
+            //     "runOn": "folderOpen",
+            // }
+        },
+    ]
+}

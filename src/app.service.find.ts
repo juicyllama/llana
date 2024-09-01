@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { Query } from './helpers/Query';
-import { Logger, context } from './helpers/Logger';
 import { GetResponseObject, ListResponseObject } from './types/response.types';
 import { DatabaseFindByIdOptions, DatabaseFindManyOptions, DatabaseFindOneOptions } from './types/database.types';
 
@@ -8,10 +7,7 @@ import { DatabaseFindByIdOptions, DatabaseFindManyOptions, DatabaseFindOneOption
 export class FindService {
   constructor(
     private readonly query: Query,
-    private readonly logger: Logger,
-){
-  logger.setContext(context)
-}
+){}
 
   async findById(options: DatabaseFindByIdOptions): Promise<GetResponseObject> { 
     return await this.query.findById(options)

@@ -2,7 +2,7 @@ import * as mysql from 'mysql2/promise';
 import { Connection } from 'mysql2/promise';
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { context, Logger } from '../helpers/Logger'
+import { Logger } from '../helpers/Logger'
 import { DatabaseFindByIdOptions, DatabaseFindManyOptions, DatabaseFindOneOptions, DatabaseFindTotalRecords, DatabaseSchema, DatabaseSchemaColumn, DatabaseWhere, WhereOperator } from '../types/database.types';
 import { ListResponseObject } from '../types/response.types';
 import { Pagination } from '../helpers/Pagination';
@@ -14,9 +14,7 @@ export class MySQL {
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
         private readonly pagination: Pagination
-	) {
-		this.logger.setContext(context)
-	}
+	) {}
 
     /**
      * Create a MySQL connection
@@ -41,8 +39,7 @@ export class MySQL {
                     message: e.message
                 }
             })
-        }
-       
+        }   
     }
 
     /**
@@ -69,8 +66,8 @@ export class MySQL {
             };
         });
        
-        const relations_result = await this.performQuery(`SELECT TABLE_NAME as 'table',COLUMN_NAME as 'column',CONSTRAINT_NAME as 'key' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = '${table_name}'`)
-        
+        const relations_query = `SELECT TABLE_NAME as 'table',COLUMN_NAME as 'column',CONSTRAINT_NAME as 'key' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = '${table_name}'`
+        const relations_result = await this.performQuery(relations_query)
         const relations = relations_result.filter((row: any) => row.table !== null).map((row: any) => ({
             table: row.table,
             column: row.column,
@@ -106,47 +103,30 @@ export class MySQL {
 
 	async findOne(options: DatabaseFindOneOptions): Promise<any> {
 
-        const table_name = options.schema.table
-
-        const fields = options.fields?.split(',').filter(field => !field.includes('.'))
-
-        const where = options.where?.filter(where => !where.column.includes('.'))
-    
-		let command = `SELECT ${table_name}.${fields?.length ? fields.join(`, ${table_name}.`) : '*'} `
-        command += `FROM ${table_name} `
-
-        if(where?.length){
-            command += `WHERE ${where.map(w => `${w.column} ${w.operator} ${w.value ? `'`+ w.value +`'` : ''}`).join(' AND ')} `
-        }
-        
+        let command = this.find(options)
         command += ` LIMIT 1`
 
         const results = await this.performQuery(command)
-		return await this.addRelations(options, results[0])
+
+        if(!options.joins){
+            return await this.addRelations(options, results[0])
+        }else{
+            return results[0]
+        }
+		
 	}	
 
     /**
 	 * Find multiple records
 	 */
 
+    //TODO: support for joins
+
 	async findMany(options: DatabaseFindManyOptions): Promise<ListResponseObject> {
-
-        console.log(options)
-
-
-        const table_name = options.schema.table
 
         const total = await this.findTotalRecords(options)
 
-        const fields = options.fields?.split(',').filter(field => !field.includes('.'))
-
-		let command = `SELECT ${table_name}.${fields?.length ? fields.join(`, ${table_name}.`) : '*'} FROM ${table_name} `
-
-        const where = options.where?.filter(where => !where.column.includes('.'))
-		
-        if(where?.length){
-            command += `WHERE ${where.map(where => `${where.column} ${where.operator} ${where.value ? `'`+ where.value +`'` : ''}`).join(' AND ')} `
-        }
+        let command = this.find(options)
 
         const sort = options.sort.filter(sort => !sort.column.includes('.'))
 
@@ -181,6 +161,32 @@ export class MySQL {
 
 	}	
 
+    find(options: DatabaseFindOneOptions | DatabaseFindManyOptions): string {
+
+        const table_name = options.schema.table
+        const primary_key = options.schema.primary_key
+
+        const fields = options.joins ? options.fields?.split(',') : options.fields?.split(',').filter(field => !field.includes('.'))
+        const where = options.joins ? options.where : options.where?.filter(where => !where.column.includes('.'))
+    
+		let command = `SELECT ${fields?.length ? fields.join(`, ${table_name}.`) : '*'} `
+        command += `FROM ${table_name} `
+
+        if(options.joins && options.relations?.length){
+            for(const relation of options.relations){
+                const schema_relation = options.schema.relations.find(r => r.table === relation)
+                command += `LEFT JOIN ${schema_relation.table} ON ${table_name}.${primary_key} = ${schema_relation.table}.${schema_relation.column} `
+            }
+        }
+
+        if(where?.length){
+            command += `WHERE ${where.map(w => `${w.column} ${w.operator} ${w.value ? `'`+ w.value +`'` : ''}`).join(' AND ')} `
+        }
+
+        return command
+       
+    }
+
     /**
      * Get total records with where conditions
      */
@@ -201,24 +207,20 @@ export class MySQL {
         return results[0].total
     }
 
-
-
-	
     async addRelations(options: DatabaseFindByIdOptions | DatabaseFindOneOptions | DatabaseFindManyOptions, result: any): Promise<any> {
 
         if(!result) return {}
 
-		if(options.relations?.split(',').length){
+		if(options.relations?.length){
 
             const primary_key_id = result[options.schema.columns.find(column => column.primary_key).field]
 
-			for(const relation of options.relations.split(',')){
+			for(const relation of options.relations){
 				const schema_relation = options.schema.relations.find(r => r.table === relation).schema
                 const relation_table = options.schema.relations.find(r => r.table === relation)
 				const fields = options.fields?.split(',').filter(field => field.includes(schema_relation.table+'.'))
                 
                 if(fields.length){
-                    // Remove table name from fields
                     fields.forEach((field, index) => {
                         fields[index] = field.replace(`${schema_relation.table}.`, '')
                     })
@@ -270,8 +272,6 @@ export class MySQL {
                     offset: 0
                 })
 
-                console.log(relation_result)
-				
                 result[relation] = relation_result.data
 			}
 		}

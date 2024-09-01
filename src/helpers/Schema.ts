@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { context, Logger } from "./Logger";
+import { Logger } from "./Logger";
 import { DatabaseSchema, DatabaseType, WhereOperator } from "../types/database.types";
 import { ConfigService } from "@nestjs/config";
 import { MySQL } from "../databases/mysql.database";
-import { ValidateResponse } from "../types/schema.types";
+import { ValidateFieldsResponse, validateRelationsResponse, ValidateResponse, validateWhereResponse } from "../types/schema.types";
 import { NON_FIELD_PARAMS } from "../app.constants";
 
 @Injectable()
@@ -12,9 +12,7 @@ export class Schema {
 		private readonly logger: Logger,
         private readonly configService: ConfigService,
         private readonly mysql: MySQL
-	) {
-		this.logger.setContext(context)
-	}
+	) {}
 
     /**
 	 * Get Table Schema
@@ -32,15 +30,6 @@ export class Schema {
 			this.logger.error(`[Query][GetSchema] ${e.message}`)
 		}
 	}
-
-    /**
-     * Create entity schema from database schema
-     * @param schema
-     */
-
-    getTableName(schema: DatabaseSchema): string {
-        return schema.table
-    }
 
     /**
 	 * The primary key's name of the table
@@ -100,25 +89,31 @@ export class Schema {
         }
     }
     
-    validateFields(schema: DatabaseSchema, fields: string): ValidateResponse {
-
-        const table_name = this.getTableName(schema)
+    validateFields(schema: DatabaseSchema, fields: string): ValidateFieldsResponse {
 
         try{
-            const array = fields.split(',').filter(field => !field.includes('.'))
+            const params = fields.split(',').filter(field => !field.includes('.'))
+            const params_relations = fields.split(',').filter(field => field.includes('.'))
 
-            for(let field of array){
+            for(let field of params){
                 if(!schema.columns.find((col) => col.field === field)){
                     return {
                         valid: false,
-                        message: `Field ${field} not found in table schema for ${table_name}`
+                        message: `Field ${field} not found in table schema for ${schema.table}`
                     }
                 }
+            }
+
+            const relations = []
+
+            for(const relation of params_relations){
+                relations.push(relation.split('.')[0])  
             }
         
             return {
                 valid: true,
-                params: array
+                params,
+                relations
             }
         }catch(e){
             return {
@@ -133,18 +128,14 @@ export class Schema {
      * Validate relations by ensuring that the relation exists in the schema
      */
 
-    async validateRelations(schema: DatabaseSchema, relations: string): Promise<ValidateResponse> {
-
-        const table_name = this.getTableName(schema)
-
+    async validateRelations(schema: DatabaseSchema, relations: string[]): Promise<validateRelationsResponse> {
+        
        try{
-            const array = relations.split(',')
-
-            for(let relation of array){
+            for(let relation of relations){
                 if(!schema.relations.find((col) => col.table === relation)){
                     return {
                         valid: false,
-                        message: `Relation ${relation} not found in table schema for ${table_name} `
+                        message: `Relation ${relation} not found in table schema for ${schema.table} `
                     }
                 }
                 schema.relations.find((col) => col.table === relation).schema = await this.getSchema(relation)
@@ -152,7 +143,6 @@ export class Schema {
         
             return {
                 valid: true,
-                params: array,
                 schema: schema
             }
         }catch(e){
@@ -170,7 +160,7 @@ export class Schema {
      * Example: ?id[equals]=1&name=John&age[gte]=21
      */
 
-    validateWhereParams(schema: DatabaseSchema, params: any): ValidateResponse {
+    validateWhereParams(schema: DatabaseSchema, params: any): validateWhereResponse {
 
         const where = []
 
@@ -230,7 +220,7 @@ export class Schema {
      * Example: ?sort=name.asc,id.desc,content.title.asc
      */
     
-    validateOrder(schema: DatabaseSchema, sort: string): {valid: boolean, message?: string} {
+    validateOrder(schema: DatabaseSchema, sort: string): ValidateResponse {
 
         const array = sort.split(',').filter(sort => !sort.includes('.'))
 

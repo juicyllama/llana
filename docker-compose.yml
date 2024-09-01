@@ -1,4 +1,3 @@
-version: "3.9"
 services:
     llana-mysql:
         image: mysql:8.0

@@ -4,7 +4,6 @@ export interface Restriction {
     type: RestrictionType,
     location: RestrictionLocation,
     name: string,
-    hosts?: string[],
     routes?: {
         include?: string[],
         exclude?: string[],

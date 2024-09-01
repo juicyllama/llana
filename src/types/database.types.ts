@@ -128,16 +128,17 @@ export interface DatabaseFindOneOptions extends DatabaeseFindOptions {
 }
 
 export interface DatabaseFindManyOptions extends DatabaeseFindOptions {
-    where?: DatabaseWhere[],
-    limit?: number,
-    offset?: number,
+    where?: DatabaseWhere[]
+    limit?: number
+    offset?: number
     sort?: SortCondition[]
 }
 
 export interface DatabaeseFindOptions {
     schema: DatabaseSchema,
     fields?: string,
-    relations?: string,
+    relations?: string[],
+    joins?: boolean // Do join at database level, default false
 }
 
 export interface DatabaseFindTotalRecords {

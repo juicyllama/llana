@@ -1,6 +1,6 @@
 import { Injectable, Req } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { context, Logger } from "./Logger";
+import { Logger } from "./Logger";
 import { Restriction, RestrictionLocation, RestrictionType } from "src/types/restrictions.types";
 import { AuthAPIKey } from "src/types/auth.types";
 import { Query } from "./Query";
@@ -14,9 +14,7 @@ export class Authentication {
 		private readonly logger: Logger,
         private readonly query: Query,
         private readonly schema: Schema,
-	) {
-		this.logger.setContext(context)
-	}
+	) {}
 
     /**
      * Create entity schema from database schema
@@ -148,6 +146,7 @@ export class Authentication {
                     const api_key_config = this.configService.get<AuthAPIKey>('auth.api_key')
                             
                     if(!api_key_config || !api_key_config.table){
+                        this.logger.error(`[Authentication][auth] System configuration error: API Key lookup table not found`)
                         auth_passed = {
                             valid: false,
                             message: 'System configuration error: API Key lookup table not found'
@@ -156,6 +155,7 @@ export class Authentication {
                     } 
                     
                     if(!api_key_config.column){
+                        this.logger.error(`[Authentication][auth] System configuration error: API Key lookup table not found`)
                         auth_passed = {
                             valid: false,
                             message: 'System configuration error: API Key lookup column not found'
@@ -163,19 +163,57 @@ export class Authentication {
                         continue
                     }
 
-                    const schema = await this.schema.getSchema(api_key_config.table)
+                    let schema = await this.schema.getSchema(api_key_config.table)
+
+                     const relations = api_key_config.column.includes('.') ? [api_key_config.column.split('.')[0]] : []
+
+                    if (relations.length > 0) {
+                        const validateRelations = await this.schema.validateRelations(schema, relations)
+                        if (!validateRelations.valid) {
+                            this.logger.error(validateRelations.message)
+                            return validateRelations
+                        }
+
+                        schema = validateRelations.schema
+                    }
+
                     const result = await this.query.findOne({
                         schema,
+                        relations,
+                        fields: [api_key_config.identity_column ?? api_key_config.column ].join(','),
                         where: [{
                             column: api_key_config.column,
                             operator: WhereOperator.equals,
                             value: req_api_key
-                        }]
-
+                        }],
+                        joins: true
                     })
 
+                    let column
+
+                    if(api_key_config.column){
+                        if(api_key_config.column.includes('.')){
+                            column = api_key_config.column.split('.')[1]
+                        }else{
+                            column = api_key_config.column
+                        }
+                    }
+
+                    let identity_column
+
+                    if(api_key_config.identity_column){
+                        if(api_key_config.identity_column.includes('.')){
+                            identity_column = api_key_config.identity_column.split('.')[1]
+                        }else{
+                            identity_column = api_key_config.identity_column
+                        }
+                    }
+
+                    const match_column = identity_column ?? column
+
                     //key does not match - return unauthorized immediately
-                    if(!result || !result[api_key_config.column] || result[api_key_config.column] !== req_api_key){
+                    if(!result || !result[match_column] || result[match_column] !== req_api_key){
+                        this.logger.debug(`[Authentication][auth] API key not found`, {key: req_api_key, match_column, result})
                         return { valid: false, message: 'Unathorized' }
                     }
 

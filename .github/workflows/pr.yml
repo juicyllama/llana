@@ -1,0 +1,52 @@
+#
+# GitHub Actions workflow.
+#
+# Perfoms the following actions on a pull request:
+# * Checkout the code
+# * Install Node.js
+# * Prepare the environment
+# * Install dependencies
+# * Lint the code
+# * Run the tests
+# * Confirm the build runs
+#
+
+name: 'PR Checks: Llana'
+
+on:
+    pull_request:
+        branches:
+            - main
+    workflow_dispatch:
+    workflow_call:
+
+jobs:
+    pr_checks:
+        name: 'Pull Request Package: Llana'
+        runs-on: ubuntu-latest
+        steps:
+
+            -   name: 'Checkout'
+                uses: actions/checkout@v4
+                with:
+                    token: ${{ secrets.GH_CI_CD_RELEASE }}
+
+            -   name: Install Node.js
+                uses: actions/setup-node@v4
+                with:
+                    node-version: 18.18.2
+
+            -   name: Prepare
+                run: echo -e "shamefully-hoist=true\\n@fortawesome:registry=https://npm.fontawesome.com/\n//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_AUTH_TOKEN }}" > .npmrc
+
+            -   name: Install dependencies
+                run: npm install
+
+            -   name: Lint
+                run: npm run lint
+
+            -   name: Build Docker Image
+                run: npm run start:docker
+
+            -   name: Test
+                run: npm run test
