@@ -27,8 +27,6 @@ We are working to support all major databases, if you would like to contribute t
 
 - [ ] Authentication
 
-      - [ ] Auth testing files (hosts, apikey)
-
       - [ ] Role based default permissions, e.g. 
 
       ```
@@ -73,13 +71,18 @@ We are working to support all major databases, if you would like to contribute t
 
 - [ ] setup auth login endpoint
 
+- [ ] get endpoints, support deeper tables (e.g. content_keywords) with format, content/1/keywords 
+
 - [ ] finish endpoint support for mysql 
+
+note: on create/update/upsert, do type checking on data, numbers, enums matching etc
+note: delete options (SOFT/HARD). if soft specify name of delete column in table.
 
 - [ ] add full testing
 
 - [ ] Move these docs to juicyllama.com/llana, landing page + docs
 
-- [ ] Add redis support for faster performance (e.g. schema caching)
+- [ ] Add redis support for faster performance (e.g. schema caching, user_identity)
 
 - [ ] containerize and publish to docker
 
@@ -87,7 +90,11 @@ We are working to support all major databases, if you would like to contribute t
 
 - [ ] move remaining items to github issues
 
+- [ ] add column exclusions (global and by table, e.g. deleted_at, password)
+
 - [ ] Adding more database integrations (postgres, etc)
+
+- [ ] Interface for managing configuration
 
 - [ ] Scope Llana cloud option for non-technical users
 
@@ -119,6 +126,14 @@ Replace the database connection string `DATABASE_URI` in the `.env` file.
 
 ### Authentication 
 
+We currently support two types of authentication:
+
+#### API KEY
+
+By defualt, this expects a table named `users_api_keys` with the field `api_key`, you can override these settings in in the `src/config/auth.config.ts` file.
+
+#### JWT Token 
+
 We provide a special extra endpoint, the only one not generated based on your database schema. 
 
 * `/auth/login`
@@ -127,17 +142,26 @@ This endpoint will take the users login credentials and return back a JWT token,
 
 By defualt, this expects a table named `users` with the fields `email` and `password`, you can override these settings in in the `src/config/auth.config.ts` file.
 
-### Restrictions
+#### Routes
 
-Out of the box we provide an two example restrictions in the `src/config/restrictions.config.ts` which requires users to either authenticate (via the `/auth/login` endpoint) and pass the JWT token to all other endpoints or by providing an API Key. 
+By default any authentications required will apply to all endpoints, you can add exclusions to the config. There is an option to add inclusions for more granular inclusion/exclusion support.
 
-By default the API Key expect a table named `users` with the field `api_key`, you can override these settings in in the `src/config/auth.config.ts` file.
-
-You can update `src/config/restrictions.config.ts` to enforce different types of restrictions on data access.
-
-By default restrictions will apply to all endpoints, you can add exclusions to the config. There is an option to add inclusions for more granular inclusion/exclusion support.
-
+This allows you to open and close specific endpoints to the public.
 </div>
+
+### Roles
+
+User roles are an important part of granting the correct permissions to perform relevent actions on the API endpoints.
+
+By default, everything is locked down and no actions can be performed (`NONE`). You can set role `defualts` which will be the fallback if no specific table role permissions have been added.
+
+We provide a defualt configutation you can update/expand `src/config/roles.config.ts`
+
+You can grant roles the ability to `DELETE` which means they can also `READ` and `WRITE`, granting `WRITE` access also allows users to `READ` and finally `READ` access is just that. If you don't want to give a role any permissions then use `NONE`
+
+If the user has insufficent permmissions they will get a `403 Forbidden` response.
+
+*Note:* User roles work in combination with [Authentication](#authentication), if you don't have authentications setup, your API will be fully open and roles do not apply.   
 
 ## Building Requests
 

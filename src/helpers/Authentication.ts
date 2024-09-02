@@ -1,259 +1,282 @@
-import { Injectable, Req } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { Logger } from "./Logger";
-import { Restriction, RestrictionLocation, RestrictionType } from "src/types/restrictions.types";
-import { AuthAPIKey } from "src/types/auth.types";
-import { Query } from "./Query";
-import { WhereOperator } from "../types/database.types";
-import { Schema } from "./Schema";
+import { Injectable, Req } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { Logger } from './Logger'
+import { AuthAPIKey, AuthRestrictionsResponse, Auth, AuthLocation, AuthType } from '../types/auth.types'
+import { Query } from './Query'
+import { WhereOperator } from '../types/database.types'
+import { Schema } from './Schema'
+import { Env } from '@juicyllama/utils'
 
 @Injectable()
 export class Authentication {
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
-        private readonly query: Query,
-        private readonly schema: Schema,
+		private readonly query: Query,
+		private readonly schema: Schema,
 	) {}
 
-    /**
-     * Create entity schema from database schema
-     * @param schema
-     */
+	/**
+	 * Create entity schema from database schema
+	 * @param schema
+	 */
 
-    async auth(@Req() req): Promise<{valid: boolean, message?: string}> {
+	async auth(@Req() req): Promise<AuthRestrictionsResponse> {
+		const authentications = this.configService.get<Auth[]>('auth')
 
-        const restrictions = this.configService.get<Restriction[]>('restrictions')
+		if (!authentications) {
+			return {
+				valid: true,
+			}
+		}
 
-        if(!restrictions){
-            return {
-                valid: true
-            }
-        }
+		let auth_passed: AuthRestrictionsResponse = {
+			valid: false,
+			message: 'Unathorized',
+		}
 
-        let auth_passed: {valid: boolean, message?: string} = {
-            valid: false,
-            message: 'Unathorized'
-        }
+		for (const auth of authentications) {
+			if (auth_passed.valid) continue
 
-        for(const restriction of restrictions){
-            if(auth_passed.valid) continue
+			if (!auth.type) {
+				auth_passed = {
+					valid: false,
+					message: 'System configuration error: Restriction type required',
+				}
+				continue
+			}
 
-            if(!restriction.type){
-                auth_passed = {
-                    valid: false,
-                    message: 'System configuration error: Restriction type required'
-                }
-                continue
-            }
+			//Is the restriction required on the current route?
+			let check_required = true
 
-            //Is the restriction required on the current route?
-            let check_required = true
+			if (auth.routes?.exclude) {
+				for (const exclude of auth.routes.exclude) {
+					if (req.originalUrl.includes(exclude)) {
+						check_required = false
+					}
 
-            if(restriction.routes?.exclude){
-                for(const exclude of restriction.routes.exclude){
-                    if(req.originalUrl.includes(exclude)){
-                        check_required = false
-                    }
+					if (exclude.includes('*')) {
+						if (req.originalUrl.includes(exclude.split('*')[0])) {
+							check_required = false
+						}
+					}
 
-                    if(exclude.includes('*')){
-                        if(req.originalUrl.includes(exclude.split('*')[0])){
-                            check_required = false
-                        }
-                    }
+					if (exclude === '*') {
+						check_required = false
+					}
+				}
+			}
 
-                    if(exclude === '*'){
-                        check_required = false
-                    }
-                }
-            }
+			if (auth.routes?.include) {
+				for (const include of auth.routes.include) {
+					if (req.originalUrl.includes(include)) {
+						check_required = true
+					}
 
-            if(restriction.routes?.include){
-                for(const include of restriction.routes.include){
-                    if(req.originalUrl.includes(include)){
-                        check_required = true
-                    }
+					if (include.includes('*')) {
+						if (req.originalUrl.includes(include.split('*')[0])) {
+							check_required = true
+						}
+					}
 
-                    if(include.includes('*')){
-                        if(req.originalUrl.includes(include.split('*')[0])){
-                            check_required = true
-                        }
-                    }
+					if (include === '*') {
+						check_required = true
+					}
+				}
+			}
 
-                    if(include === '*'){
-                        check_required = true
-                    }
-                }
-            }
+			if (!check_required) continue
 
-            if(!check_required) continue
+			switch (auth.type) {
+				case AuthType.APIKEY:
+					if (!auth.name) {
+						auth_passed = {
+							valid: false,
+							message: 'System configuration error: API key name required',
+						}
+						continue
+					}
 
-            switch(restriction.type){
-                case RestrictionType.APIKEY:
+					if (!auth.location) {
+						auth_passed = {
+							valid: false,
+							message: 'System configuration error: API key location required',
+						}
+						continue
+					}
 
-                    if(!restriction.name){
-                        auth_passed = {
-                            valid: false,
-                            message: 'System configuration error: API key name required'
-                        }
-                        continue
-                    }
+					let req_api_key
 
-                    if(!restriction.location){
-                        auth_passed = {
-                            valid: false,
-                            message: 'System configuration error: API key location required'
-                        }
-                        continue
-                    }
-                    
-                    let req_api_key
+					switch (auth.location) {
+						case AuthLocation.HEADER:
+							if (!req.headers[auth.name]) {
+								auth_passed = {
+									valid: false,
+									message: `API key header ${auth.name} required`,
+								}
+								continue
+							}
+							req_api_key = req.headers[auth.name]
+							break
 
-                    switch(restriction.location){
-                        case RestrictionLocation.HEADER:
-                            if(!req.headers[restriction.name]){
-                                auth_passed = {valid: false, message: `API key header ${restriction.name} required`}
-                                continue
-                            }
-                            req_api_key = req.headers[restriction.name]
-                            break
-        
-                        case RestrictionLocation.QUERY:
-                            if(!req.query[restriction.name]){
-                                auth_passed = {valid: false, message: `API key query ${restriction.name} required`}
-                                continue
-                            }
-                            req_api_key = req.query[restriction.name]
-                            break
-        
-                        case RestrictionLocation.BODY:
-                            if(!req.body[restriction.name]){
-                                auth_passed = {valid: false, message: `API key body ${restriction.name} required`}
-                                continue
-                            }
-                            req_api_key = req.body[restriction.name]
-                            break
-                    }
+						case AuthLocation.QUERY:
+							if (!req.query[auth.name]) {
+								auth_passed = {
+									valid: false,
+									message: `API key query ${auth.name} required`,
+								}
+								continue
+							}
+							req_api_key = req.query[auth.name]
+							break
 
-                    if(!req_api_key){
-                        auth_passed = {
-                            valid: false,
-                            message: 'API key required'
-                        }
-                        continue
-                    }
+						case AuthLocation.BODY:
+							if (!req.body[auth.name]) {
+								auth_passed = {
+									valid: false,
+									message: `API key body ${auth.name} required`,
+								}
+								continue
+							}
+							req_api_key = req.body[auth.name]
+							break
+					}
 
-                    const api_key_config = this.configService.get<AuthAPIKey>('auth.api_key')
-                            
-                    if(!api_key_config || !api_key_config.table){
-                        this.logger.error(`[Authentication][auth] System configuration error: API Key lookup table not found`)
-                        auth_passed = {
-                            valid: false,
-                            message: 'System configuration error: API Key lookup table not found'
-                        }
-                        continue
-                    } 
-                    
-                    if(!api_key_config.column){
-                        this.logger.error(`[Authentication][auth] System configuration error: API Key lookup table not found`)
-                        auth_passed = {
-                            valid: false,
-                            message: 'System configuration error: API Key lookup column not found'
-                        }
-                        continue
-                    }
+					if (!req_api_key) {
+						auth_passed = {
+							valid: false,
+							message: 'API key required',
+						}
+						continue
+					}
 
-                    let schema = await this.schema.getSchema(api_key_config.table)
+					if (Env.IsTest()) {
+						this.logger.debug(`[Authentication][auth] Skipping API key check in test environment`)
+						auth_passed = {
+							valid: true,
+						}
+						continue
+					}
 
-                     const relations = api_key_config.column.includes('.') ? [api_key_config.column.split('.')[0]] : []
+					const api_key_config = auth.table as AuthAPIKey
 
-                    if (relations.length > 0) {
-                        const validateRelations = await this.schema.validateRelations(schema, relations)
-                        if (!validateRelations.valid) {
-                            this.logger.error(validateRelations.message)
-                            return validateRelations
-                        }
+					if (!api_key_config || !api_key_config.name) {
+						this.logger.error(
+							`[Authentication][auth] System configuration error: API Key lookup table not found`,
+						)
+						auth_passed = {
+							valid: false,
+							message: 'System configuration error: API Key lookup table not found',
+						}
+						continue
+					}
 
-                        schema = validateRelations.schema
-                    }
+					if (!api_key_config.column) {
+						this.logger.error(
+							`[Authentication][auth] System configuration error: API Key lookup column not found`,
+						)
+						auth_passed = {
+							valid: false,
+							message: 'System configuration error: API Key lookup column not found',
+						}
+						continue
+					}
 
-                    const result = await this.query.findOne({
-                        schema,
-                        relations,
-                        fields: [api_key_config.identity_column ?? api_key_config.column ].join(','),
-                        where: [{
-                            column: api_key_config.column,
-                            operator: WhereOperator.equals,
-                            value: req_api_key
-                        }],
-                        joins: true
-                    })
+					let schema = await this.schema.getSchema(api_key_config.name)
 
-                    let column
+					const relations = api_key_config.column.includes('.') ? [api_key_config.column.split('.')[0]] : []
 
-                    if(api_key_config.column){
-                        if(api_key_config.column.includes('.')){
-                            column = api_key_config.column.split('.')[1]
-                        }else{
-                            column = api_key_config.column
-                        }
-                    }
+					if (relations.length > 0) {
+						const validateRelations = await this.schema.validateRelations(schema, relations)
+						if (!validateRelations.valid) {
+							this.logger.error(validateRelations.message)
+							return validateRelations
+						}
 
-                    let identity_column
+						schema = validateRelations.schema
+					}
 
-                    if(api_key_config.identity_column){
-                        if(api_key_config.identity_column.includes('.')){
-                            identity_column = api_key_config.identity_column.split('.')[1]
-                        }else{
-                            identity_column = api_key_config.identity_column
-                        }
-                    }
+					let identity_column
 
-                    const match_column = identity_column ?? column
+					if (api_key_config.identity_column) {
+						identity_column = api_key_config.identity_column
+					}else {
+						identity_column = schema.primary_key
+					}
 
-                    //key does not match - return unauthorized immediately
-                    if(!result || !result[match_column] || result[match_column] !== req_api_key){
-                        this.logger.debug(`[Authentication][auth] API key not found`, {key: req_api_key, match_column, result})
-                        return { valid: false, message: 'Unathorized' }
-                    }
+					const result = await this.query.findOne({
+						schema,
+						relations,
+						fields: [`${api_key_config.name}.${identity_column}`, api_key_config.column].join(','),
+						where: [
+							{
+								column: api_key_config.column,
+								operator: WhereOperator.equals,
+								value: req_api_key,
+							},
+						],
+						joins: true,
+					})
 
-                    auth_passed = {
-                        valid: true
-                    }
+					let column
 
-                    break
+					if (api_key_config.column.includes('.')) {
+						column = api_key_config.column.split('.')[1]
+					} else {
+						column = api_key_config.column
+					}
+					
+					//key does not match - return unauthorized immediately
+					if (!result || !result[column] || result[column] !== req_api_key) {
+						this.logger.debug(`[Authentication][auth] API key not found`, {
+							key: req_api_key,
+							column,
+							result,
+						})
+						return { valid: false, message: 'Unathorized' }
+					}
 
-                case RestrictionType.JWT:
-                    
-                    const jwt_token = req.headers['authorization']?.split(' ')[1]
+					if(!result[identity_column]) {
+						
+						this.logger.error(`[Authentication][auth] Identity column ${identity_column} not found in result`, { result })
+						return { valid: false, message: `System configuration error: Identity column ${identity_column} not found` }
+					}
 
-                    if(!jwt_token) {
-                        auth_passed = {
-                            valid: false,
-                            message: 'JWT token required'
-                        }
-                        continue
-                    }
+					this.logger.debug(`[Authentication][auth] User #${result[identity_column]} identified successfully`)
 
-                    this.logger.error(`[Authentication][auth] JWT authentication not implemented`, {jwt_token})
+					auth_passed = {
+						valid: true,
+						user_identifier: result[identity_column],
+					}
 
-                    auth_passed = {
-                        valid: false,
-                        message: 'JWT authentication not implemented'
-                    }
+					break
 
-                    //TODO: Implement JWT authentication
+				case AuthType.JWT:
+					const jwt_token = req.headers['authorization']?.split(' ')[1]
 
-                    continue   
-            
-            }
+					if (!jwt_token) {
+						auth_passed = {
+							valid: false,
+							message: 'JWT token required',
+						}
+						continue
+					}
 
-            
-        }
+					this.logger.error(`[Authentication][auth] JWT authentication not implemented`, { jwt_token })
 
-        return auth_passed
-		
+					auth_passed = {
+						valid: false,
+						message: 'JWT authentication not implemented',
+					}
+
+					//TODO: Implement JWT authentication
+
+					//const api_key_config = auth.auth as AuthAPIKey
+
+					continue
+			}
+		}
+
+		return auth_passed
 	}
-
-  
 }

@@ -22,11 +22,13 @@
 		"prebuild": "rimraf dist",
 		"build": "nest build",
 		"format": "prettier --write \"**/*.ts\"",
+		"lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
 		"start": "nest start",
 		"start:dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
 		"start:docker": "docker compose --project-name llana up --build --detach",
-		"test": "jest"
+		"start:ngrok": "~/ngrok http http://localhost:3030/ --subdomain=llana",
+		"test": "jest --runInBand --detectOpenHandles --forceExit"
 	},
 	"dependencies": {
 		"@juicyllama/utils": "^0.10.4",
@@ -36,6 +38,7 @@
 		"@nestjs/platform-express": "^10.3.2",
 		"@nestjs/serve-static": "^4.0.2",
 		"@nestjs/swagger": "^7.4.0",
+		"axios": "^1.7.7",
 		"class-validator": "^0.14.1",
 		"jwt-simple": "^0.5.6",
 		"lodash": "^4.17.21",
@@ -84,5 +87,16 @@
 		],
 		"coverageDirectory": "../coverage",
 		"testEnvironment": "node"
+	},
+	"prettier": {
+		"singleQuote": true,
+		"trailingComma": "all",
+		"tabWidth": 4,
+		"useTabs": true,
+		"semi": false,
+		"printWidth": 120,
+		"arrowParens": "avoid",
+		"bracketSpacing": true,
+		"bracketSameLine": true
 	}
 }

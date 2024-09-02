@@ -1,41 +1,40 @@
-import { ApiProperty } from "@nestjs/swagger"
+import { ApiProperty } from '@nestjs/swagger'
 
 export enum Method {
-	GET = "GET",
-	POST = "POST",
-	PUT = "PUT",
-	PATCH = "PATCH",
-	DELETE = "DELETE"
+	GET = 'GET',
+	POST = 'POST',
+	PUT = 'PUT',
+	PATCH = 'PATCH',
+	DELETE = 'DELETE',
 }
 
 export type GetResponseObject = any
 
 export type GetQueryObject = {
-	limit?: number,
-	offset?: number,
-	fields?: string,
-	relations?: string,
+	limit?: number
+	offset?: number
+	fields?: string
+	relations?: string
 	page?: string
 	[key: string]: any
 }
 
 export type ListResponseObject = {
-	offset: number,
-	limit: number,
-	total: number,
+	offset: number
+	limit: number
+	total: number
 	pagination: {
 		page: {
-			current: string,
-			prev?: string,
-			next?: string,
-			first?: string,
+			current: string
+			prev?: string
+			next?: string
+			first?: string
 			last?: string
-		},
+		}
 		total: number
-	},
+	}
 	data: GetResponseObject[]
 }
-
 
 export class BulkUploadResponse {
 	@ApiProperty({

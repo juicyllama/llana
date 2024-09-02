@@ -1,8 +1,8 @@
 import { Env } from '@juicyllama/utils'
 import { Injectable, NestMiddleware } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config';
-import { Request, Response, NextFunction } from 'express';
-import { Logger } from '../helpers/Logger';
+import { ConfigService } from '@nestjs/config'
+import { Request, Response, NextFunction } from 'express'
+import { Logger } from '../helpers/Logger'
 
 @Injectable()
 export class HostCheckMiddleware implements NestMiddleware {
@@ -12,11 +12,16 @@ export class HostCheckMiddleware implements NestMiddleware {
 	) {}
 
 	use(req: Request, res: Response, next: NextFunction) {
-
 		const allowed_hosts = this.configService.get<string[]>('hosts') || []
 
-		if(allowed_hosts.length === 0){
+		if (allowed_hosts.length === 0) {
 			return next()
+		}
+
+		if (Env.IsTest()) {
+			if (allowed_hosts.includes('localhost')) {
+				return next()
+			}
 		}
 
 		for (const host of allowed_hosts) {
@@ -26,12 +31,18 @@ export class HostCheckMiddleware implements NestMiddleware {
 		}
 
 		if (Env.IsDev()) {
-			this.logger.warn(`Host not in approved list, skipping forbidden response as in dev mode`, { host: req.get('host'), allowed_hosts })
+			this.logger.warn(`Host not in approved list, skipping forbidden response as in dev mode`, {
+				host: req.get('host'),
+				allowed_hosts,
+			})
 			return next()
-		}else{
+		} else {
+			this.logger.debug(`Host not in approved list, returning forbidden response`, {
+				host: req.get('host'),
+				allowed_hosts,
+			})
 			res.status(403).send('Forbidden')
-			return next()
+			return
 		}
-		 
 	}
 }
