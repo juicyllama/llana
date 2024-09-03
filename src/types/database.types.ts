@@ -18,6 +18,7 @@ export enum WhereOperator {
 	not_in = 'NOT IN',
 	null = 'IS NULL',
 	not_null = 'IS NOT NULL',
+	search = 'SEARCH',
 }
 
 export enum DatabaseColumnType {
@@ -104,7 +105,8 @@ export interface DatabaseSchemaColumn {
 export interface DatabaseSchemaRelation {
 	table: string
 	column: string
-	key: string
+	org_table: string
+	org_column: string
 	schema?: DatabaseSchema
 }
 
@@ -121,7 +123,7 @@ export interface DatabaseFindManyOptions extends DatabaeseFindOptions {
 
 export interface DatabaeseFindOptions {
 	schema: DatabaseSchema
-	fields?: string
+	fields?: string[]
 	relations?: string[]
 	joins?: boolean // Do join at database level, default false
 }

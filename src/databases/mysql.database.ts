@@ -9,6 +9,7 @@ import {
 	DatabaseFindTotalRecords,
 	DatabaseSchema,
 	DatabaseSchemaColumn,
+	DatabaseSchemaRelation,
 	DatabaseWhere,
 	WhereOperator,
 } from '../types/database.types'
@@ -38,6 +39,7 @@ export class MySQL {
 		const connection = await this.createConnection()
 		try {
 			const [results] = await connection.query<any[]>(query)
+			connection.end()
 			return results
 		} catch (e) {
 			this.logger.error('Error executing mysql database query')
@@ -47,6 +49,7 @@ export class MySQL {
 					message: e.message,
 				},
 			})
+			connection.end()
 			throw new Error(e)
 		}
 	}
@@ -74,15 +77,19 @@ export class MySQL {
 			}
 		})
 
-		const relations_query = `SELECT TABLE_NAME as 'table',COLUMN_NAME as 'column',CONSTRAINT_NAME as 'key' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = '${table_name}'`
+		const relations_query = `SELECT TABLE_NAME as 'table', COLUMN_NAME as 'column', REFERENCED_TABLE_NAME as 'org_table', REFERENCED_COLUMN_NAME as 'org_column' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = '${table_name}';`
 		const relations_result = await this.performQuery(relations_query)
 		const relations = relations_result
-			.filter((row: any) => row.table !== null)
-			.map((row: any) => ({
-				table: row.table,
-				column: row.column,
-				key: row.key,
-			}))
+			.filter((row: DatabaseSchemaRelation) => row.table !== null)
+			.map((row: DatabaseSchemaRelation) => row)
+
+		const relation_back_query = `SELECT REFERENCED_TABLE_NAME as 'table', REFERENCED_COLUMN_NAME as 'column', TABLE_NAME as 'org_table', COLUMN_NAME as 'org_column' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = '${table_name}' AND REFERENCED_TABLE_NAME IS NOT NULL;`
+		const relation_back_result = await this.performQuery(relation_back_query)
+		const relation_back = relation_back_result
+			.filter((row: DatabaseSchemaRelation) => row.table !== null)
+			.map((row: DatabaseSchemaRelation) => row)
+
+		relations.push(...relation_back)
 
 		return {
 			table: table_name,
@@ -90,22 +97,6 @@ export class MySQL {
 			columns,
 			relations,
 		}
-	}
-
-	/**
-	 * Find record by primary key id
-	 */
-
-	async findById(options: DatabaseFindOneOptions): Promise<any> {
-		const fields = options.fields?.split(',').filter(field => !field.includes('.'))
-
-		let command = `SELECT ${options.schema.table}.${fields?.length ? fields.join(`, ${options.schema.table}.`) : '*'} FROM ${options.schema.table} `
-		command += `WHERE ${options.where.map(w => `${w.column} ${w.operator} ${w.value ? `'` + w.value + `'` : ''}`).join(' AND ')} LIMIT 1`
-
-		this.logger.debug(`[Query][Find][One][${options.schema.table}] ` + command)
-
-		const results = await this.performQuery(command)
-		return await this.addRelations(options, results[0])
 	}
 
 	/**
@@ -131,17 +122,26 @@ export class MySQL {
 	 * Find multiple records
 	 */
 
-	//TODO: support for joins
-
 	async findMany(options: DatabaseFindManyOptions): Promise<ListResponseObject> {
 		const total = await this.findTotalRecords(options)
 
 		let command = this.find(options)
 
-		const sort = options.sort.filter(sort => !sort.column.includes('.'))
+		let sort: SortCondition[] = []
+		if (options.sort) {
+			sort = options.sort?.filter(sort => !sort.column.includes('.'))
+		}
 
 		if (sort?.length) {
 			command += `ORDER BY ${sort.map(sort => `${sort.column} ${sort.operator}`).join(', ')}`
+		}
+
+		if (!options.limit) {
+			options.limit = this.configService.get<number>('database.defaults.limit') ?? 20
+		}
+
+		if (!options.offset) {
+			options.offset = 0
 		}
 
 		command += ` LIMIT ${options.limit} OFFSET ${options.offset}`
@@ -174,11 +174,8 @@ export class MySQL {
 
 	find(options: DatabaseFindOneOptions | DatabaseFindManyOptions): string {
 		const table_name = options.schema.table
-		const primary_key = options.schema.primary_key
 
-		const fields = options.joins
-			? options.fields?.split(',')
-			: options.fields?.split(',').filter(field => !field.includes('.'))
+		const fields = options.joins ? options.fields : options.fields?.filter(field => !field.includes('.'))
 		const where = options.joins ? options.where : options.where?.filter(where => !where.column.includes('.'))
 
 		for (const f in fields) {
@@ -193,12 +190,12 @@ export class MySQL {
 		if (options.joins && options.relations?.length) {
 			for (const relation of options.relations) {
 				const schema_relation = options.schema.relations.find(r => r.table === relation)
-				command += `LEFT JOIN ${schema_relation.table} ON ${table_name}.${primary_key} = ${schema_relation.table}.${schema_relation.column} `
+				command += `LEFT JOIN ${schema_relation.table} ON ${schema_relation.org_table}.${schema_relation.org_column} = ${schema_relation.table}.${schema_relation.column} `
 			}
 		}
 
 		if (where?.length) {
-			command += `WHERE ${where.map(w => `${w.column} ${w.operator} ${w.value ? `'` + w.value + `'` : ''}`).join(' AND ')} `
+			command += `WHERE ${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.value ? `'` + (w.operator === WhereOperator.search ? '%' : '') + w.value + (w.operator === WhereOperator.search ? '%' : '') + `'` : ''}`).join(' AND ')} `
 		}
 
 		return command
@@ -216,7 +213,7 @@ export class MySQL {
 		const where = options.where?.filter(where => !where.column.includes('.'))
 
 		if (where?.length) {
-			command += `WHERE ${where.map(where => `${where.column} ${where.operator} ${where.value ? `'` + where.value + `'` : ''}`).join(' AND ')} `
+			command += `WHERE ${where.map(w => `${w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.value ? `'` + (w.operator === WhereOperator.search ? '%' : '') + w.value + (w.operator === WhereOperator.search ? '%' : '') + `'` : ''}`).join(' AND ')} `
 		}
 
 		const results = await this.performQuery(command)
@@ -227,12 +224,10 @@ export class MySQL {
 		if (!result) return {}
 
 		if (options.relations?.length) {
-			const primary_key_id = result[options.schema.columns.find(column => column.primary_key).field]
-
 			for (const relation of options.relations) {
 				const schema_relation = options.schema.relations.find(r => r.table === relation).schema
 				const relation_table = options.schema.relations.find(r => r.table === relation)
-				const fields = options.fields?.split(',').filter(field => field.includes(schema_relation.table + '.'))
+				const fields = options.fields?.filter(field => field.includes(schema_relation.table + '.'))
 
 				if (fields.length) {
 					fields.forEach((field, index) => {
@@ -250,13 +245,13 @@ export class MySQL {
 					{
 						column: relation_table.column,
 						operator: WhereOperator.equals,
-						value: primary_key_id,
+						value: result[relation_table.org_column],
 					},
 				]
 
 				if ('where' in options && options.where) {
 					where = where.concat(
-						options.where.filter(where => where.column.includes(schema_relation.table + '.')),
+						options.where?.filter(where => where.column.includes(schema_relation.table + '.')),
 					)
 
 					for (const w of where) {
@@ -266,14 +261,14 @@ export class MySQL {
 
 				let sort: SortCondition[] = []
 				if ('sort' in options && options.sort) {
-					sort = options.sort.filter(sort => sort.column.includes(schema_relation.table + '.'))
+					sort = options.sort?.filter(sort => sort.column.includes(schema_relation.table + '.'))
 					for (const s of sort) {
 						s.column = s.column.replace(`${schema_relation.table}.`, '')
 					}
 				}
 
 				this.logger.debug(`[Query][Find][Many][${options.schema.table}][Relation][${relation}]`, {
-					fields: fields.join(','),
+					fields,
 					where,
 					sort,
 					limit,
@@ -282,7 +277,7 @@ export class MySQL {
 
 				const relation_result = await this.findMany({
 					schema: schema_relation,
-					fields: fields.join(','),
+					fields,
 					where,
 					sort,
 					limit,

@@ -7,10 +7,6 @@ import { DatabaseFindManyOptions, DatabaseFindOneOptions } from './types/databas
 export class FindService {
 	constructor(private readonly query: Query) {}
 
-	async findById(options: DatabaseFindOneOptions): Promise<GetResponseObject> {
-		return await this.query.findById(options)
-	}
-
 	async findOne(options: DatabaseFindOneOptions): Promise<GetResponseObject> {
 		return await this.query.findOne(options)
 	}

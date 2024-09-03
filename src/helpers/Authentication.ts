@@ -215,7 +215,7 @@ export class Authentication {
 					const result = await this.query.findOne({
 						schema,
 						relations,
-						fields: [`${api_key_config.name}.${identity_column}`, api_key_config.column].join(','),
+						fields: [`${api_key_config.name}.${identity_column}`, api_key_config.column],
 						where: [
 							{
 								column: api_key_config.column,

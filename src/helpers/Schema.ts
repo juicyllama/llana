@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { Logger } from './Logger'
-import { DatabaseSchema, DatabaseType, WhereOperator } from '../types/database.types'
+import { DatabaseSchema, DatabaseType, DatabaseWhere, WhereOperator } from '../types/database.types'
 import { ConfigService } from '@nestjs/config'
 import { MySQL } from '../databases/mysql.database'
 import {
@@ -60,7 +60,7 @@ export class Schema {
 			}
 		}
 
-		if (col.type.includes('int')) {
+		if (col.type.startsWith('int')) {
 			if (isNaN(parseInt(value))) {
 				return {
 					valid: false,
@@ -68,12 +68,12 @@ export class Schema {
 				}
 			}
 		} else if (
-			col.type.includes('varchar') ||
-			col.type.includes('text') ||
-			col.type.includes('char') ||
-			col.type.includes('enum')
+			col.type.startsWith('varchar') ||
+			col.type.startsWith('text') ||
+			col.type.startsWith('char') ||
+			col.type.startsWith('enum')
 		) {
-			if (typeof value !== 'string') {
+			if (typeof value != 'string') {
 				return {
 					valid: false,
 					message: `Invalid varchar ${value} for column ${col.field}`,
@@ -94,16 +94,23 @@ export class Schema {
 
 	validateFields(schema: DatabaseSchema, fields: string): ValidateFieldsResponse {
 		try {
-			const params = fields.split(',').filter(field => !field.includes('.'))
-			const params_relations = fields.split(',').filter(field => field.includes('.'))
+			const params = fields?.split(',')?.filter(field => !field.includes('.'))
+			const params_relations = fields?.split(',')?.filter(field => field.includes('.'))
+
+			const validatedFields = []
 
 			for (const field of params) {
+				if (field === '') {
+					continue
+				}
 				if (!schema.columns.find(col => col.field === field)) {
 					return {
 						valid: false,
 						message: `Field ${field} not found in table schema for ${schema.table}`,
 					}
 				}
+
+				validatedFields.push(field)
 			}
 
 			const relations = []
@@ -112,9 +119,15 @@ export class Schema {
 				relations.push(relation.split('.')[0])
 			}
 
+			// Add back relation fields
+			const relation_params = fields?.split(',')?.filter(field => field.includes('.'))
+			for (const relation of relation_params) {
+				validatedFields.push(relation)
+			}
+
 			return {
 				valid: true,
-				params,
+				params: validatedFields,
 				relations,
 			}
 		} catch (e) {
@@ -162,23 +175,42 @@ export class Schema {
 	 */
 
 	validateWhereParams(schema: DatabaseSchema, params: any): validateWhereResponse {
-		const where = []
+		const where: DatabaseWhere[] = []
 
 		for (const param in params) {
 			if (NON_FIELD_PARAMS.includes(param)) continue
 
-			const [column] = param.split('[').filter(part => part !== '')
-			let [operator] = param.split('[').filter(part => part !== '')
+			const column = param
 
-			if (!operator) {
-				operator = 'equals'
+			let operator: WhereOperator
+			let value: any
+
+			switch (typeof params[param]) {
+				case 'string':
+					operator = WhereOperator.equals
+					value = params[param]
+					break
+				case 'object':
+					const operators = Object.keys(params[param]) as WhereOperator[]
+					operator = operators[0]
+
+					if (!operator) {
+						operator = WhereOperator.equals
+					}
+					value = params[param][operator]
+					operator = WhereOperator[operator]
+					break
+
+				default:
+					return {
+						valid: false,
+						message: `Invalid where param ${param}`,
+					}
 			}
 
 			if (column.includes('.')) {
 				continue
 			}
-
-			const value = params[param]
 
 			if (!schema.columns.find(col => col.field === column)) {
 				return {
@@ -187,7 +219,7 @@ export class Schema {
 				}
 			}
 
-			if (!Object.values(WhereOperator).includes(WhereOperator[operator])) {
+			if (!Object.values(WhereOperator).includes(operator)) {
 				return {
 					valid: false,
 					message: `Operator ${operator} not found`,
@@ -202,7 +234,7 @@ export class Schema {
 
 			where.push({
 				column,
-				operator: WhereOperator[operator],
+				operator,
 				value,
 			})
 		}
@@ -222,7 +254,7 @@ export class Schema {
 	 */
 
 	validateOrder(schema: DatabaseSchema, sort: string): ValidateResponse {
-		const array = sort.split(',').filter(sort => !sort.includes('.'))
+		const array = sort?.split(',')?.filter(sort => !sort.includes('.'))
 
 		for (const item of array) {
 			const direction = item.lastIndexOf('.')

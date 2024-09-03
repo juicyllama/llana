@@ -121,7 +121,7 @@ export class Roles {
 
 		const role = await this.query.findOne({
 			schema: table_schema,
-			fields: config.location.column,
+			fields: [config.location.column],
 			where: [
 				{
 					column: user_id_column,

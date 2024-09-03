@@ -25,20 +25,14 @@ We are working to support all major databases, if you would like to contribute t
 
 ## TODO:
 
-- [ ] Authentication
-
-      - [ ] integrate JWT token support + /login endpoint
-
-      - [ ] Auth testing (user/pass, login)
-
-- [ ] setup auth login endpoint
-
 - [ ] finish endpoint support for mysql 
 
-note: on create/update/upsert, do type checking on data, numbers, enums matching etc
-note: delete options (SOFT/HARD). if soft specify name of delete column in table.
+TODO: expose "join=OBJECT(default) || DATABASE"
 
-- [ ] add full testing
+note: on create/update/upsert, do type checking on data, numbers, enums matching based on table schema
+note: delete options (SOFT/HARD). if soft specify name of delete column in table. default and by table config
+
+- [ ] add full testing (endpoints)
 
 - [ ] Move these docs to juicyllama.com/llana, landing page + docs
 
@@ -46,9 +40,13 @@ note: delete options (SOFT/HARD). if soft specify name of delete column in table
 
 - [ ] containerize and publish to docker
 
-- [ ] use on first external client project
-
 - [ ] move remaining items to github issues
+
+        - [ ] TODO: use on first external client project (no needed in github - Ampli)
+
+- [ ] bulk endpoints (create, update, upsert, delete)
+
+- [ ] add UUID or something to track each request and include in any response / error for better logging / debugging
 
 - [ ] add column exclusions (global and by table, e.g. deleted_at, password)
 
@@ -70,6 +68,10 @@ note: delete options (SOFT/HARD). if soft specify name of delete column in table
     - [ ] Pen testing
     - [ ] Failed auth lockout
     - [ ] Request throttling
+
+- [ ] Charting GET `*/chart` endpoint
+
+- [ ] Fix end-2-end test "socket hangup issue"
 
 #### Marketing
 
@@ -128,7 +130,9 @@ body: {
 Example Response: 
 
 ```
-
+{
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInVzZXJuYW1lIjoidGVzdEB0ZXN0LmNvbSIsImlhdCI6MTcyNTM1NDI4OCwiZXhwIjoxNzI1NDQwNjg4fQ.Wb_Y6y1Mkb0xrhUX57s2XlKtqeZ5L68wNCVMWT8wFJw"
+}
 ```
 
 #### Routes
@@ -191,7 +195,7 @@ Pass page into requests to load a specific page result, in the `/list` response 
 
 format is column[operator]=value with operator being from the enum WhereOperator 
       
-Example: `?city=Barcelona`
+Example: `?city=Barcelona` or `?city[equals]=Barcelona`
 
 ### Sorting
 
@@ -199,27 +203,26 @@ format is sort={column}.{direction},column.{direction}
 
 `?sort=contactName.asc,custId.desc`
 
+### Joining
+
+By default joins are handled at a code level, building objects in your responses. However if you would prefer to handle joins at a database level, better performance but slightly more problematic to "wire up". Pass `&join=DATABASSE` to your requests.
+
 ## Endpoints
 
 For every table in your database, you will automatically have access to the following endpoints:
 
 - TODO: Create (POST)
   - TODO: Single `*/`
-  - TODO: Bulk `*/bulk`
 - Read (GET)
   - Find By Id `*/:id`
   - FindOne `*/`
   - Multiple `*/list`
-  - TODO: Charting `*/chart`
 - TODO: Update (PUT)
   - TODO: Single `*/:id`
-  - TODO: Bulk `*/bulk`
 - TODO: Upsert (PATCH)
   - TODO: Single `*/:id`
-  - TODO: Bulk `*/bulk`
 - TODO: Delete (DELETE)
   - TODO: Single `*/:id`
-  - TODO: Bulk `*/bulk`
 
 
 ### Read One (By ID)
@@ -320,8 +323,9 @@ API key: `Ex@mp1eS$Cu7eAp!K3y`
 
 ## Database Support
 
-| Endpoint | ORACLE | MYSQL | MSSQL | POSTGRES | MONGODB | REDIS | SNOWFLAKE | ELASTICSEARCH | SQLITE | CASSANDRA | MARIADB |
+| ENDPOINT | ORACLE | MYSQL | MSSQL | POSTGRES | MONGODB | REDIS | SNOWFLAKE | ELASTICSEARCH | SQLITE | CASSANDRA | MARIADB |
 |---|-|-|-|-|-|-|-|-|-|-|-|
-|GET  */:id` |[ ]|[x]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|
-|POST  */` |[ ]|[x]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|
-|POST  */list` |[ ]|[x]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|[ ]|
+|GET `*/:id` ||✅||||||||||
+|GET `*/` ||✅||||||||||
+|GET `*/list` ||✅||||||||||
+|POST `/login` ||✅||||||||||

@@ -110,7 +110,7 @@ export class GetController {
 					return res.status(400).send(e.message)
 				}
 
-				const relation_fields = req.query.fields.split(',').filter(field => field.includes(relation))
+				const relation_fields = req.query.fields?.split(',')?.filter(field => field.includes(relation))
 				const relation_fields_no_prefix = relation_fields.map(field => field.replace(`${relation}.`, ''))
 
 				if (relation_fields_no_prefix.length > 0) {
@@ -148,8 +148,8 @@ export class GetController {
 					validateWhere.where = validateWhere.where.concat(relationshipValidateWhere.where)
 				}
 
-				const relationship_sort_fields = req.query.sort.split(',').filter(key => key.includes(`${relation}.`))
-				if (relationship_sort_fields.length > 0) {
+				const relationship_sort_fields = req.query.sort?.split(',')?.filter(key => key.includes(`${relation}.`))
+				if (relationship_sort_fields?.length > 0) {
 					const validateOrder = this.schema.validateOrder(
 						relation_schema,
 						relationship_sort_fields.join(', '),
@@ -172,12 +172,13 @@ export class GetController {
 		return res.status(200).send(
 			await this.service.findMany({
 				schema,
-				fields: req.query.fields,
+				fields: validateFields?.params ?? [],
 				relations,
 				where: validateWhere.where,
 				limit,
 				offset,
 				sort: this.sort.createSortArray(req.query.sort),
+				joins: !!(req.query.join === 'DATABASE'),
 			}),
 		)
 	}
@@ -260,9 +261,9 @@ export class GetController {
 		}
 
 		return res.status(200).send(
-			await this.service.findById({
+			await this.service.findOne({
 				schema,
-				fields: req.query.fields,
+				fields: validateFields?.params ?? [],
 				relations,
 				where,
 			}),
@@ -339,7 +340,7 @@ export class GetController {
 					return res.status(400).send(e.message)
 				}
 
-				const relation_fields = req.query.fields.split(',').filter(field => field.includes(relation))
+				const relation_fields = req.query.fields?.split(',')?.filter(field => field.includes(relation))
 				const relation_fields_no_prefix = relation_fields.map(field => field.replace(`${relation}.`, ''))
 
 				if (relation_fields_no_prefix.length > 0) {
@@ -382,7 +383,7 @@ export class GetController {
 		return res.status(200).send(
 			await this.service.findOne({
 				schema,
-				fields: req.query.fields,
+				fields: validateFields?.params ?? [],
 				relations,
 				where: validateWhere.where,
 			}),
