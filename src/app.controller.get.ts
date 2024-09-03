@@ -46,7 +46,7 @@ export class GetController {
 		try {
 			schema = await this.schema.getSchema(table_name)
 		} catch (e) {
-			return res.status(404).send('Endpoint not found')
+			return res.status(404).send(e.message)
 		}
 
 		const auth = await this.authentication.auth(req)
@@ -107,7 +107,7 @@ export class GetController {
 				try {
 					relation_schema = await this.schema.getSchema(relation)
 				} catch (e) {
-					return res.status(400).send(`No Schema Found For Relation ${relation}`)
+					return res.status(400).send(e.message)
 				}
 
 				const relation_fields = req.query.fields.split(',').filter(field => field.includes(relation))
@@ -191,7 +191,7 @@ export class GetController {
 		try {
 			schema = await this.schema.getSchema(table_name)
 		} catch (e) {
-			return res.status(404).send('Endpoint not found')
+			return res.status(404).send(e.message)
 		}
 
 		const auth = await this.authentication.auth(req)
@@ -278,7 +278,7 @@ export class GetController {
 		try {
 			schema = await this.schema.getSchema(table_name)
 		} catch (e) {
-			return res.status(404).send('Endpoint not found')
+			return res.status(404).send(e.message)
 		}
 
 		const auth = await this.authentication.auth(req)
@@ -336,7 +336,7 @@ export class GetController {
 				try {
 					relation_schema = await this.schema.getSchema(relation)
 				} catch (e) {
-					return res.status(400).send(`No Schema Found For Relation ${relation}`)
+					return res.status(400).send(e.message)
 				}
 
 				const relation_fields = req.query.fields.split(',').filter(field => field.includes(relation))

@@ -35,7 +35,7 @@ export class Schema {
 			}
 		} catch (e) {
 			this.logger.error(`[Query][GetSchema] ${e.message}`)
-			throw new Error(e)
+			throw new Error(`Table schema not found for table ${table_name}`)
 		}
 	}
 
@@ -118,6 +118,7 @@ export class Schema {
 				relations,
 			}
 		} catch (e) {
+			this.logger.debug(`[validateFields] ${e.message}`)
 			return {
 				valid: false,
 				message: `Error parsing fields ${fields}`,
@@ -146,6 +147,7 @@ export class Schema {
 				schema: schema,
 			}
 		} catch (e) {
+			this.logger.debug(`[validateRelations] ${e.message}`)
 			return {
 				valid: false,
 				message: `Error parsing relations ${relations}`,

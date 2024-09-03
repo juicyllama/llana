@@ -73,7 +73,7 @@ export class Roles {
 				} catch (e) {
 					return <AuthTablePermissionFailResponse>{
 						valid: false,
-						message: `No Schema Found For Table ${table}`,
+						message: e.message,
 					}
 				}
 
@@ -114,7 +114,7 @@ export class Roles {
 		try {
 			table_schema = await this.schema.getSchema(config.location.table)
 		} catch (e) {
-			throw new Error(`No Schema Found For Table ${config.location.table}`)
+			throw new Error(e)
 		}
 
 		const user_id_column = config.location?.identifier_column ?? table_schema.primary_key
