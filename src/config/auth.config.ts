@@ -4,21 +4,22 @@ import { WhereOperator } from '../types/database.types'
 
 export default registerAs(
 	'auth',
-	() => <Auth[]>[
+	() =>
+		<Auth[]>[
 			{
 				type: AuthType.APIKEY,
 				location: AuthLocation.HEADER,
 				name: 'x-api-key',
 				table: <AuthAPIKey>{
-					name: 'users', //should start at your main users indentity table
-					column: 'users_api_keys.api_key',
+					name: 'User', //should start at your main users indentity table
+					column: 'UserApiKey.apiKey',
 					where: [
 						{
-							column: 'deleted_at',
+							column: 'deletedAt',
 							operator: WhereOperator.null,
 						},
 					],
-				}
+				},
 			},
 			{
 				type: AuthType.JWT,
@@ -26,19 +27,18 @@ export default registerAs(
 					exclude: ['auth/login'],
 				},
 				table: <AuthJWT>{
-					name: 'users', //should start at your main users indentity table
-					columns: { email: 'email', password: 'password' },
+					name: 'User', //should start at your main users indentity table
+					columns: { username: 'email', password: 'password' },
 					password: {
 						encryption: AuthPasswordEncryption.SHA512,
-						salt: null,
 					},
 					where: [
 						{
-							column: 'deleted_at',
+							column: 'deletedAt',
 							operator: WhereOperator.null,
 						},
 					],
 				},
 			},
-		]
+		],
 )

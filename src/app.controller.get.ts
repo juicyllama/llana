@@ -10,7 +10,7 @@ import { Sort } from './helpers/Sort'
 import { Roles } from './helpers/Roles'
 import { RolePermission } from './types/roles.types'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
-import { DatabaseWhere, WhereOperator } from './types/database.types'
+import { DatabaseSchema, DatabaseWhere, WhereOperator } from './types/database.types'
 
 @Controller()
 export class GetController {
@@ -21,7 +21,7 @@ export class GetController {
 		private readonly schema: Schema,
 		private readonly sort: Sort,
 		private readonly authentication: Authentication,
-		private readonly roles: Roles
+		private readonly roles: Roles,
 	) {}
 
 	@Get('')
@@ -41,7 +41,7 @@ export class GetController {
 	async list(@Req() req, @Res() res): Promise<ListResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
 
-		let schema
+		let schema: DatabaseSchema
 
 		try {
 			schema = await this.schema.getSchema(table_name)
@@ -56,16 +56,16 @@ export class GetController {
 
 		//perform role check
 
-		let role_where = []
+		const role_where = []
 
-		if(auth.user_identifier) {
+		if (auth.user_identifier) {
 			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
 
-			if(!permission.valid) {
+			if (!permission.valid) {
 				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
 			}
 
-			if(permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
+			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
 				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
 			}
 		}
@@ -87,7 +87,7 @@ export class GetController {
 			return res.status(400).send(validateWhere.message)
 		}
 
-		if(role_where.length > 0) {
+		if (role_where.length > 0) {
 			validateWhere.where = validateWhere.where.concat(role_where)
 		}
 
@@ -102,9 +102,12 @@ export class GetController {
 			schema = validateRelations.schema
 
 			for (const relation of relations) {
-				const relation_schema = await this.schema.getSchema(relation)
-				if (!relation_schema) {
-					return res.status(400).send(`Relation ${relation} not found`)
+				let relation_schema
+
+				try {
+					relation_schema = await this.schema.getSchema(relation)
+				} catch (e) {
+					return res.status(400).send(`No Schema Found For Relation ${relation}`)
 				}
 
 				const relation_fields = req.query.fields.split(',').filter(field => field.includes(relation))
@@ -183,7 +186,7 @@ export class GetController {
 	async getById(@Req() req, @Res() res): Promise<GetResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
 
-		let schema
+		let schema: DatabaseSchema
 
 		try {
 			schema = await this.schema.getSchema(table_name)
@@ -198,22 +201,16 @@ export class GetController {
 
 		//perform role check
 
-		let role_where = []
+		const role_where = []
 
-		if(auth.user_identifier) {
-			const role = await this.roles.getRole(auth.user_identifier)
-
-			if(!role) {
-				return res.status(401).send('Role not found')
-			}
-
+		if (auth.user_identifier) {
 			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
 
-			if(!permission.valid) {
+			if (!permission.valid) {
 				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
 			}
 
-			if(permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
+			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
 				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
 			}
 		}
@@ -255,10 +252,10 @@ export class GetController {
 				column: primary_key,
 				operator: WhereOperator.equals,
 				value: req.params.id,
-			}
+			},
 		]
 
-		if(role_where.length > 0) {
+		if (role_where.length > 0) {
 			where.concat(role_where)
 		}
 
@@ -267,7 +264,7 @@ export class GetController {
 				schema,
 				fields: req.query.fields,
 				relations,
-				where
+				where,
 			}),
 		)
 	}
@@ -276,7 +273,7 @@ export class GetController {
 	async getOne(@Req() req, @Res() res): Promise<ListResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
 
-		let schema
+		let schema: DatabaseSchema
 
 		try {
 			schema = await this.schema.getSchema(table_name)
@@ -291,22 +288,16 @@ export class GetController {
 
 		//perform role check
 
-		let role_where = []
+		const role_where = []
 
-		if(auth.user_identifier) {
-			const role = await this.roles.getRole(auth.user_identifier)
-
-			if(!role) {
-				return res.status(401).send('Role not found')
-			}
-
+		if (auth.user_identifier) {
 			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
 
-			if(!permission.valid) {
+			if (!permission.valid) {
 				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
 			}
 
-			if(permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
+			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
 				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
 			}
 		}
@@ -326,7 +317,7 @@ export class GetController {
 			return res.status(400).send(validateWhere.message)
 		}
 
-		if(role_where.length > 0) {
+		if (role_where.length > 0) {
 			validateWhere.where = validateWhere.where.concat(role_where)
 		}
 
@@ -340,9 +331,12 @@ export class GetController {
 			schema = validateRelations.schema
 
 			for (const relation of relations) {
-				const relation_schema = await this.schema.getSchema(relation)
-				if (!relation_schema) {
-					return res.status(400).send(`Relation ${relation} not found`)
+				let relation_schema
+
+				try {
+					relation_schema = await this.schema.getSchema(relation)
+				} catch (e) {
+					return res.status(400).send(`No Schema Found For Relation ${relation}`)
 				}
 
 				const relation_fields = req.query.fields.split(',').filter(field => field.includes(relation))

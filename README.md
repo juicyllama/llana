@@ -27,51 +27,11 @@ We are working to support all major databases, if you would like to contribute t
 
 - [ ] Authentication
 
-      - [ ] Role based default permissions, e.g. 
-
-      ```
-        roles: [{
-          role: {role_string},
-          own_records: DELETE,
-          other_records: READ | WRITE
-        }]
-      ```
-
-      - [ ] Auth testing (role based access)
-
       - [ ] integrate JWT token support + /login endpoint
 
       - [ ] Auth testing (user/pass, login)
 
-- [ ] Add Demo Database data to Docker setup file
-
-- [ ] Table based permissions JSON file
-      [{
-        table: {table_name},
-        roles: [{
-          role: {role_string},
-          own_records: READ | WRITE | DELETE,
-          other_records: READ | WRITE | DELETE,
-          identifer_route: 'user_id', // also supports clients.user_clients.user_id
-
-//replaced by identifer_route if possible?
-          <!-- identifier_restrictions: [{
-              table: clients,
-              column: client_id,
-              relation: [{
-                type: FK | JOIN
-                table: string
-                column: string,
-              }]
-          }] -->
-        }]
-      }]
-
-      + add for demo database tables where needed
-
 - [ ] setup auth login endpoint
-
-- [ ] get endpoints, support deeper tables (e.g. content_keywords) with format, content/1/keywords 
 
 - [ ] finish endpoint support for mysql 
 
@@ -97,8 +57,19 @@ note: delete options (SOFT/HARD). if soft specify name of delete column in table
 - [ ] Interface for managing configuration
 
 - [ ] Scope Llana cloud option for non-technical users
+    - [ ] Auto deployment with docker
+    - [ ] Pricing & request volumes 
 
 - [ ] Scope out Setup / Install service (pay to deploy on your database)
+
+- [ ] Add GraphQL Layer
+
+- [ ] Support other authentication methods (2FA, Fingerprint, Oauth2, etc)
+
+- [ ] Security  
+    - [ ] Pen testing
+    - [ ] Failed auth lockout
+    - [ ] Request throttling
 
 #### Marketing
 
@@ -130,17 +101,35 @@ We currently support two types of authentication:
 
 #### API KEY
 
-By defualt, this expects a table named `users_api_keys` with the field `api_key`, you can override these settings in in the `src/config/auth.config.ts` file.
+By defualt, this expects a table named `UserApiKey` with the field `apiKey`, you can override these settings in in the `src/config/auth.config.ts` file.
 
 #### JWT Token 
 
 We provide a special extra endpoint, the only one not generated based on your database schema. 
 
-* `/auth/login`
+* `/login`
 
-This endpoint will take the users login credentials and return back a JWT token, which can be used as authentication for other endpoints (see Restrictions below).
+This `POST` endpoint will take the users login credentials and return back a JWT token, which can be used as authentication for other endpoints (see Restrictions below).
 
-By defualt, this expects a table named `users` with the fields `email` and `password`, you can override these settings in in the `src/config/auth.config.ts` file.
+By defualt, this expects a table named `User` with the fields `email` and `password`, you can override these settings in in the `src/config/auth.config.ts` file.
+
+Example Request:
+
+```
+POST `/login`
+
+body: {
+  email: test@test.com,
+  password: test
+}
+
+```
+
+Example Response: 
+
+```
+
+```
 
 #### Routes
 
@@ -169,7 +158,7 @@ If the user has insufficent permmissions they will get a `403 Forbidden` respons
 
 You can specify which fields you would like to return, defualts to `*`
 
-Example `?fields=id,name,content.id`
+Example `?fields=orderId,shipName,Customer.ContactName`
 
 Note, if you pass deep fields (table.column) then you must pass the table as a relation also.
 
@@ -177,7 +166,7 @@ Note, if you pass deep fields (table.column) then you must pass the table as a r
 
 You can fetch deeper content by passing relations, assuming their is a forign key connection it will return the deep result.
 
-Example `?relations=content`
+Example `?relations=Customer`
 
 ### Pagination 
 
@@ -202,13 +191,13 @@ Pass page into requests to load a specific page result, in the `/list` response 
 
 format is column[operator]=value with operator being from the enum WhereOperator 
       
-Example: `?id=1&first_name[equals]=John&age[gte]=21&content.deleted_at[null]`
+Example: `?city=Barcelona`
 
 ### Sorting
 
 format is sort={column}.{direction},column.{direction}
 
-`?sort=name.asc,id.desc`
+`?sort=contactName.asc,custId.desc`
 
 ## Endpoints
 
@@ -240,13 +229,13 @@ Endpoint: `*/:id`
 Example Request:
 
 ```
-GET `/users/1?fields=role,id,content.id&relations=content`
+GET `/User/1?fields=role,id`
 ```
 
 Example Response: 
 
 ```
-{"role":"ADMIN","id":1,"content":[{"id":3},{"id":2},{"id":1}]}
+{"role":"ADMIN","id":1}
 ```
 
 ### Read One
@@ -256,13 +245,13 @@ Endpoint: `*/`
 Example Request:
 
 ```
-GET `/users/1?fields=role,id,content.id&relations=content`
+GET `/User/1?fields=role,id`
 ```
 
 Example Response: 
 
 ```
-{"role":"ADMIN","id":1,"content":[{"id":3},{"id":2},{"id":1}]}
+{"role":"ADMIN","id":1}
 ```
 
 ### Read All
@@ -270,7 +259,7 @@ Example Response:
 Endpoint: `*/list`
 
 ```
-GET `/users/list`
+GET `/User/list`
 ```
 
 Response Schema: 
@@ -318,10 +307,15 @@ Example Response:
 
 ## Docker Demos
 
-Out of the box you can use our docker demo data to play with the system. Here is some helpful information:
+Out of the box you can use our docker demo data to play with the system. 
 
-Test user, email: `test@test.com` password: `test` with API key: `Ex@mp1eS$Cu7eAp!K3y`
+We are using this helpful [database sample repository](https://github.com/harryho/db-samples) to build demo database examples. We add a `User` table and a `UserApiKey` table to facilitate the authentication. 
 
+You can use the following user details for testing:
+
+Email: `test@test.com`
+Password: `test`
+API key: `Ex@mp1eS$Cu7eAp!K3y`
 
 
 ## Database Support

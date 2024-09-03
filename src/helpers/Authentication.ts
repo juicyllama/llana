@@ -3,9 +3,10 @@ import { ConfigService } from '@nestjs/config'
 import { Logger } from './Logger'
 import { AuthAPIKey, AuthRestrictionsResponse, Auth, AuthLocation, AuthType } from '../types/auth.types'
 import { Query } from './Query'
-import { WhereOperator } from '../types/database.types'
+import { DatabaseSchema, WhereOperator } from '../types/database.types'
 import { Schema } from './Schema'
 import { Env } from '@juicyllama/utils'
+import { JwtService } from '@nestjs/jwt'
 
 @Injectable()
 export class Authentication {
@@ -14,6 +15,7 @@ export class Authentication {
 		private readonly logger: Logger,
 		private readonly query: Query,
 		private readonly schema: Schema,
+		private readonly jwtService: JwtService,
 	) {}
 
 	/**
@@ -86,6 +88,22 @@ export class Authentication {
 			}
 
 			if (!check_required) continue
+
+			let identity_column
+			let schema: DatabaseSchema
+
+			try {
+				schema = await this.schema.getSchema(auth.table.name)
+			} catch (e) {
+				this.logger.error(`[Authentication][auth] Table ${auth.table.name} not found`, { e })
+				return { valid: false, message: `No Schema Found For Table ${auth.table.name}` }
+			}
+
+			if (auth.table.identity_column) {
+				identity_column = auth.table.identity_column
+			} else {
+				identity_column = schema.primary_key
+			}
 
 			switch (auth.type) {
 				case AuthType.APIKEY:
@@ -182,8 +200,6 @@ export class Authentication {
 						continue
 					}
 
-					let schema = await this.schema.getSchema(api_key_config.name)
-
 					const relations = api_key_config.column.includes('.') ? [api_key_config.column.split('.')[0]] : []
 
 					if (relations.length > 0) {
@@ -194,14 +210,6 @@ export class Authentication {
 						}
 
 						schema = validateRelations.schema
-					}
-
-					let identity_column
-
-					if (api_key_config.identity_column) {
-						identity_column = api_key_config.identity_column
-					}else {
-						identity_column = schema.primary_key
 					}
 
 					const result = await this.query.findOne({
@@ -225,7 +233,7 @@ export class Authentication {
 					} else {
 						column = api_key_config.column
 					}
-					
+
 					//key does not match - return unauthorized immediately
 					if (!result || !result[column] || result[column] !== req_api_key) {
 						this.logger.debug(`[Authentication][auth] API key not found`, {
@@ -236,10 +244,15 @@ export class Authentication {
 						return { valid: false, message: 'Unathorized' }
 					}
 
-					if(!result[identity_column]) {
-						
-						this.logger.error(`[Authentication][auth] Identity column ${identity_column} not found in result`, { result })
-						return { valid: false, message: `System configuration error: Identity column ${identity_column} not found` }
+					if (!result[identity_column]) {
+						this.logger.error(
+							`[Authentication][auth] Identity column ${identity_column} not found in result`,
+							{ result },
+						)
+						return {
+							valid: false,
+							message: `System configuration error: Identity column ${identity_column} not found`,
+						}
 					}
 
 					this.logger.debug(`[Authentication][auth] User #${result[identity_column]} identified successfully`)
@@ -262,16 +275,23 @@ export class Authentication {
 						continue
 					}
 
-					this.logger.error(`[Authentication][auth] JWT authentication not implemented`, { jwt_token })
+					const jwt_config = this.configService.get<any>('jwt')
 
-					auth_passed = {
-						valid: false,
-						message: 'JWT authentication not implemented',
+					try {
+						const payload = await this.jwtService.verifyAsync(jwt_token, {
+							secret: jwt_config.secret,
+						})
+
+						auth_passed = {
+							valid: true,
+							user_identifier: payload.sub,
+						}
+					} catch {
+						auth_passed = {
+							valid: false,
+							message: 'JWT Authentication Failed',
+						}
 					}
-
-					//TODO: Implement JWT authentication
-
-					//const api_key_config = auth.auth as AuthAPIKey
 
 					continue
 			}

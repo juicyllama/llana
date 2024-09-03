@@ -7,7 +7,7 @@ export interface Auth {
 	routes?: {
 		include?: string[]
 		exclude?: string[]
-	},
+	}
 	table: AuthAPIKey | AuthJWT
 }
 
@@ -28,7 +28,7 @@ export interface AuthAPIKey extends AuthTableSettings {
 
 export interface AuthJWT extends AuthTableSettings {
 	columns: {
-		email: string
+		username: string
 		password: string
 	}
 	password: {
@@ -49,6 +49,7 @@ export interface AuthTableSettings {
 
 export enum AuthPasswordEncryption {
 	BCRYPT = 'BCRYPT',
+	SHA1 = 'SHA1',
 	SHA256 = 'SHA256',
 	SHA512 = 'SHA512',
 	MD5 = 'MD5',
@@ -68,7 +69,6 @@ export interface AuthTablePermissionSuccessResponse extends AuthTablePermissionR
 export interface AuthTablePermissionFailResponse extends AuthTablePermissionResponse {
 	message: string
 }
-
 
 export interface AuthTablePermissionResponse {
 	valid: boolean

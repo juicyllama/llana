@@ -28,17 +28,22 @@
 		"start:debug": "nest start --debug --watch",
 		"start:docker": "docker compose --project-name llana up --build --detach",
 		"start:ngrok": "~/ngrok http http://localhost:3030/ --subdomain=llana",
-		"test": "jest --runInBand --detectOpenHandles --forceExit"
+		"test": "jest --clear-cache && jest --runInBand --detectOpenHandles --forceExit",
+		"precommit": "npm run test && npm run lint && npm run format",
+		"commit": "git pull && git add . && git commit -m \"chore: update\" && git push"
 	},
 	"dependencies": {
 		"@juicyllama/utils": "^0.10.4",
 		"@nestjs/common": "^10.3.2",
 		"@nestjs/config": "^3.2.3",
 		"@nestjs/core": "^10.3.2",
+		"@nestjs/jwt": "^10.2.0",
 		"@nestjs/platform-express": "^10.3.2",
 		"@nestjs/serve-static": "^4.0.2",
 		"@nestjs/swagger": "^7.4.0",
+		"argon2": "^0.41.1",
 		"axios": "^1.7.7",
+		"bcrypt": "^5.1.1",
 		"class-validator": "^0.14.1",
 		"jwt-simple": "^0.5.6",
 		"lodash": "^4.17.21",

@@ -47,6 +47,7 @@ export class MySQL {
 					message: e.message,
 				},
 			})
+			throw new Error(e)
 		}
 	}
 
@@ -180,8 +181,8 @@ export class MySQL {
 			: options.fields?.split(',').filter(field => !field.includes('.'))
 		const where = options.joins ? options.where : options.where?.filter(where => !where.column.includes('.'))
 
-		for(const f in fields){
-			if(!fields[f].includes('.')){
+		for (const f in fields) {
+			if (!fields[f].includes('.')) {
 				fields[f] = `${table_name}.` + fields[f]
 			}
 		}
@@ -222,10 +223,7 @@ export class MySQL {
 		return results[0].total
 	}
 
-	async addRelations(
-		options: DatabaseFindOneOptions | DatabaseFindManyOptions,
-		result: any,
-	): Promise<any> {
+	async addRelations(options: DatabaseFindOneOptions | DatabaseFindManyOptions, result: any): Promise<any> {
 		if (!result) return {}
 
 		if (options.relations?.length) {

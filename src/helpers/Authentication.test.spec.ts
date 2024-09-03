@@ -26,7 +26,10 @@ describe('Authentication', () => {
 		configService = app.get<ConfigService>(ConfigService)
 		logger = app.get<Logger>(Logger)
 
-		await app.listen(Number(configService.get<number>('PORT_TESTING')) ?? Number(configService.get<number>('PORT')) + 1, testing.host)
+		await app.listen(
+			Number(configService.get<number>('PORT_TESTING')) ?? Number(configService.get<number>('PORT')) + 1,
+			testing.host,
+		)
 		await app.init()
 
 		testing.port = app.getHttpServer().address().port
@@ -44,10 +47,10 @@ describe('Authentication', () => {
 	describe('Hosts', () => {
 		it('No hosts provided in config', async function () {
 			configService.set('hosts', [])
-			try{
-				const response = await axiosInstance.get('/users/1')
+			try {
+				const response = await axiosInstance.get('/User/1')
 				expect(response.status).toEqual(200)
-			}catch(e){
+			} catch (e) {
 				logger.error(e.message, e)
 				expect(true).toEqual(false)
 			}
@@ -55,10 +58,10 @@ describe('Authentication', () => {
 
 		it('Single host should pass', async function () {
 			configService.set('hosts', [`${testing.host}:${testing.port}`])
-			try{
-				const response = await axiosInstance.get('/users/1')
+			try {
+				const response = await axiosInstance.get('/User/1')
 				expect(response.status).toEqual(200)
-			}catch(e){
+			} catch (e) {
 				logger.error(e.message, e)
 				expect(true).toEqual(false)
 			}
@@ -67,7 +70,7 @@ describe('Authentication', () => {
 		it('Single host should fail', async function () {
 			configService.set('hosts', ['google.com'])
 			try {
-				await axiosInstance.get('/users/1')
+				await axiosInstance.get('/User/1')
 			} catch (e) {
 				expect(e.response.status).toEqual(403)
 			}

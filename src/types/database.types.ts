@@ -1,8 +1,8 @@
 import { SortCondition } from './schema.types'
 
 export enum DatabaseNaming {
-	SNAKE_CASE = 'SNAKE_CASE',
-	//CAMEL_CASE = "CAMEL_CASE" TODO: support camel case
+	snake_case = 'snake_case',
+	camelCase = 'camelCase',
 }
 
 export enum WhereOperator {

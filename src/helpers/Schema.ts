@@ -35,6 +35,7 @@ export class Schema {
 			}
 		} catch (e) {
 			this.logger.error(`[Query][GetSchema] ${e.message}`)
+			throw new Error(e)
 		}
 	}
 

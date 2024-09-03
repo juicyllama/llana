@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { Logger } from './Logger'
-import {
-	DatabaseType,
-	DatabaseFindOneOptions,
-	DatabaseFindManyOptions,
-} from '../types/database.types'
+import { DatabaseType, DatabaseFindOneOptions, DatabaseFindManyOptions } from '../types/database.types'
 import { ConfigService } from '@nestjs/config'
 import { MySQL } from '../databases/mysql.database'
 import { ListResponseObject } from '../types/response.types'
@@ -23,7 +19,6 @@ export class Query {
 
 	async findById(options: DatabaseFindOneOptions): Promise<any> {
 		const table_name = options.schema.table
-
 
 		this.logger.debug(`[Query][Find][One][Id][${table_name}]`, {
 			fields: options.fields,

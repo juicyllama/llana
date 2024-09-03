@@ -16,7 +16,7 @@ export interface Role {
 
 export interface RoleLocation {
 	table: string //the table which holds the users role information
-	column: string  //the column in the table which holds the users role
+	column: string //the column in the table which holds the users role
 	identifier_column?: string // the column in the table which holds the user identity (e.g. user_id), if not provided, we will use the tables primary key
 }
 
