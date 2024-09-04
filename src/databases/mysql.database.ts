@@ -1,21 +1,33 @@
-import * as mysql from 'mysql2/promise'
-import { Connection } from 'mysql2/promise'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import * as mysql from 'mysql2/promise'
+import { Connection } from 'mysql2/promise'
+import { SortCondition } from 'src/types/schema.types'
+
 import { Logger } from '../helpers/Logger'
+import { Pagination } from '../helpers/Pagination'
 import {
+	DatabaseColumnType,
+	DatabaseCreateOneOptions,
+	DatabaseDeleteOneOptions,
 	DatabaseFindManyOptions,
 	DatabaseFindOneOptions,
 	DatabaseFindTotalRecords,
 	DatabaseSchema,
 	DatabaseSchemaColumn,
 	DatabaseSchemaRelation,
+	DatabaseUniqueCheckOptions,
+	DatabaseUpdateOneOptions,
 	DatabaseWhere,
 	WhereOperator,
 } from '../types/database.types'
-import { ListResponseObject } from '../types/response.types'
-import { Pagination } from '../helpers/Pagination'
-import { SortCondition } from 'src/types/schema.types'
+import { MySQLColumnType } from '../types/databases/mysql.types'
+import {
+	DeleteResponseObject,
+	FindManyResponseObject,
+	FindOneResponseObject,
+	IsUniqueResponse,
+} from '../types/response.types'
 
 @Injectable()
 export class MySQL {
@@ -66,7 +78,7 @@ export class MySQL {
 		const columns = columns_result.map((column: any) => {
 			return <DatabaseSchemaColumn>{
 				field: column.Field,
-				type: column.Type,
+				type: this.fieldMapper(column.Type),
 				nullable: column.Null === 'YES',
 				required: column.Null === 'NO',
 				primary_key: column.Key === 'PRI',
@@ -100,16 +112,52 @@ export class MySQL {
 	}
 
 	/**
+	 * Insert a record
+	 */
+
+	async createOne(options: DatabaseCreateOneOptions): Promise<FindOneResponseObject> {
+		const table_name = options.schema.table
+
+		options = this.pipeJsToMySQL(options) as DatabaseCreateOneOptions
+
+		const columns = Object.keys(options.data)
+		const values = Object.values(options.data)
+
+		const command = `INSERT INTO ${table_name} (${columns.join(', ')}) VALUES (${values.map(value => `'${value}'`).join(', ')})`
+
+		this.logger.debug(`[Query][Create][One][${options.schema.table}] ` + command)
+
+		const result = await this.performQuery(command)
+
+		return await this.findOne({
+			schema: options.schema,
+			where: [
+				{
+					column: options.schema.primary_key,
+					operator: WhereOperator.equals,
+					value: result.insertId,
+				},
+			],
+		})
+	}
+
+	/**
 	 * Find single record
 	 */
 
-	async findOne(options: DatabaseFindOneOptions): Promise<any> {
+	async findOne(options: DatabaseFindOneOptions): Promise<FindOneResponseObject | undefined> {
 		let command = this.find(options)
 		command += ` LIMIT 1`
 
 		this.logger.debug(`[Query][Find][One][${options.schema.table}] ` + command)
 
 		const results = await this.performQuery(command)
+
+		if (!results[0]) {
+			return
+		}
+
+		results[0] = this.pipeMySQLToJs(results[0])
 
 		if (!options.joins) {
 			return await this.addRelations(options, results[0])
@@ -122,7 +170,7 @@ export class MySQL {
 	 * Find multiple records
 	 */
 
-	async findMany(options: DatabaseFindManyOptions): Promise<ListResponseObject> {
+	async findMany(options: DatabaseFindManyOptions): Promise<FindManyResponseObject> {
 		const total = await this.findTotalRecords(options)
 
 		let command = this.find(options)
@@ -151,6 +199,7 @@ export class MySQL {
 		const results = await this.performQuery(command)
 
 		for (const r in results) {
+			results[r] = this.pipeMySQLToJs(results[r])
 			results[r] = await this.addRelations(options, results[r])
 		}
 
@@ -170,35 +219,6 @@ export class MySQL {
 			},
 			data: results,
 		}
-	}
-
-	find(options: DatabaseFindOneOptions | DatabaseFindManyOptions): string {
-		const table_name = options.schema.table
-
-		const fields = options.joins ? options.fields : options.fields?.filter(field => !field.includes('.'))
-		const where = options.joins ? options.where : options.where?.filter(where => !where.column.includes('.'))
-
-		for (const f in fields) {
-			if (!fields[f].includes('.')) {
-				fields[f] = `${table_name}.` + fields[f]
-			}
-		}
-
-		let command = `SELECT ${fields?.length ? fields.join(`, `) : '*'} `
-		command += `FROM ${table_name} `
-
-		if (options.joins && options.relations?.length) {
-			for (const relation of options.relations) {
-				const schema_relation = options.schema.relations.find(r => r.table === relation)
-				command += `LEFT JOIN ${schema_relation.table} ON ${schema_relation.org_table}.${schema_relation.org_column} = ${schema_relation.table}.${schema_relation.column} `
-			}
-		}
-
-		if (where?.length) {
-			command += `WHERE ${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.value ? `'` + (w.operator === WhereOperator.search ? '%' : '') + w.value + (w.operator === WhereOperator.search ? '%' : '') + `'` : ''}`).join(' AND ')} `
-		}
-
-		return command
 	}
 
 	/**
@@ -288,5 +308,181 @@ export class MySQL {
 			}
 		}
 		return result
+	}
+
+	/**
+	 * Update one records
+	 */
+
+	async updateOne(options: DatabaseUpdateOneOptions): Promise<FindOneResponseObject> {
+		const table_name = options.schema.table
+
+		let command = `UPDATE ${table_name} SET `
+
+		options = this.pipeJsToMySQL(options) as DatabaseUpdateOneOptions
+
+		command += `${Object.keys(options.data)
+			.map(key => `${key} = '${options.data[key]}'`)
+			.join(', ')} `
+
+		command += `WHERE ${options.schema.primary_key} = ${options.id}`
+
+		this.logger.debug(`[Query][Update][One][${options.schema.table}] ` + command)
+
+		await this.performQuery(command)
+
+		return await this.findOne({
+			schema: options.schema,
+			where: [
+				{
+					column: options.schema.primary_key,
+					operator: WhereOperator.equals,
+					value: options.id,
+				},
+			],
+		})
+	}
+
+	/**
+	 * Delete single record
+	 */
+
+	async deleteOne(options: DatabaseDeleteOneOptions): Promise<DeleteResponseObject> {
+		console.log(options)
+
+		if (options.softDelete) {
+			const result = await this.updateOne({
+				id: options.id,
+				schema: options.schema,
+				data: {
+					[options.softDelete]: new Date().toISOString(),
+				},
+			})
+
+			if (result) {
+				return {
+					deleted: 1,
+				}
+			}
+		}
+
+		const table_name = options.schema.table
+
+		let command = `DELETE FROM ${table_name} `
+
+		command += `WHERE ${options.schema.primary_key} = ${options.id}`
+
+		this.logger.debug(`[Query][Delete][One][${options.schema.table}] ` + command)
+
+		const result = await this.performQuery(command)
+
+		return {
+			deleted: result.affectedRows,
+		}
+	}
+
+	find(options: DatabaseFindOneOptions | DatabaseFindManyOptions): string {
+		const table_name = options.schema.table
+
+		const fields = options.joins ? options.fields : options.fields?.filter(field => !field.includes('.'))
+		const where = options.joins ? options.where : options.where?.filter(where => !where.column.includes('.'))
+
+		for (const f in fields) {
+			if (!fields[f].includes('.')) {
+				fields[f] = `${table_name}.` + fields[f]
+			}
+		}
+
+		let command = `SELECT ${fields?.length ? fields.join(`, `) : '*'} `
+		command += `FROM ${table_name} `
+
+		if (options.joins && options.relations?.length) {
+			for (const relation of options.relations) {
+				const schema_relation = options.schema.relations.find(r => r.table === relation)
+				command += `LEFT JOIN ${schema_relation.table} ON ${schema_relation.org_table}.${schema_relation.org_column} = ${schema_relation.table}.${schema_relation.column} `
+			}
+		}
+
+		if (where?.length) {
+			command += `WHERE ${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.value ? `'` + (w.operator === WhereOperator.search ? '%' : '') + w.value + (w.operator === WhereOperator.search ? '%' : '') + `'` : ''}`).join(' AND ')} `
+		}
+
+		return command
+	}
+
+	async uniqueCheck(options: DatabaseUniqueCheckOptions): Promise<IsUniqueResponse> {
+		console.error(`TODO: UNIQUE CHECK`, options.schema)
+
+		//TODO: complete unique check based on Unique Keys in schema
+
+		return {
+			valid: true,
+		}
+	}
+
+	fieldMapper(type: MySQLColumnType): DatabaseColumnType {
+		switch (type) {
+			case MySQLColumnType.INT:
+			case MySQLColumnType.TINYINT:
+			case MySQLColumnType.SMALLINT:
+			case MySQLColumnType.MEDIUMINT:
+			case MySQLColumnType.BIGINT:
+			case MySQLColumnType.FLOAT:
+			case MySQLColumnType.DOUBLE:
+			case MySQLColumnType.DECIMAL:
+			case MySQLColumnType.NUMERIC:
+			case MySQLColumnType.REAL:
+			case MySQLColumnType.TIMESTAMP:
+			case MySQLColumnType.YEAR:
+				return DatabaseColumnType.NUMBER
+			case MySQLColumnType.CHAR:
+			case MySQLColumnType.VARCHAR:
+			case MySQLColumnType.TEXT:
+			case MySQLColumnType.TINYTEXT:
+			case MySQLColumnType.MEDIUMTEXT:
+			case MySQLColumnType.LONGTEXT:
+			case MySQLColumnType.ENUM:
+				return DatabaseColumnType.STRING
+			case MySQLColumnType.DATE:
+			case MySQLColumnType.DATETIME:
+			case MySQLColumnType.TIME:
+				return DatabaseColumnType.DATE
+			case MySQLColumnType.BOOL:
+			case MySQLColumnType.BOOLEAN:
+				return DatabaseColumnType.BOOLEAN
+			case MySQLColumnType.JSON:
+				return DatabaseColumnType.JSON
+			case MySQLColumnType.SET:
+			case MySQLColumnType.BLOB:
+			case MySQLColumnType.TINYBLOB:
+			case MySQLColumnType.MEDIUMBLOB:
+			case MySQLColumnType.LONGBLOB:
+			case MySQLColumnType.BINARY:
+			case MySQLColumnType.VARBINARY:
+			default:
+				return DatabaseColumnType.UNKNOWN
+		}
+	}
+
+	pipeJsToMySQL(
+		options: DatabaseCreateOneOptions | DatabaseUpdateOneOptions,
+	): DatabaseCreateOneOptions | DatabaseUpdateOneOptions {
+		//convert dates to mysql format
+		for (const column of options.schema.columns) {
+			if (column.type === DatabaseColumnType.DATE && options.data[column.field]) {
+				options.data[column.field] = new Date().toISOString().slice(0, 19).replace('T', ' ')
+			}
+		}
+
+		return options
+	}
+
+	pipeMySQLToJs(data: { [key: string]: any }): { [key: string]: any } {
+		for (const key in data) {
+			if (data[key] instanceof Date) {
+				data[key] = data[key].toISOString()
+			}
+		}
+		return data
 	}
 }

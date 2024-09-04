@@ -1,12 +1,13 @@
+import { Env } from '@juicyllama/utils'
 import { Injectable, Req } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { Logger } from './Logger'
-import { AuthAPIKey, AuthRestrictionsResponse, Auth, AuthLocation, AuthType } from '../types/auth.types'
-import { Query } from './Query'
-import { DatabaseSchema, WhereOperator } from '../types/database.types'
-import { Schema } from './Schema'
-import { Env } from '@juicyllama/utils'
 import { JwtService } from '@nestjs/jwt'
+
+import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
+import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
+import { Logger } from './Logger'
+import { Query } from './Query'
+import { Schema } from './Schema'
 
 @Injectable()
 export class Authentication {
@@ -212,7 +213,7 @@ export class Authentication {
 						schema = validateRelations.schema
 					}
 
-					const result = await this.query.findOne({
+					const result = await this.query.perform(QueryPerform.FIND, {
 						schema,
 						relations,
 						fields: [`${api_key_config.name}.${identity_column}`, api_key_config.column],

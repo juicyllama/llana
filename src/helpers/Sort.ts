@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+
 import { SortCondition } from '../types/schema.types'
 
 @Injectable()

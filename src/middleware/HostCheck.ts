@@ -1,7 +1,8 @@
 import { Env } from '@juicyllama/utils'
 import { Injectable, NestMiddleware } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { Request, Response, NextFunction } from 'express'
+import { NextFunction, Request, Response } from 'express'
+
 import { Logger } from '../helpers/Logger'
 
 @Injectable()

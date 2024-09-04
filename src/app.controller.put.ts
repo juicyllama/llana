@@ -1,37 +1,26 @@
-import { Body, Controller, Post, Req, Res } from '@nestjs/common'
+import { Controller, Put, Req, Res } from '@nestjs/common'
 
-import { LoginService } from './app.service.login'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
-import { AuthTablePermissionFailResponse } from './types/auth.types'
-import { DatabaseSchema, QueryPerform } from './types/database.types'
+import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
+import { DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from './types/database.types'
 import { FindOneResponseObject, IsUniqueResponse } from './types/response.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller()
-export class PostController {
+export class PutController {
 	constructor(
 		private readonly authentication: Authentication,
-		private readonly loginService: LoginService,
 		private readonly query: Query,
-		private readonly schema: Schema,
 		private readonly roles: Roles,
+		private readonly schema: Schema,
 	) {}
 
-	@Post('/login')
-	signIn(@Body() signInDto: Record<string, any>) {
-		return this.loginService.signIn(signInDto.username, signInDto.password)
-	}
-
-	/**
-	 * Create new record
-	 */
-
-	@Post('*/')
-	async createOne(@Req() req, @Res() res): Promise<FindOneResponseObject> {
+	@Put('*/:id')
+	async updateById(@Req() req, @Res() res): Promise<FindOneResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
 
 		let schema: DatabaseSchema
@@ -48,11 +37,18 @@ export class PostController {
 		}
 
 		//perform role check
+
+		const role_where = []
+
 		if (auth.user_identifier) {
 			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.WRITE)
 
 			if (!permission.valid) {
 				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
+			}
+
+			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
+				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
 			}
 		}
 
@@ -62,18 +58,55 @@ export class PostController {
 			return res.status(400).send(validate.message)
 		}
 
+		//validate :id field
+		const primary_key = this.schema.getPrimaryKey(schema)
+
+		if (!primary_key) {
+			return res.status(400).send(`No primary key found for table ${table_name}`)
+		}
+
+		const validateKey = await this.schema.validateData(schema, { [primary_key]: req.params.id })
+		if (!validateKey.valid) {
+			return res.status(400).send(validateKey.message)
+		}
+
 		//validate uniqueness
 		const uniqueValidation = (await this.query.perform(QueryPerform.UNIQUE, {
 			schema,
 			data: req.body,
+			id: req.params.id,
 		})) as IsUniqueResponse
 		if (!uniqueValidation.valid) {
 			return res.status(400).send(uniqueValidation.message)
 		}
 
+		const where = <DatabaseWhere[]>[
+			{
+				column: primary_key,
+				operator: WhereOperator.equals,
+				value: req.params.id,
+			},
+		]
+
+		if (role_where.length > 0) {
+			where.concat(role_where)
+		}
+
+		//Check record exists
+
+		const record = await this.query.perform(QueryPerform.FIND, {
+			schema,
+			where,
+		})
+
+		if (!record) {
+			return res.status(400).send(`Record with id ${req.params.id} not found`)
+		}
+
 		try {
-			return res.status(201).send(
-				await this.query.perform(QueryPerform.CREATE, {
+			return res.status(200).send(
+				await this.query.perform(QueryPerform.UPDATE, {
+					id: req.params.id,
 					schema,
 					data: validate.instance,
 				}),

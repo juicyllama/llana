@@ -1,5 +1,6 @@
 import { registerAs } from '@nestjs/config'
-import { AuthAPIKey, AuthJWT, AuthPasswordEncryption, Auth, AuthLocation, AuthType } from '../types/auth.types'
+
+import { Auth, AuthAPIKey, AuthJWT, AuthLocation, AuthPasswordEncryption, AuthType } from '../types/auth.types'
 import { WhereOperator } from '../types/database.types'
 
 export default registerAs(

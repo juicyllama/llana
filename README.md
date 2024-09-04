@@ -25,14 +25,6 @@ We are working to support all major databases, if you would like to contribute t
 
 ## TODO:
 
-- [ ] finish endpoint support for mysql 
-
-TODO: expose "join=OBJECT(default) || DATABASE"
-
-note: on create/update/upsert, do type checking on data, numbers, enums matching based on table schema
-note: delete options (SOFT/HARD). if soft specify name of delete column in table. default and by table config
-
-- [ ] add full testing (endpoints)
 
 - [ ] Move these docs to juicyllama.com/llana, landing page + docs
 
@@ -44,6 +36,16 @@ note: delete options (SOFT/HARD). if soft specify name of delete column in table
 
         - [ ] TODO: use on first external client project (no needed in github - Ampli)
 
+- [ ] full test coverage
+
+        - [ ] App Boot
+        - [ ] Helpers / Database
+        - [ ] Helpers / Encryption
+        - [ ] Helpers / Logger
+        - [ ] Helpers / Query
+        - [ ] Helpers / Schema (pay special attention to data validation)
+        - [ ] Helpers / Sort
+
 - [ ] bulk endpoints (create, update, upsert, delete)
 
 - [ ] add UUID or something to track each request and include in any response / error for better logging / debugging
@@ -51,6 +53,8 @@ note: delete options (SOFT/HARD). if soft specify name of delete column in table
 - [ ] add column exclusions (global and by table, e.g. deleted_at, password)
 
 - [ ] Adding more database integrations (postgres, etc)
+
+- [ ] on postinstall a script to generate a randomly secure JWT_KEY for the .env file
 
 - [ ] Interface for managing configuration
 
@@ -68,6 +72,8 @@ note: delete options (SOFT/HARD). if soft specify name of delete column in table
     - [ ] Pen testing
     - [ ] Failed auth lockout
     - [ ] Request throttling
+
+- [ ] Upsert (PATH) endpoint (user may specify fields to compare, also/fallback to Unique Keys) -> update if exists otherwise create
 
 - [ ] Charting GET `*/chart` endpoint
 
@@ -214,15 +220,12 @@ For every table in your database, you will automatically have access to the foll
 - TODO: Create (POST)
   - TODO: Single `*/`
 - Read (GET)
-  - Find By Id `*/:id`
-  - FindOne `*/`
-  - Multiple `*/list`
+  - By Id `*/:id`
+  - Many `*/`
 - TODO: Update (PUT)
-  - TODO: Single `*/:id`
-- TODO: Upsert (PATCH)
-  - TODO: Single `*/:id`
+  - TODO: By Id `*/:id`
 - TODO: Delete (DELETE)
-  - TODO: Single `*/:id`
+  - TODO: By Id `*/:id`
 
 
 ### Read One (By ID)
@@ -329,3 +332,6 @@ API key: `Ex@mp1eS$Cu7eAp!K3y`
 |GET `*/` ||✅||||||||||
 |GET `*/list` ||✅||||||||||
 |POST `/login` ||✅||||||||||
+|POST `*/` ||✅||||||||||
+|PUT `/:id` ||✅||||||||||
+|DELETE `/:id` ||✅||||||||||

@@ -1,11 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing'
 import { ConfigModule } from '@nestjs/config'
 import { ConfigService } from '@nestjs/config'
-import { Pagination } from './Pagination'
-import { Logger } from './Logger'
+import { Test, TestingModule } from '@nestjs/testing'
+
 import auth from '../config/auth.config'
 import database from '../config/database.config'
 import hosts from '../config/hosts.config'
+import { Logger } from './Logger'
+import { Pagination } from './Pagination'
 
 describe('Pagination', () => {
 	let app: TestingModule
@@ -29,9 +30,12 @@ describe('Pagination', () => {
 
 	describe('get', () => {
 		it('No params passed', () => {
+			console.log('service.get({})', service.get({}))
+			console.log('configService', configService.get<string>('database'))
+
 			const query = {}
 			const result = service.get(query)
-			expect(result.limit).toBe(Number(configService.get<string>('database.defaults.relations.limit')))
+			expect(result.limit).toBe(Number(configService.get<string>('database.defaults.limit')))
 			expect(result.offset).toBe(0)
 		})
 
@@ -49,7 +53,7 @@ describe('Pagination', () => {
 				offset: 10,
 			}
 			const result = service.get(query)
-			expect(result.limit).toBe(Number(configService.get<string>('database.defaults.relations.limit')))
+			expect(result.limit).toBe(Number(configService.get<string>('database.defaults.limit')))
 			expect(result.offset).toBe(10)
 		})
 
@@ -67,7 +71,7 @@ describe('Pagination', () => {
 				foo: 'bar',
 			}
 			const result = service.get(query)
-			expect(result.limit).toBe(Number(configService.get<string>('database.defaults.relations.limit')))
+			expect(result.limit).toBe(Number(configService.get<string>('database.defaults.limit')))
 			expect(result.offset).toBe(0)
 		})
 	})

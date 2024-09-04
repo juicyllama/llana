@@ -1,4 +1,5 @@
 import { registerAs } from '@nestjs/config'
+
 import { Role, RoleLocation, RolePermission, RoleProfiles, RolesConfig, TableRole } from '../types/roles.types'
 
 export default registerAs(

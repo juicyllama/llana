@@ -1,9 +1,11 @@
+import { createHash, createHmac } from 'node:crypto'
+
 import { Injectable } from '@nestjs/common'
-import { Logger } from './Logger'
-import { AuthPasswordEncryption } from '../types/auth.types'
-import bcrypt from 'bcrypt'
-import { createHmac, createHash } from 'node:crypto'
 import * as argon2 from 'argon2'
+import bcrypt from 'bcrypt'
+
+import { AuthPasswordEncryption } from '../types/auth.types'
+import { Logger } from './Logger'
 
 @Injectable()
 export class Encryption {

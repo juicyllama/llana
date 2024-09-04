@@ -5,6 +5,15 @@ export enum DatabaseNaming {
 	camelCase = 'camelCase',
 }
 
+export enum QueryPerform {
+	CREATE = 'create',
+	FIND = 'find',
+	FIND_MANY = 'findMany',
+	UPDATE = 'update',
+	DELETE = 'delete',
+	UNIQUE = 'unique',
+}
+
 export enum WhereOperator {
 	equals = '=',
 	not_equals = '!=',
@@ -22,21 +31,12 @@ export enum WhereOperator {
 }
 
 export enum DatabaseColumnType {
-	INT = 'int',
-	SMALLINT = 'smallint',
-	BIGINT = 'bigint',
-	FLOAT = 'float',
-	DOUBLE = 'double',
-	DECIMAL = 'decimal',
-	CHAR = 'char',
-	VARCHAR = 'varchar',
-	TEXT = 'text',
-	BLOB = 'blob',
+	STRING = 'string',
+	NUMBER = 'number',
 	BOOLEAN = 'boolean',
 	DATE = 'date',
-	TIME = 'time',
-	DATETIME = 'datetime',
-	TIMESTAMP = 'timestamp',
+	JSON = 'json',
+	UNKNOWN = 'unknown',
 }
 
 export enum ImportMode {
@@ -110,8 +110,17 @@ export interface DatabaseSchemaRelation {
 	schema?: DatabaseSchema
 }
 
+export interface DatabaseCreateOneOptions {
+	schema: DatabaseSchema
+	data:
+		| {
+				[key: string]: string | number | boolean
+		  }
+		| object
+}
+
 export interface DatabaseFindOneOptions extends DatabaeseFindOptions {
-	where: DatabaseWhere[]
+	where?: DatabaseWhere[]
 }
 
 export interface DatabaseFindManyOptions extends DatabaeseFindOptions {
@@ -128,7 +137,44 @@ export interface DatabaeseFindOptions {
 	joins?: boolean // Do join at database level, default false
 }
 
+export interface DatabaseUpdateOneOptions {
+	id: string
+	schema: DatabaseSchema
+	data: {
+		[key: string]: string | number | boolean
+	}
+}
+
+export interface DatabaseDeleteOneOptions {
+	id: string
+	schema: DatabaseSchema
+	softDelete?: string // Soft delete column
+}
+
 export interface DatabaseFindTotalRecords {
 	schema: DatabaseSchema
 	where?: DatabaseWhere[]
+}
+
+export interface DatabaseConfig {
+	type: DatabaseType
+	host: string
+	defaults: {
+		limit: number
+		relations: {
+			limit: number
+		}
+	}
+	deletes: {
+		soft: boolean
+		column: string
+	}
+}
+
+export interface DatabaseUniqueCheckOptions {
+	schema: DatabaseSchema
+	data: {
+		[key: string]: string | number | boolean
+	}
+	id?: string
 }

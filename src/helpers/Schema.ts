@@ -1,15 +1,18 @@
 import { Injectable } from '@nestjs/common'
-import { Logger } from './Logger'
-import { DatabaseSchema, DatabaseType, DatabaseWhere, WhereOperator } from '../types/database.types'
 import { ConfigService } from '@nestjs/config'
+import { plainToClass } from 'class-transformer'
+import { IsBoolean, IsDateString, IsJSON, IsNumber, IsOptional, IsString, validate } from 'class-validator'
+
+import { NON_FIELD_PARAMS } from '../app.constants'
 import { MySQL } from '../databases/mysql.database'
+import { DatabaseColumnType, DatabaseSchema, DatabaseType, DatabaseWhere, WhereOperator } from '../types/database.types'
 import {
 	ValidateFieldsResponse,
 	validateRelationsResponse,
 	ValidateResponse,
 	validateWhereResponse,
 } from '../types/schema.types'
-import { NON_FIELD_PARAMS } from '../app.constants'
+import { Logger } from './Logger'
 
 @Injectable()
 export class Schema {
@@ -50,45 +53,135 @@ export class Schema {
 		}).field
 	}
 
-	validateColumnData(schema: DatabaseSchema, column: string, value: any): { valid: boolean; message?: string } {
-		const col = schema.columns.find(col => col.field === column)
+	/**
+	 * Get the class for the schema
+	 */
 
-		if (!col) {
-			return {
-				valid: false,
-				message: `Column ${column} not found in schema`,
+	schemaToClass(schema: DatabaseSchema, data?: { [key: string]: any }): any {
+		class DynamicClass {}
+
+		for (const column of schema.columns) {
+			const decorators = []
+
+			if (data && !data[column.field]) {
+				continue
+			}
+
+			if (column.primary_key) {
+				decorators.push(IsOptional())
+				continue
+			}
+
+			switch (column.type) {
+				case DatabaseColumnType.NUMBER:
+					decorators.push(IsNumber())
+					break
+				case DatabaseColumnType.STRING:
+					decorators.push(IsString())
+					break
+				case DatabaseColumnType.BOOLEAN:
+					decorators.push(IsBoolean())
+					break
+				case DatabaseColumnType.DATE:
+					decorators.push(IsDateString())
+					break
+				case DatabaseColumnType.JSON:
+					decorators.push(IsJSON())
+					break
+				default:
+					break
+			}
+
+			if (!column.required) {
+				decorators.push(IsOptional())
+			}
+
+			Reflect.decorate(decorators, DynamicClass.prototype, column.field)
+		}
+
+		return DynamicClass
+	}
+
+	/**
+	 * Sanitize data for schema
+	 *
+	 * * Convert date strings to Date objects
+	 */
+
+	sanitizeData(schema: DatabaseSchema, data: { [key: string]: any }): { [key: string]: any } {
+		const sanitizedData = {}
+
+		for (const column of schema.columns) {
+			if (!data[column.field]) {
+				continue
+			}
+
+			if (column.type === DatabaseColumnType.DATE) {
+				sanitizedData[column.field] = new Date(data[column.field]).toISOString()
+			} else {
+				sanitizedData[column.field] = data[column.field]
 			}
 		}
 
-		if (col.type.startsWith('int')) {
-			if (isNaN(parseInt(value))) {
+		return sanitizedData
+	}
+
+	/**
+	 * Pipe response from database to class
+	 */
+
+	async pipeResponse(schema: DatabaseSchema, data: { [key: string]: any }): Promise<object> {
+		const DynamicClass = this.schemaToClass(schema, data)
+		const instance: object = plainToClass(DynamicClass, data)
+		try {
+			const errors = await validate(instance)
+
+			if (errors.length > 0) {
+				this.logger.error(`[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`)
+				this.logger.error({
+					data,
+					instance,
+					errors,
+				})
+				throw new Error(`Error piping response - ${Object.values(errors[0].constraints).join(', ')}`)
+			} else {
+				return instance
+			}
+		} catch (e) {
+			throw new Error(e.message)
+		}
+	}
+
+	/**
+	 * validate schema fields with data
+	 */
+
+	async validateData(
+		schema: DatabaseSchema,
+		data: { [key: string]: any },
+	): Promise<{ valid: boolean; message?: string; instance?: object }> {
+		try {
+			const DynamicClass = this.schemaToClass(schema, data)
+			const sanitizedData = this.sanitizeData(schema, data)
+			const instance: object = plainToClass(DynamicClass, sanitizedData)
+			const errors = await validate(instance)
+
+			if (errors.length > 0) {
 				return {
 					valid: false,
-					message: `Invalid integer ${value} for column ${col.field}`,
+					message: errors.map(error => Object.values(error.constraints)).join(', '),
 				}
-			}
-		} else if (
-			col.type.startsWith('varchar') ||
-			col.type.startsWith('text') ||
-			col.type.startsWith('char') ||
-			col.type.startsWith('enum')
-		) {
-			if (typeof value != 'string') {
+			} else {
 				return {
-					valid: false,
-					message: `Invalid varchar ${value} for column ${col.field}`,
+					valid: true,
+					instance,
 				}
 			}
-		} else {
-			console.error(`[validateColumnData] Column type ${col.type} not integrated`)
+		} catch (e) {
 			return {
 				valid: false,
-				message: `System Erorr: Column type ${col.type} not integrated`,
+				message: e.message,
 			}
-		}
-
-		return {
-			valid: true,
 		}
 	}
 
@@ -174,7 +267,7 @@ export class Schema {
 	 * Example: ?id[equals]=1&name=John&age[gte]=21
 	 */
 
-	validateWhereParams(schema: DatabaseSchema, params: any): validateWhereResponse {
+	async validateWhereParams(schema: DatabaseSchema, params: any): Promise<validateWhereResponse> {
 		const where: DatabaseWhere[] = []
 
 		for (const param in params) {
@@ -226,7 +319,7 @@ export class Schema {
 				}
 			}
 
-			const validation = this.validateColumnData(schema, column, value)
+			const validation = await this.validateData(schema, { [column]: value })
 
 			if (!validation.valid) {
 				return validation

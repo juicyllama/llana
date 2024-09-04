@@ -1,27 +1,28 @@
 import { Controller, Get, Req, Res } from '@nestjs/common'
-import { FindService } from './app.service.find'
-import { Logger } from './helpers/Logger'
-import { UrlToTable } from './helpers/Database'
-import { Schema } from './helpers/Schema'
-import { GetResponseObject, ListResponseObject } from './types/response.types'
+
 import { Authentication } from './helpers/Authentication'
+import { UrlToTable } from './helpers/Database'
+import { Logger } from './helpers/Logger'
 import { Pagination } from './helpers/Pagination'
-import { Sort } from './helpers/Sort'
+import { Query } from './helpers/Query'
 import { Roles } from './helpers/Roles'
-import { RolePermission } from './types/roles.types'
+import { Schema } from './helpers/Schema'
+import { Sort } from './helpers/Sort'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
-import { DatabaseSchema, DatabaseWhere, WhereOperator } from './types/database.types'
+import { DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from './types/database.types'
+import { FindManyResponseObject, FindOneResponseObject } from './types/response.types'
+import { RolePermission } from './types/roles.types'
 
 @Controller()
 export class GetController {
 	constructor(
-		private readonly pagination: Pagination,
-		private readonly service: FindService,
-		private readonly logger: Logger,
-		private readonly schema: Schema,
-		private readonly sort: Sort,
 		private readonly authentication: Authentication,
+		private readonly logger: Logger,
+		private readonly pagination: Pagination,
+		private readonly query: Query,
+		private readonly schema: Schema,
 		private readonly roles: Roles,
+		private readonly sort: Sort,
 	) {}
 
 	@Get('')
@@ -37,8 +38,128 @@ export class GetController {
 		return res.sendFile('favicon.ico', { root: 'public' })
 	}
 
-	@Get('*/list')
-	async list(@Req() req, @Res() res): Promise<ListResponseObject> {
+	@Get('*/schema')
+	async schama(@Req() req, @Res() res): Promise<DatabaseSchema> {
+		const table_name = UrlToTable(req.originalUrl, 1)
+
+		let schema: DatabaseSchema
+
+		try {
+			schema = await this.schema.getSchema(table_name)
+		} catch (e) {
+			return res.status(404).send(e.message)
+		}
+
+		const auth = await this.authentication.auth(req)
+		if (!auth.valid) {
+			return res.status(401).send(auth.message)
+		}
+
+		//perform role check
+		if (auth.user_identifier) {
+			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
+
+			if (!permission.valid) {
+				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
+			}
+		}
+
+		return res.status(200).send(schema)
+	}
+
+	@Get('*/:id')
+	async getById(@Req() req, @Res() res): Promise<FindOneResponseObject> {
+		const table_name = UrlToTable(req.originalUrl, 1)
+
+		let schema: DatabaseSchema
+
+		try {
+			schema = await this.schema.getSchema(table_name)
+		} catch (e) {
+			return res.status(404).send(e.message)
+		}
+
+		const auth = await this.authentication.auth(req)
+		if (!auth.valid) {
+			return res.status(401).send(auth.message)
+		}
+
+		//perform role check
+
+		const role_where = []
+
+		if (auth.user_identifier) {
+			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
+
+			if (!permission.valid) {
+				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
+			}
+
+			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
+				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
+			}
+		}
+
+		//validate :id field
+		const primary_key = this.schema.getPrimaryKey(schema)
+
+		if (!primary_key) {
+			return res.status(400).send(`No primary key found for table ${table_name}`)
+		}
+
+		const validateKey = await this.schema.validateData(schema, { [primary_key]: req.params.id })
+		if (!validateKey.valid) {
+			return res.status(400).send(validateKey.message)
+		}
+
+		let validateFields
+		if (req.query.fields) {
+			validateFields = this.schema.validateFields(schema, req.query.fields)
+			if (!validateFields.valid) {
+				return res.status(400).send(validateFields.message)
+			}
+		}
+
+		const relations = combineRelations(req.query.relations, validateFields?.relations)
+
+		let validateRelations
+		if (relations) {
+			validateRelations = await this.schema.validateRelations(schema, relations)
+			if (!validateRelations.valid) {
+				return res.status(400).send(validateRelations.message)
+			}
+
+			schema = validateRelations.schema
+		}
+
+		const where = <DatabaseWhere[]>[
+			{
+				column: primary_key,
+				operator: WhereOperator.equals,
+				value: req.params.id,
+			},
+		]
+
+		if (role_where.length > 0) {
+			where.concat(role_where)
+		}
+
+		try {
+			return res.status(200).send(
+				await this.query.perform(QueryPerform.FIND, {
+					schema,
+					fields: validateFields?.params ?? [],
+					relations,
+					where,
+				}),
+			)
+		} catch (e) {
+			return res.status(400).send(e.message)
+		}
+	}
+
+	@Get('*/')
+	async list(@Req() req, @Res() res): Promise<FindManyResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
 
 		let schema: DatabaseSchema
@@ -82,7 +203,7 @@ export class GetController {
 
 		const relations = combineRelations(req.query.relations, validateFields?.relations)
 
-		const validateWhere = this.schema.validateWhereParams(schema, req.query)
+		const validateWhere = await this.schema.validateWhereParams(schema, req.query)
 		if (!validateWhere.valid) {
 			return res.status(400).send(validateWhere.message)
 		}
@@ -132,7 +253,7 @@ export class GetController {
 					}, {})
 
 				if (relationship_where_fields) {
-					const relationshipValidateWhere = this.schema.validateWhereParams(
+					const relationshipValidateWhere = await this.schema.validateWhereParams(
 						relation_schema,
 						relationship_where_fields,
 					)
@@ -169,225 +290,22 @@ export class GetController {
 			}
 		}
 
-		return res.status(200).send(
-			await this.service.findMany({
-				schema,
-				fields: validateFields?.params ?? [],
-				relations,
-				where: validateWhere.where,
-				limit,
-				offset,
-				sort: this.sort.createSortArray(req.query.sort),
-				joins: !!(req.query.join === 'DATABASE'),
-			}),
-		)
-	}
-
-	@Get('*/:id')
-	async getById(@Req() req, @Res() res): Promise<GetResponseObject> {
-		const table_name = UrlToTable(req.originalUrl, 1)
-
-		let schema: DatabaseSchema
-
 		try {
-			schema = await this.schema.getSchema(table_name)
+			return res.status(200).send(
+				await this.query.perform(QueryPerform.FIND_MANY, {
+					schema,
+					fields: validateFields?.params ?? [],
+					relations,
+					where: validateWhere.where,
+					limit,
+					offset,
+					sort: this.sort.createSortArray(req.query.sort),
+					joins: !!(req.query.join === 'DATABASE'),
+				}),
+			)
 		} catch (e) {
-			return res.status(404).send(e.message)
+			return res.status(400).send(e.message)
 		}
-
-		const auth = await this.authentication.auth(req)
-		if (!auth.valid) {
-			return res.status(401).send(auth.message)
-		}
-
-		//perform role check
-
-		const role_where = []
-
-		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
-
-			if (!permission.valid) {
-				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
-			}
-
-			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
-			}
-		}
-
-		//validate :id field
-		const primary_key = this.schema.getPrimaryKey(schema)
-
-		if (!primary_key) {
-			return res.status(400).send(`No primary key found for table ${table_name}`)
-		}
-
-		const validateKey = this.schema.validateColumnData(schema, primary_key, req.params.id)
-		if (!validateKey.valid) {
-			return res.status(400).send(validateKey.message)
-		}
-
-		let validateFields
-		if (req.query.fields) {
-			validateFields = this.schema.validateFields(schema, req.query.fields)
-			if (!validateFields.valid) {
-				return res.status(400).send(validateFields.message)
-			}
-		}
-
-		const relations = combineRelations(req.query.relations, validateFields?.relations)
-
-		let validateRelations
-		if (relations) {
-			validateRelations = await this.schema.validateRelations(schema, relations)
-			if (!validateRelations.valid) {
-				return res.status(400).send(validateRelations.message)
-			}
-
-			schema = validateRelations.schema
-		}
-
-		const where = <DatabaseWhere[]>[
-			{
-				column: primary_key,
-				operator: WhereOperator.equals,
-				value: req.params.id,
-			},
-		]
-
-		if (role_where.length > 0) {
-			where.concat(role_where)
-		}
-
-		return res.status(200).send(
-			await this.service.findOne({
-				schema,
-				fields: validateFields?.params ?? [],
-				relations,
-				where,
-			}),
-		)
-	}
-
-	@Get('*/')
-	async getOne(@Req() req, @Res() res): Promise<ListResponseObject> {
-		const table_name = UrlToTable(req.originalUrl, 1)
-
-		let schema: DatabaseSchema
-
-		try {
-			schema = await this.schema.getSchema(table_name)
-		} catch (e) {
-			return res.status(404).send(e.message)
-		}
-
-		const auth = await this.authentication.auth(req)
-		if (!auth.valid) {
-			return res.status(401).send(auth.message)
-		}
-
-		//perform role check
-
-		const role_where = []
-
-		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
-
-			if (!permission.valid) {
-				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
-			}
-
-			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
-			}
-		}
-
-		let validateFields
-		if (req.query.fields) {
-			validateFields = this.schema.validateFields(schema, req.query.fields)
-			if (!validateFields.valid) {
-				return res.status(400).send(validateFields.message)
-			}
-		}
-
-		const relations = combineRelations(req.query.relations, validateFields?.relations)
-
-		const validateWhere = this.schema.validateWhereParams(schema, req.query)
-		if (!validateWhere.valid) {
-			return res.status(400).send(validateWhere.message)
-		}
-
-		if (role_where.length > 0) {
-			validateWhere.where = validateWhere.where.concat(role_where)
-		}
-
-		let validateRelations
-		if (relations) {
-			validateRelations = await this.schema.validateRelations(schema, relations)
-			if (!validateRelations.valid) {
-				return res.status(400).send(validateRelations.message)
-			}
-
-			schema = validateRelations.schema
-
-			for (const relation of relations) {
-				let relation_schema
-
-				try {
-					relation_schema = await this.schema.getSchema(relation)
-				} catch (e) {
-					return res.status(400).send(e.message)
-				}
-
-				const relation_fields = req.query.fields?.split(',')?.filter(field => field.includes(relation))
-				const relation_fields_no_prefix = relation_fields.map(field => field.replace(`${relation}.`, ''))
-
-				if (relation_fields_no_prefix.length > 0) {
-					const validateRelationFields = this.schema.validateFields(
-						relation_schema,
-						relation_fields_no_prefix.join(','),
-					)
-					if (!validateRelationFields.valid) {
-						return res.status(400).send(validateRelationFields.message)
-					}
-				}
-
-				const relationship_where_fields = Object.keys(req.query)
-					.filter(key => key.includes(`${relation}.`))
-					.map(key => key.replace(`${relation}.`, ''))
-					.reduce((obj, key) => {
-						obj[key] = req.query[`${relation}.${key}`]
-						return obj
-					}, {})
-
-				if (relationship_where_fields) {
-					const relationshipValidateWhere = this.schema.validateWhereParams(
-						relation_schema,
-						relationship_where_fields,
-					)
-					if (!relationshipValidateWhere.valid) {
-						return res.status(400).send(relationshipValidateWhere.message)
-					}
-
-					for (const r in relationshipValidateWhere.where) {
-						relationshipValidateWhere.where[r].column =
-							`${relation}.${relationshipValidateWhere.where[r].column}`
-					}
-
-					validateWhere.where = validateWhere.where.concat(relationshipValidateWhere.where)
-				}
-			}
-		}
-
-		return res.status(200).send(
-			await this.service.findOne({
-				schema,
-				fields: validateFields?.params ?? [],
-				relations,
-				where: validateWhere.where,
-			}),
-		)
 	}
 }
 

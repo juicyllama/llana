@@ -1,4 +1,5 @@
 import 'dotenv/config'
+
 import { DatabaseType } from '../types/database.types'
 
 export function deconstructConnectionString(connectionString: string): {

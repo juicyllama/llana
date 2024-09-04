@@ -3,30 +3,30 @@ CREATE DATABASE IF NOT EXISTS llana;
 USE llana;
 
 CREATE TABLE `User` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `email` varchar(255) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `role` enum('ADMIN','USER','SUPERADMIN') DEFAULT 'USER',
-  `firstName` varchar(255) DEFAULT NULL,
-  `lastName` varchar(255) DEFAULT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deletedAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `uniqueEmail` (`email`)
+  id int NOT NULL AUTO_INCREMENT
+  ,email varchar(255) NOT NULL
+  ,password varchar(255) NOT NULL
+  ,role enum('ADMIN','USER','SUPERADMIN') DEFAULT 'USER'
+  ,firstName varchar(255) DEFAULT NULL
+  ,lastName varchar(255) DEFAULT NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
+  ,PRIMARY KEY (id)
+  ,UNIQUE KEY id (id)
+  ,UNIQUE KEY uniqueEmail (email)
 ) ENGINE=INNODB;
 
 CREATE TABLE `UserApiKey` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `userId` int NOT NULL,
-  `apiKey` varchar(255) NOT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deletedAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `user` (`userId`),
-  CONSTRAINT `UserApiKeyUserId` FOREIGN KEY (`userId`) REFERENCES `User` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+  id int NOT NULL AUTO_INCREMENT
+  ,userId int NOT NULL
+  ,apiKey varchar(255) NOT NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
+  ,PRIMARY KEY (id)
+  ,KEY user (userId)
+  ,CONSTRAINT UserApiKeyUserId FOREIGN KEY (userId) REFERENCES User (id) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE=INNODB;
 
 CREATE TABLE Category (
@@ -34,12 +34,18 @@ CREATE TABLE Category (
   ,categoryName VARCHAR(15) NOT NULL
   ,description TEXT NULL
   ,picture BLOB NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (categoryId)
   ) ENGINE=INNODB;
 
 CREATE TABLE Region (
   regionId INT NOT NULL
   ,regiondescription VARCHAR(50) NOT NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (regionId)
   ) ENGINE=INNODB;
 
@@ -48,6 +54,9 @@ CREATE TABLE Territory (
   territoryId VARCHAR(20) NOT NULL
   ,territorydescription VARCHAR(50) NOT NULL
   ,regionId INT NOT NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (TerritoryId)
   ,FOREIGN KEY (regionId)
       REFERENCES Region(regionId)
@@ -67,6 +76,9 @@ CREATE TABLE Customer (
   ,mobile VARCHAR(24) NULL
   ,email VARCHAR(225) NULL
   ,fax VARCHAR(24) NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (CustId)
   ) ENGINE=INNODB;
 
@@ -91,12 +103,18 @@ CREATE TABLE Employee (
   ,notes BLOB NULL
   ,mgrId INT NULL
   ,photoPath VARCHAR(255) NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (employeeId)
   ) ENGINE=INNODB;
 
 CREATE TABLE EmployeeTerritory (
   employeeId  INT AUTO_INCREMENT NOT NULL
   ,territoryId VARCHAR(20) NOT NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (employeeId, territoryId)
   ,FOREIGN KEY (employeeId)
       REFERENCES Employee(employeeId)
@@ -118,6 +136,9 @@ CREATE TABLE Supplier (
   ,email VARCHAR(225) NULL
   ,fax VARCHAR(24) NULL
   ,HomePage TEXT NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (supplierId)
   ) ENGINE=INNODB;
 
@@ -134,6 +155,9 @@ CREATE TABLE Product (
   ,unitsOnOrder SMALLINT NULL
   ,reorderLevel SMALLINT NULL
   ,discontinued CHAR(1) NOT NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (ProductId)
   ,FOREIGN KEY (supplierId)
       REFERENCES Supplier(supplierId)
@@ -147,6 +171,9 @@ CREATE TABLE Shipper (
   shipperId INT AUTO_INCREMENT NOT NULL
   ,companyName VARCHAR(40) NOT NULL
   ,phone VARCHAR(44) NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (ShipperId)
   ) ENGINE=INNODB;
 
@@ -168,6 +195,9 @@ CREATE TABLE SalesOrder (
   ,shipRegion VARCHAR(15) NULL
   ,shipPostalCode VARCHAR(10) NULL
   ,shipCountry VARCHAR(15) NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (orderId,custId)
    , FOREIGN KEY (shipperid)
       REFERENCES Shipper(shipperid)
@@ -185,6 +215,9 @@ CREATE TABLE OrderDetail (
   ,unitPrice DECIMAL(10, 2) NOT NULL
   ,quantity SMALLINT NOT NULL
   ,discount DECIMAL(10, 2) NOT NULL
+  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
+  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (orderDetailId)
   ,FOREIGN KEY (orderId)
       REFERENCES SalesOrder(orderId)
@@ -6629,117 +6662,115 @@ INSERT INTO OrderDetail(orderid, productid, unitprice, quantity, discount)
 
 -- Region 
 
-INSERT INTO Region VALUES (1,'Eastern');
-INSERT INTO Region VALUES (2,'Western');
-INSERT INTO Region VALUES (3,'Northern');
-INSERT INTO Region VALUES (4,'Southern');
+INSERT INTO Region(regionId, regiondescription) VALUES (1,'Eastern');
+INSERT INTO Region(regionId, regiondescription) VALUES (2,'Western');
+INSERT INTO Region(regionId, regiondescription) VALUES (3,'Northern');
+INSERT INTO Region(regionId, regiondescription) VALUES (4,'Southern');
 
 -- Territory 
 
-INSERT INTO Territory  VALUES ('01581','Westboro',1);
-INSERT INTO Territory  VALUES ('01730','Bedford',1);
-INSERT INTO Territory  VALUES ('01833','Georgetow',1);
-INSERT INTO Territory  VALUES ('02116','Boston',1);
-INSERT INTO Territory  VALUES ('02139','Cambridge',1);
-INSERT INTO Territory  VALUES ('02184','Braintree',1);
-INSERT INTO Territory  VALUES ('02903','Providence',1);
-INSERT INTO Territory  VALUES ('03049','Hollis',3);
-INSERT INTO Territory  VALUES ('03801','Portsmouth',3);
-INSERT INTO Territory  VALUES ('06897','Wilton',1);
-INSERT INTO Territory  VALUES ('07960','Morristown',1);
-INSERT INTO Territory  VALUES ('08837','Edison',1);
-INSERT INTO Territory  VALUES ('10019','New York',1);
-INSERT INTO Territory  VALUES ('10038','New York',1);
-INSERT INTO Territory  VALUES ('11747','Mellvile',1);
-INSERT INTO Territory  VALUES ('14450','Fairport',1);
-INSERT INTO Territory  VALUES ('19428','Philadelphia',3);
-INSERT INTO Territory  VALUES ('19713','Neward',1);
-INSERT INTO Territory  VALUES ('20852','Rockville',1);
-INSERT INTO Territory  VALUES ('27403','Greensboro',1);
-INSERT INTO Territory  VALUES ('27511','Cary',1);
-INSERT INTO Territory  VALUES ('29202','Columbia',4);
-INSERT INTO Territory  VALUES ('30346','Atlanta',4);
-INSERT INTO Territory  VALUES ('31406','Savannah',4);
-INSERT INTO Territory  VALUES ('32859','Orlando',4);
-INSERT INTO Territory  VALUES ('33607','Tampa',4);
-INSERT INTO Territory  VALUES ('40222','Louisville',1);
-INSERT INTO Territory  VALUES ('44122','Beachwood',3);
-INSERT INTO Territory  VALUES ('45839','Findlay',3);
-INSERT INTO Territory  VALUES ('48075','Southfield',3);
-INSERT INTO Territory  VALUES ('48084','Troy',3);
-INSERT INTO Territory  VALUES ('48304','Bloomfield Hills',3);
-INSERT INTO Territory  VALUES ('53404','Racine',3);
-INSERT INTO Territory  VALUES ('55113','Roseville',3);
-INSERT INTO Territory  VALUES ('55439','Minneapolis',3);
-INSERT INTO Territory  VALUES ('60179','Hoffman Estates',2);
-INSERT INTO Territory  VALUES ('60601','Chicago',2);
-INSERT INTO Territory  VALUES ('72716','Bentonville',4);
-INSERT INTO Territory  VALUES ('75234','Dallas',4);
-INSERT INTO Territory  VALUES ('78759','Austin',4);
-INSERT INTO Territory  VALUES ('80202','Denver',2);
-INSERT INTO Territory  VALUES ('80909','Colorado Springs',2);
-INSERT INTO Territory  VALUES ('85014','Phoenix',2);
-INSERT INTO Territory  VALUES ('85251','Scottsdale',2);
-INSERT INTO Territory  VALUES ('90405','Santa Monica',2);
-INSERT INTO Territory  VALUES ('94025','Menlo Park',2);
-INSERT INTO Territory  VALUES ('94105','San Francisco',2);
-INSERT INTO Territory  VALUES ('95008','Campbell',2);
-INSERT INTO Territory  VALUES ('95054','Santa Clara',2);
-INSERT INTO Territory  VALUES ('95060','Santa Cruz',2);
-INSERT INTO Territory  VALUES ('98004','Bellevue',2);
-INSERT INTO Territory  VALUES ('98052','Redmond',2);
-INSERT INTO Territory  VALUES ('98104','Seattle',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('01581','Westboro',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('01730','Bedford',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('01833','Georgetow',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('02116','Boston',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('02139','Cambridge',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('02184','Braintree',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('02903','Providence',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('03049','Hollis',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('03801','Portsmouth',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('06897','Wilton',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('07960','Morristown',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('08837','Edison',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('10019','New York',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('10038','New York',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('11747','Mellvile',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('14450','Fairport',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('19428','Philadelphia',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('19713','Neward',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('20852','Rockville',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('27403','Greensboro',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('27511','Cary',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('29202','Columbia',4);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('30346','Atlanta',4);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('31406','Savannah',4);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('32859','Orlando',4);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('33607','Tampa',4);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('40222','Louisville',1);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('44122','Beachwood',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('45839','Findlay',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('48075','Southfield',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('48084','Troy',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('48304','Bloomfield Hills',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('53404','Racine',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('55113','Roseville',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('55439','Minneapolis',3);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('60179','Hoffman Estates',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('60601','Chicago',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('72716','Bentonville',4);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('75234','Dallas',4);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('78759','Austin',4);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('80202','Denver',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('80909','Colorado Springs',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('85014','Phoenix',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('85251','Scottsdale',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('90405','Santa Monica',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('94025','Menlo Park',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('94105','San Francisco',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('95008','Campbell',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('95054','Santa Clara',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('95060','Santa Cruz',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('98004','Bellevue',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('98052','Redmond',2);
+INSERT INTO Territory(territoryId, territorydescription, regionId) VALUES ('98104','Seattle',2);
 
 -- EmployeeTerritory
 
-INSERT INTO EmployeeTerritory  VALUES (1,'06897');
-INSERT INTO EmployeeTerritory  VALUES (1,'19713');
-INSERT INTO EmployeeTerritory  VALUES (2,'01581');
-INSERT INTO EmployeeTerritory  VALUES (2,'01730');
-INSERT INTO EmployeeTerritory  VALUES (2,'01833');
-INSERT INTO EmployeeTerritory  VALUES (2,'02116');
-INSERT INTO EmployeeTerritory  VALUES (2,'02139');
-INSERT INTO EmployeeTerritory  VALUES (2,'02184');
-INSERT INTO EmployeeTerritory  VALUES (2,'40222');
-INSERT INTO EmployeeTerritory  VALUES (3,'30346');
-INSERT INTO EmployeeTerritory  VALUES (3,'31406');
-INSERT INTO EmployeeTerritory  VALUES (3,'32859');
-INSERT INTO EmployeeTerritory  VALUES (3,'33607');
-INSERT INTO EmployeeTerritory  VALUES (4,'20852');
-INSERT INTO EmployeeTerritory  VALUES (4,'27403');
-INSERT INTO EmployeeTerritory  VALUES (4,'27511');
-INSERT INTO EmployeeTerritory  VALUES (5,'02903');
-INSERT INTO EmployeeTerritory  VALUES (5,'07960');
-INSERT INTO EmployeeTerritory  VALUES (5,'08837');
-INSERT INTO EmployeeTerritory  VALUES (5,'10019');
-INSERT INTO EmployeeTerritory  VALUES (5,'10038');
-INSERT INTO EmployeeTerritory  VALUES (5,'11747');
-INSERT INTO EmployeeTerritory  VALUES (5,'14450');
-INSERT INTO EmployeeTerritory  VALUES (6,'85014');
-INSERT INTO EmployeeTerritory  VALUES (6,'85251');
-INSERT INTO EmployeeTerritory  VALUES (6,'98004');
-INSERT INTO EmployeeTerritory  VALUES (6,'98052');
-INSERT INTO EmployeeTerritory  VALUES (6,'98104');
-INSERT INTO EmployeeTerritory  VALUES (7,'60179');
-INSERT INTO EmployeeTerritory  VALUES (7,'60601');
-INSERT INTO EmployeeTerritory  VALUES (7,'80202');
-INSERT INTO EmployeeTerritory  VALUES (7,'80909');
-INSERT INTO EmployeeTerritory  VALUES (7,'90405');
-INSERT INTO EmployeeTerritory  VALUES (7,'94025');
-INSERT INTO EmployeeTerritory  VALUES (7,'94105');
-INSERT INTO EmployeeTerritory  VALUES (7,'95008');
-INSERT INTO EmployeeTerritory  VALUES (7,'95054');
-INSERT INTO EmployeeTerritory  VALUES (7,'95060');
-INSERT INTO EmployeeTerritory  VALUES (8,'19428');
-INSERT INTO EmployeeTerritory  VALUES (8,'44122');
-INSERT INTO EmployeeTerritory  VALUES (8,'45839');
-INSERT INTO EmployeeTerritory  VALUES (8,'53404');
-INSERT INTO EmployeeTerritory  VALUES (9,'03049');
-INSERT INTO EmployeeTerritory  VALUES (9,'03801');
-INSERT INTO EmployeeTerritory  VALUES (9,'48075');
-INSERT INTO EmployeeTerritory  VALUES (9,'48084');
-INSERT INTO EmployeeTerritory  VALUES (9,'48304');
-INSERT INTO EmployeeTerritory  VALUES (9,'55113');
-INSERT INTO EmployeeTerritory  VALUES (9,'55439');
-
-
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (1,'06897');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (1,'19713');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'01581');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'01730');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'01833');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'02116');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'02139');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'02184');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'40222');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (3,'30346');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (3,'31406');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (3,'32859');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (3,'33607');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (4,'20852');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (4,'27403');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (4,'27511');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'02903');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'07960');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'08837');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'10019');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'10038');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'11747');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'14450');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (6,'85014');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (6,'85251');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (6,'98004');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (6,'98052');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (6,'98104');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'60179');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'60601');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'80202');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'80909');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'90405');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'94025');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'94105');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'95008');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'95054');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'95060');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (8,'19428');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (8,'44122');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (8,'45839');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (8,'53404');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'03049');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'03801');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'48075');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'48084');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'48304');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'55113');
+INSERT INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'55439');

@@ -1,12 +1,13 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
-import { JwtService } from '@nestjs/jwt'
-import { Query } from './helpers/Query'
 import { ConfigService } from '@nestjs/config'
-import { Logger } from './helpers/Logger'
-import { Auth, AuthJWT, AuthType } from './types/auth.types'
-import { Schema } from './helpers/Schema'
-import { DatabaseSchema, WhereOperator } from './types/database.types'
+import { JwtService } from '@nestjs/jwt'
+
 import { Encryption } from './helpers/Encryption'
+import { Logger } from './helpers/Logger'
+import { Query } from './helpers/Query'
+import { Schema } from './helpers/Schema'
+import { Auth, AuthJWT, AuthType } from './types/auth.types'
+import { DatabaseSchema, QueryPerform, WhereOperator } from './types/database.types'
 
 @Injectable()
 export class LoginService {
@@ -45,7 +46,7 @@ export class LoginService {
 			throw new UnauthorizedException()
 		}
 
-		const user = await this.query.findOne({
+		const user = await this.query.perform(QueryPerform.FIND, {
 			schema,
 			where: [
 				{

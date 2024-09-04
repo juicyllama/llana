@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+
+import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from '../types/auth.types'
+import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
+import { RolePermission, RolesConfig } from '../types/roles.types'
 import { Logger } from './Logger'
 import { Query } from './Query'
-import { DatabaseSchema, WhereOperator } from '../types/database.types'
 import { Schema } from './Schema'
-import { RolePermission, RolesConfig } from '../types/roles.types'
-import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from '../types/auth.types'
 
 @Injectable()
 export class Roles {
@@ -119,7 +120,7 @@ export class Roles {
 
 		const user_id_column = config.location?.identifier_column ?? table_schema.primary_key
 
-		const role = await this.query.findOne({
+		const role = await this.query.perform(QueryPerform.FIND, {
 			schema: table_schema,
 			fields: [config.location.column],
 			where: [

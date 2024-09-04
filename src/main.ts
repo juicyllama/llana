@@ -1,6 +1,9 @@
-import { NestFactory } from '@nestjs/core'
-import { AppModule } from './app.module'
 import 'dotenv/config'
+import 'reflect-metadata'
+
+import { NestFactory } from '@nestjs/core'
+
+import { AppModule } from './app.module'
 import { Logger } from './helpers/Logger'
 
 async function bootstrap() {

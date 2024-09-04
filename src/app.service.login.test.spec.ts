@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { LoginService } from './app.service.login'
+
 import { AppModule } from './app.module'
+import { LoginService } from './app.service.login'
 import { Logger } from './helpers/Logger'
 
 describe('Login Service', () => {

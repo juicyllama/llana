@@ -8,9 +8,9 @@ export enum Method {
 	DELETE = 'DELETE',
 }
 
-export type GetResponseObject = any
+export type FindOneResponseObject = { [key: string]: any }
 
-export type GetQueryObject = {
+export type FindQueryObject = {
 	limit?: number
 	offset?: number
 	fields?: string
@@ -19,7 +19,7 @@ export type GetQueryObject = {
 	[key: string]: any
 }
 
-export type ListResponseObject = {
+export type FindManyResponseObject = {
 	offset: number
 	limit: number
 	total: number
@@ -33,8 +33,10 @@ export type ListResponseObject = {
 		}
 		total: number
 	}
-	data: GetResponseObject[]
+	data: FindOneResponseObject[]
 }
+
+export type IsUniqueResponse = { valid: boolean; message?: string }
 
 export class BulkUploadResponse {
 	@ApiProperty({
@@ -108,4 +110,8 @@ export class BulkUploadResponse {
 		example: [1, 2, 3, 4],
 	})
 	ids!: number[]
+}
+
+export type DeleteResponseObject = {
+	deleted: number
 }
