@@ -5,7 +5,6 @@ import { UrlToTable } from './helpers/Database'
 import { Logger } from './helpers/Logger'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
-import { Request } from './helpers/Request'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
@@ -23,7 +22,6 @@ export class GetController {
 		private readonly pagination: Pagination,
 		private readonly query: Query,
 		private readonly schema: Schema,
-		private readonly request: Request,
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly sort: Sort,
@@ -74,7 +72,7 @@ export class GetController {
 	@Get('*/:id')
 	async getById(@Req() req, @Res() res): Promise<FindOneResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
-		const id = this.request.escapeText(req.params.id)
+		const id = req.params.id
 
 		let schema: DatabaseSchema
 

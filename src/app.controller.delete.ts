@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
-import { Request } from './helpers/Request'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
@@ -19,7 +18,6 @@ export class DeleteController {
 		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
 		private readonly query: Query,
-		private readonly request: Request,
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
@@ -28,7 +26,7 @@ export class DeleteController {
 	@Delete('*/:id')
 	async deleteById(@Req() req, @Res() res): Promise<DeleteResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
-		const id = this.request.escapeText(req.params.id)
+		const id = req.params.id
 
 		let schema: DatabaseSchema
 

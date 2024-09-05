@@ -26,7 +26,7 @@ export class PutController {
 	@Put('*/:id')
 	async updateById(@Req() req, @Res() res): Promise<FindOneResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
-		const id = this.request.escapeText(req.params.id)
+		const id = req.params.id
 		const body = req.body
 
 		let schema: DatabaseSchema

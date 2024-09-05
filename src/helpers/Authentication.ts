@@ -223,7 +223,7 @@ export class Authentication {
 							{
 								column: api_key_config.column,
 								operator: WhereOperator.equals,
-								value: this.request.escapeText(req_api_key),
+								value: req_api_key,
 							},
 						],
 						joins: true,

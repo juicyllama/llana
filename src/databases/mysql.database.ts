@@ -28,12 +28,14 @@ import {
 	FindOneResponseObject,
 	IsUniqueResponse,
 } from '../types/response.types'
+import { Request } from '../helpers/Request'
 
 @Injectable()
 export class MySQL {
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
+		private readonly request: Request,
 		private readonly pagination: Pagination,
 	) {}
 
@@ -123,7 +125,7 @@ export class MySQL {
 		const columns = Object.keys(options.data)
 		const values = Object.values(options.data)
 
-		const command = `INSERT INTO ${table_name} (${columns.join(', ')}) VALUES (${values.map(value => `'${value}'`).join(', ')})`
+		const command = `INSERT INTO ${table_name} (${columns.join(', ')}) VALUES (${values.map(value => `${this.request.sqlEscapeText(value)}`).join(', ')})`
 
 		this.logger.debug(`[Query][Create][One][${options.schema.table}] ` + command)
 
@@ -402,7 +404,7 @@ export class MySQL {
 		}
 
 		if (where?.length) {
-			command += `WHERE ${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.value ? (w.operator === WhereOperator.search ? '%' : '') + w.value + (w.operator === WhereOperator.search ? '%' : '') : ''}`).join(' AND ')} `
+			command += `WHERE ${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.value ? this.request.sqlEscapeText((w.operator === WhereOperator.search ? '%' : '') + w.value + (w.operator === WhereOperator.search ? '%' : '')) : ''}`).join(' AND ')} `
 		}
 
 		return command

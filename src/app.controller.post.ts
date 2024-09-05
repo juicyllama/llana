@@ -27,9 +27,7 @@ export class PostController {
 
 	@Post('/login')
 	signIn(@Body() signInDto: Record<string, any>) {
-		const username = this.request.escapeText(signInDto.username)
-		const password = this.request.text(signInDto.password)
-		return this.loginService.signIn(username, password)
+		return this.loginService.signIn(signInDto.username, signInDto.password)
 	}
 
 	/**
