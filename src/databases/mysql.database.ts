@@ -402,7 +402,7 @@ export class MySQL {
 		}
 
 		if (where?.length) {
-			command += `WHERE ${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.value ? `'` + (w.operator === WhereOperator.search ? '%' : '') + w.value + (w.operator === WhereOperator.search ? '%' : '') + `'` : ''}`).join(' AND ')} `
+			command += `WHERE ${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.value ? (w.operator === WhereOperator.search ? '%' : '') + w.value + (w.operator === WhereOperator.search ? '%' : '') : ''}`).join(' AND ')} `
 		}
 
 		return command

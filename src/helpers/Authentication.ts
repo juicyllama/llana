@@ -7,6 +7,7 @@ import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } fr
 import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
 import { Logger } from './Logger'
 import { Query } from './Query'
+import { Request } from './Request'
 import { Schema } from './Schema'
 
 @Injectable()
@@ -15,6 +16,7 @@ export class Authentication {
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
 		private readonly query: Query,
+		private readonly request: Request,
 		private readonly schema: Schema,
 		private readonly jwtService: JwtService,
 	) {}
@@ -221,7 +223,7 @@ export class Authentication {
 							{
 								column: api_key_config.column,
 								operator: WhereOperator.equals,
-								value: req_api_key,
+								value: this.request.escapeText(req_api_key),
 							},
 						],
 						joins: true,

@@ -28,7 +28,8 @@ export class PostController {
 	@Post('/login')
 	signIn(@Body() signInDto: Record<string, any>) {
 		const username = this.request.escapeText(signInDto.username)
-		return this.loginService.signIn(username, signInDto.password)
+		const password = this.request.text(signInDto.password)
+		return this.loginService.signIn(username, password)
 	}
 
 	/**
@@ -38,7 +39,7 @@ export class PostController {
 	@Post('*/')
 	async createOne(@Req() req, @Res() res): Promise<FindOneResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
-		const body = this.request.escapeObject(req.body)
+		const body = req.body
 
 		let schema: DatabaseSchema
 
