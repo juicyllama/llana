@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import * as sqlstring from 'sqlstring'
 
 import { DatabaseType } from '../types/database.types'
 
@@ -41,7 +42,7 @@ export function UrlToTable(uri: string, dropSlashes?: number): string {
 	//Sanitize string
 	uri = uri.replace(/[^a-zA-Z0-9]/g, '_')
 
-	return uri
+	return sqlstring.escape(uri)
 }
 
 export function getDatabaseType(uri: string): DatabaseType {

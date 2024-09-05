@@ -88,7 +88,7 @@ export class DeleteController {
 		})
 
 		if (!record) {
-			return res.status(400).send(`Record with id ${req.params.id} not found`)
+			return res.status(400).send(this.response.text(`Record with id ${req.params.id} not found`))
 		}
 
 		//Soft or Hard delete check
