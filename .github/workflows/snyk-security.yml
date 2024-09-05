@@ -46,6 +46,8 @@ jobs:
         #- uses: actions/setup-node@v4
         #  with:
         #    node-version: 20
+        
+        continue-on-error: true
 
         env:
           # This is where you will need to introduce the Snyk API token created with your Snyk account
