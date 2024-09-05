@@ -19,6 +19,7 @@
 	"license": "BSD-4-Clause",
 	"readmeFilename": "README.md",
 	"scripts": {
+		"postinstall": "sh ./scripts/postinstall.sh",
 		"prebuild": "rimraf dist",
 		"build": "nest build",
 		"format": "prettier --write \"**/*.ts\"",

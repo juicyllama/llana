@@ -7,10 +7,15 @@ import { GetController } from './app.controller.get'
 import { PostController } from './app.controller.post'
 import { PutController } from './app.controller.put'
 import { LoginService } from './app.service.login'
+//@ts-expect-error file generated on install
 import auth from './config/auth.config'
+//@ts-expect-error file generated on install
 import database from './config/database.config'
+//@ts-expect-error file generated on install
 import hosts from './config/hosts.config'
+//@ts-expect-error file generated on install
 import jwt from './config/jwt.config'
+//@ts-expect-error file generated on install
 import roles from './config/roles.config'
 import { MySQL } from './databases/mysql.database'
 import { Authentication } from './helpers/Authentication'
