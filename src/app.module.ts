@@ -18,6 +18,7 @@ import { Encryption } from './helpers/Encryption'
 import { Logger } from './helpers/Logger'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
+import { Request } from './helpers/Request'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
@@ -32,8 +33,8 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		JwtModule.register(jwt()),
 	],
 	controllers: [DeleteController, GetController, PostController, PutController],
-	providers: [Authentication, Encryption, Logger, LoginService, MySQL, Pagination, Query, Response, Roles, Schema, Sort],
-	exports: [Authentication, Encryption, Logger, LoginService, MySQL, Pagination, Query, Response, Roles, Schema, Sort],
+	providers: [Authentication, Encryption, Logger, LoginService, MySQL, Pagination, Query, Request, Response, Roles, Schema, Sort],
+	exports: [Authentication, Encryption, Logger, LoginService, MySQL, Pagination, Query, Request, Response, Roles, Schema, Sort],
 })
 export class AppModule implements NestModule {
 	configure(consumer: MiddlewareConsumer) {

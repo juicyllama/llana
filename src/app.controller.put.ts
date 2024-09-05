@@ -3,6 +3,7 @@ import { Controller, Put, Req, Res } from '@nestjs/common'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
+import { Request } from './helpers/Request'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
@@ -16,6 +17,7 @@ export class PutController {
 	constructor(
 		private readonly authentication: Authentication,
 		private readonly query: Query,
+		private readonly request: Request,
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
@@ -24,6 +26,8 @@ export class PutController {
 	@Put('*/:id')
 	async updateById(@Req() req, @Res() res): Promise<FindOneResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
+		const id = this.request.escapeText(req.params.id)
+		const body = this.request.escapeObject(req.body)
 
 		let schema: DatabaseSchema
 
@@ -55,7 +59,7 @@ export class PutController {
 		}
 
 		//validate input data
-		const validate = await this.schema.validateData(schema, req.body)
+		const validate = await this.schema.validateData(schema, body)
 		if (!validate.valid) {
 			return res.status(400).send(this.response.text(validate.message))
 		}
@@ -67,7 +71,7 @@ export class PutController {
 			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
-		const validateKey = await this.schema.validateData(schema, { [primary_key]: req.params.id })
+		const validateKey = await this.schema.validateData(schema, { [primary_key]: id })
 		if (!validateKey.valid) {
 			return res.status(400).send(this.response.text(validateKey.message))
 		}
@@ -75,8 +79,8 @@ export class PutController {
 		//validate uniqueness
 		const uniqueValidation = (await this.query.perform(QueryPerform.UNIQUE, {
 			schema,
-			data: req.body,
-			id: req.params.id,
+			data: body,
+			id: id,
 		})) as IsUniqueResponse
 		if (!uniqueValidation.valid) {
 			return res.status(400).send(this.response.text(uniqueValidation.message))
@@ -86,7 +90,7 @@ export class PutController {
 			{
 				column: primary_key,
 				operator: WhereOperator.equals,
-				value: req.params.id,
+				value: id,
 			},
 		]
 
@@ -102,13 +106,13 @@ export class PutController {
 		})
 
 		if (!record) {
-			return res.status(400).send(this.response.text(`Record with id ${req.params.id} not found`))
+			return res.status(400).send(this.response.text(`Record with id ${id} not found`))
 		}
 
 		try {
 			return res.status(200).send(
 				await this.query.perform(QueryPerform.UPDATE, {
-					id: req.params.id,
+					id: id,
 					schema,
 					data: validate.instance,
 				}),

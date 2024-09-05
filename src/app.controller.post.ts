@@ -4,6 +4,7 @@ import { LoginService } from './app.service.login'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
+import { Request } from './helpers/Request'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
@@ -19,13 +20,15 @@ export class PostController {
 		private readonly loginService: LoginService,
 		private readonly query: Query,
 		private readonly schema: Schema,
+		private readonly request: Request,
 		private readonly response: Response,
 		private readonly roles: Roles,
 	) {}
 
 	@Post('/login')
 	signIn(@Body() signInDto: Record<string, any>) {
-		return this.loginService.signIn(signInDto.username, signInDto.password)
+		const username = this.request.escapeText(signInDto.username)
+		return this.loginService.signIn(username, signInDto.password)
 	}
 
 	/**
@@ -35,6 +38,7 @@ export class PostController {
 	@Post('*/')
 	async createOne(@Req() req, @Res() res): Promise<FindOneResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
+		const body = this.request.escapeObject(req.body)
 
 		let schema: DatabaseSchema
 
@@ -59,7 +63,7 @@ export class PostController {
 		}
 
 		//validate input data
-		const validate = await this.schema.validateData(schema, req.body)
+		const validate = await this.schema.validateData(schema, body)
 		if (!validate.valid) {
 			return res.status(400).send(this.response.text(validate.message))
 		}
@@ -67,7 +71,7 @@ export class PostController {
 		//validate uniqueness
 		const uniqueValidation = (await this.query.perform(QueryPerform.UNIQUE, {
 			schema,
-			data: req.body,
+			data: body,
 		})) as IsUniqueResponse
 		if (!uniqueValidation.valid) {
 			return res.status(400).send(this.response.text(uniqueValidation.message))

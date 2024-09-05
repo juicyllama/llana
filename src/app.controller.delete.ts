@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
+import { Request } from './helpers/Request'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
@@ -18,6 +19,7 @@ export class DeleteController {
 		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
 		private readonly query: Query,
+		private readonly request: Request,
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
@@ -26,6 +28,7 @@ export class DeleteController {
 	@Delete('*/:id')
 	async deleteById(@Req() req, @Res() res): Promise<DeleteResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
+		const id = this.request.escapeText(req.params.id)
 
 		let schema: DatabaseSchema
 
@@ -63,7 +66,7 @@ export class DeleteController {
 			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
-		const validateKey = await this.schema.validateData(schema, { [primary_key]: req.params.id })
+		const validateKey = await this.schema.validateData(schema, { [primary_key]: id })
 		if (!validateKey.valid) {
 			return res.status(400).send(this.response.text(validateKey.message))
 		}
@@ -72,7 +75,7 @@ export class DeleteController {
 			{
 				column: primary_key,
 				operator: WhereOperator.equals,
-				value: req.params.id,
+				value: id,
 			},
 		]
 
@@ -88,7 +91,7 @@ export class DeleteController {
 		})
 
 		if (!record) {
-			return res.status(400).send(this.response.text(`Record with id ${req.params.id} not found`))
+			return res.status(400).send(this.response.text(`Record with id ${id} not found`))
 		}
 
 		//Soft or Hard delete check
@@ -103,7 +106,7 @@ export class DeleteController {
 		try {
 			return res.status(200).send(
 				await this.query.perform(QueryPerform.DELETE, {
-					id: req.params.id,
+					id: id,
 					schema,
 					softDelete,
 				}),

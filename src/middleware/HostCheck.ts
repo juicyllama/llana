@@ -1,4 +1,4 @@
-import { Env } from '@juicyllama/utils'
+import { Env } from '../utils/Env'
 import { Injectable, NestMiddleware } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NextFunction, Request, Response } from 'express'

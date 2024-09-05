@@ -5,6 +5,7 @@ import { UrlToTable } from './helpers/Database'
 import { Logger } from './helpers/Logger'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
+import { Request } from './helpers/Request'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
@@ -22,6 +23,7 @@ export class GetController {
 		private readonly pagination: Pagination,
 		private readonly query: Query,
 		private readonly schema: Schema,
+		private readonly request: Request,
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly sort: Sort,
@@ -72,6 +74,7 @@ export class GetController {
 	@Get('*/:id')
 	async getById(@Req() req, @Res() res): Promise<FindOneResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
+		const id = this.request.escapeText(req.params.id)
 
 		let schema: DatabaseSchema
 
@@ -109,7 +112,7 @@ export class GetController {
 			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
-		const validateKey = await this.schema.validateData(schema, { [primary_key]: req.params.id })
+		const validateKey = await this.schema.validateData(schema, { [primary_key]: id })
 		if (!validateKey.valid) {
 			return res.status(400).send(this.response.text(validateKey.message))
 		}
@@ -138,7 +141,7 @@ export class GetController {
 			{
 				column: primary_key,
 				operator: WhereOperator.equals,
-				value: req.params.id,
+				value: id,
 			},
 		]
 
@@ -163,7 +166,7 @@ export class GetController {
 	@Get('*/')
 	async list(@Req() req, @Res() res): Promise<FindManyResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
-
+		
 		let schema: DatabaseSchema
 
 		try {

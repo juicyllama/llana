@@ -1,4 +1,4 @@
-import { Env } from '@juicyllama/utils'
+import { Env } from '../utils/Env'
 import { Injectable, Req } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'

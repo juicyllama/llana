@@ -33,7 +33,6 @@
 		"commit": "git pull && git add . && git commit -m \"chore: update\" && git push"
 	},
 	"dependencies": {
-		"@juicyllama/utils": "^0.10.4",
 		"@nestjs/common": "^10.3.2",
 		"@nestjs/config": "^3.2.3",
 		"@nestjs/core": "^10.3.2",
