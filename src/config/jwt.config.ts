@@ -4,6 +4,6 @@ export default registerAs(
 	() =>
 		<any>{
 			secret: process.env.JWT_KEY,
-			signOptions: { expiresIn: '1d' },
+			signOptions: { expiresIn: process.env.JWT_EXPIRES_IN ?? '1d' },
 		},
 )

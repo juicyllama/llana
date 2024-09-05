@@ -25,18 +25,6 @@ if [ ! -f src/config/auth.config.ts ]; then
     cp src/config/auth.config.example.ts src/config/auth.config.ts
 fi
 
-if [ ! -f src/config/database.config.ts ]; then
-    cp src/config/database.config.example.ts src/config/database.config.ts
-fi
-
-if [ ! -f src/config/hosts.config.ts ]; then
-    cp src/config/hosts.config.example.ts src/config/hosts.config.ts
-fi
-
-if [ ! -f src/config/jwt.config.ts ]; then
-    cp src/config/jwt.config.example.ts src/config/jwt.config.ts
-fi
-
 if [ ! -f src/config/roles.config.ts ]; then
     cp src/config/roles.config.example.ts src/config/roles.config.ts
 fi
