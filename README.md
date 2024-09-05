@@ -1,27 +1,38 @@
 <div align="center">
 
+# Llana
+
   <a href="https://juicyllama.com/" target="_blank">
     <img src="https://juicyllama.com/assets/images/icon.png" width="100" alt="JuicyLlama Logo" />
   </a>
 
-Visit [JuicyLlama > Tools > Llana](https://juicyllama.com/tools/llana) for full documentation. 
-
 </div>
+
+## Database REST API in minuites
+
+Llana is a no-code API wrapper that exposes a REST API for any database within minuites. Stop wasting time building endpoints, just connect your database and start playing. Open source, free to use, and no vendor lock-in.
+
+## Documentation
+
+Visit [JuicyLlama](https://juicyllama.com) > [Tools](https://juicyllama.com/tools) > [Llana](https://juicyllama.com/tools/llana) for full documentation. 
+
 
 ## Databases
 
 We are working to support all major databases, if you would like to contribute to the open source project and help integrate your faviourt database, checkout our [contribiution guidelines](https://juicyllama.com/developers/contributing).
 
-- [ ] [ORACLE](https://expressjs.com/en/guide/database-integration.html#oracle) [(Help Wanted)](https://badgen.net/badge/Help%20Wanted/Todo/red?icon=github)
-- [x] [MYSQL](https://expressjs.com/en/guide/database-integration.html#mysql) [(In Progress)](https://badgen.net/badge/Beta%20Version/In%20Progress/yellow?icon=github)
-- [ ] MSSQL [(Help Wanted)](https://badgen.net/badge/Help%20Wanted/Todo/red?icon=github)
-- [ ] [POSTGRES](https://expressjs.com/en/guide/database-integration.html#postgresql) [(Help Wanted)](https://badgen.net/badge/Help%20Wanted/Todo/red?icon=github)
-- [ ] [MONGODB](https://expressjs.com/en/guide/database-integration.html#mongodb) [(Help Wanted)](https://badgen.net/badge/Help%20Wanted/Todo/red?icon=github)
-- [ ] [REDIS](https://expressjs.com/en/guide/database-integration.html#redis) [(Help Wanted)](https://badgen.net/badge/Help%20Wanted/Todo/red?icon=github)
-- [ ] SNOWFLAKE [(Help Wanted)](https://badgen.net/badge/Help%20Wanted/Todo/red?icon=github)
-- [ ] [ELASTICSEARCH](https://expressjs.com/en/guide/database-integration.html#elasticsearch) [(Help Wanted)](https://badgen.net/badge/Help%20Wanted/Todo/red?icon=github)
-- [ ] [SQLITE](https://expressjs.com/en/guide/database-integration.html#sqlite) [(Help Wanted)](https://badgen.net/badge/Help%20Wanted/Todo/red?icon=github)
-- [ ] [CASSANDRA](https://expressjs.com/en/guide/database-integration.html#cassandra) [(Help Wanted)](https://badgen.net/badge/Help%20Wanted/Todo/red?icon=github)
-- [ ] MARIADB [(Help Wanted)](https://badgen.net/badge/Help%20Wanted/Todo/red?icon=github)
+[ExpressJs Database Integration Guide](https://expressjs.com/en/guide/database-integration.html)
+
+![ORACLE](https://badgen.net/badge/ORACLE/Help%20Welcomed/red)<br>
+![MYSQL](https://badgen.net/badge/MYSQL/In%20Progress/yellow)<br>
+![MSSQL](https://badgen.net/badge/MSSQL/Help%20Welcomed/red)<br>
+![POSTGRES](https://badgen.net/badge/POSTGRES/Help%20Welcomed/red)<br>
+![MONGODB](https://badgen.net/badge/MONGODB/Help%20Welcomed/red)<br>
+![REDIS](https://badgen.net/badge/REDIS/Help%20Welcomed/red)<br>
+![SNOWFLAKE](https://badgen.net/badge/SNOWFLAKE/Help%20Welcomed/red)<br>
+![ELASTICSEARCH](https://badgen.net/badge/ELASTICSEARCH/Help%20Welcomed/red)<br>
+![SQLITE](https://badgen.net/badge/SQLITE/Help%20Welcomed/red)<br>
+![CASSANDRA](https://badgen.net/badge/CASSANDRA/Help%20Welcomed/red)<br>
+![MARIADB](https://badgen.net/badge/MARIADB/Help%20Welcomed/red)<br>
 
 [See the complete breakdown of which databases are integrated with which endpoints](https://juicyllama.com/tools/llana/support) 
