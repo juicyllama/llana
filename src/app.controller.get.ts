@@ -164,7 +164,7 @@ export class GetController {
 	@Get('*/')
 	async list(@Req() req, @Res() res): Promise<FindManyResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
-		
+
 		let schema: DatabaseSchema
 
 		try {
@@ -307,7 +307,7 @@ export class GetController {
 				}),
 			)
 		} catch (e) {
-			return res.status(400).sendthis.response.text((e.message))
+			return res.status(400).sendthis.response.text(e.message)
 		}
 	}
 }

@@ -22,6 +22,7 @@ describe('Authentication', () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
 		}).compile()
+
 		app = moduleRef.createNestApplication()
 
 		configService = app.get<ConfigService>(ConfigService)

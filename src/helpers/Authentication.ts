@@ -1,13 +1,12 @@
-import { Env } from '../utils/Env'
 import { Injectable, Req } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 
 import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
 import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
+import { Env } from '../utils/Env'
 import { Logger } from './Logger'
 import { Query } from './Query'
-import { Request } from './Request'
 import { Schema } from './Schema'
 
 @Injectable()
@@ -16,7 +15,6 @@ export class Authentication {
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
 		private readonly query: Query,
-		private readonly request: Request,
 		private readonly schema: Schema,
 		private readonly jwtService: JwtService,
 	) {}

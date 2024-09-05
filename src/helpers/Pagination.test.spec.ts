@@ -1,28 +1,21 @@
-import { ConfigModule } from '@nestjs/config'
+import { INestApplication } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { Test, TestingModule } from '@nestjs/testing'
+import { Test } from '@nestjs/testing'
 
-import auth from '../config/auth.config'
-import database from '../config/database.config'
-import hosts from '../config/hosts.config'
-import { Logger } from './Logger'
+import { AppModule } from '../app.module'
 import { Pagination } from './Pagination'
 
 describe('Pagination', () => {
-	let app: TestingModule
+	let app: INestApplication
 	let service: Pagination
 	let configService: ConfigService
 
 	beforeAll(async () => {
-		app = await Test.createTestingModule({
-			imports: [
-				ConfigModule.forRoot({
-					load: [auth, database, hosts],
-				}),
-			],
-			providers: [Pagination, Logger],
-			exports: [Pagination, Logger],
+		const moduleRef = await Test.createTestingModule({
+			imports: [AppModule],
 		}).compile()
+
+		app = moduleRef.createNestApplication()
 
 		service = app.get<Pagination>(Pagination)
 		configService = app.get<ConfigService>(ConfigService)

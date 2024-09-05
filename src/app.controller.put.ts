@@ -3,7 +3,6 @@ import { Controller, Put, Req, Res } from '@nestjs/common'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
-import { Request } from './helpers/Request'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
@@ -17,7 +16,6 @@ export class PutController {
 	constructor(
 		private readonly authentication: Authentication,
 		private readonly query: Query,
-		private readonly request: Request,
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,

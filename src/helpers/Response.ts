@@ -5,12 +5,11 @@ import * as escape from 'escape-html'
 export class Response {
 	constructor() {}
 
-    /**
-     * Pipes a response whilst sanitizing it
-     */
+	/**
+	 * Pipes a response whilst sanitizing it
+	 */
 
-    text(string: string): string {
-        return escape(string)
-    }
-
+	text(string: string): string {
+		return escape(string)
+	}
 }

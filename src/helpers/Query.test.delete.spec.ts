@@ -1,24 +1,29 @@
 import { faker } from '@faker-js/faker'
-import { Test, TestingModule } from '@nestjs/testing'
-import { DeleteResponseObject, FindOneResponseObject } from 'src/types/response.types'
+import { INestApplication } from '@nestjs/common'
+import { Test } from '@nestjs/testing'
 
 import { AppModule } from '../app.module'
 import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
-import { Logger } from './Logger'
+import { DeleteResponseObject, FindOneResponseObject } from '../types/response.types'
+import { Logger, logLevel } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
 
 describe('Query > Delete', () => {
-	let app: TestingModule
+	let app: INestApplication
 	let service: Query
 	let schema: Schema
 	let logger: Logger
 	let usersTableSchema: DatabaseSchema
 
 	beforeAll(async () => {
-		app = await Test.createTestingModule({
+		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
 		}).compile()
+
+		app = moduleRef.createNestApplication({
+			logger: logLevel(),
+		})
 
 		service = app.get<Query>(Query)
 		schema = app.get<Schema>(Schema)

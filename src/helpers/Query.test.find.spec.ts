@@ -1,14 +1,15 @@
-import { Test, TestingModule } from '@nestjs/testing'
+import { INestApplication } from '@nestjs/common'
+import { Test } from '@nestjs/testing'
 
 import { AppModule } from '../app.module'
 import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
 import { FindManyResponseObject, FindOneResponseObject } from '../types/response.types'
-import { Logger } from './Logger'
+import { Logger, logLevel } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
 
 describe('Query > Find', () => {
-	let app: TestingModule
+	let app: INestApplication
 	let service: Query
 	let schema: Schema
 	let logger: Logger
@@ -17,9 +18,13 @@ describe('Query > Find', () => {
 	let salesOrderTableSchema: DatabaseSchema
 
 	beforeAll(async () => {
-		app = await Test.createTestingModule({
+		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
 		}).compile()
+
+		app = moduleRef.createNestApplication({
+			logger: logLevel(),
+		})
 
 		service = app.get<Query>(Query)
 		schema = app.get<Schema>(Schema)

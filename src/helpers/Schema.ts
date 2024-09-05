@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { plainToClass } from 'class-transformer'
 import { IsBoolean, IsDateString, IsJSON, IsNumber, IsOptional, IsString, validate } from 'class-validator'
+import * as sqlstring from 'sqlstring'
 
 import { NON_FIELD_PARAMS } from '../app.constants'
 import { MySQL } from '../databases/mysql.database'
@@ -13,8 +14,6 @@ import {
 	validateWhereResponse,
 } from '../types/schema.types'
 import { Logger } from './Logger'
-
-import * as sqlstring from 'sqlstring'
 
 @Injectable()
 export class Schema {
@@ -120,7 +119,7 @@ export class Schema {
 
 			if (column.type === DatabaseColumnType.DATE) {
 				sanitizedData[column.field] = new Date(data[column.field]).toISOString()
-			} else if(column.type === DatabaseColumnType.STRING) {
+			} else if (column.type === DatabaseColumnType.STRING) {
 				sanitizedData[column.field] = sqlstring.escape(data[column.field].toString())
 			} else {
 				sanitizedData[column.field] = data[column.field]

@@ -1,18 +1,21 @@
-import { Test, TestingModule } from '@nestjs/testing'
+import { INestApplication } from '@nestjs/common'
+import { Test } from '@nestjs/testing'
 
 import { AppModule } from './app.module'
 import { LoginService } from './app.service.login'
 import { Logger } from './helpers/Logger'
 
 describe('Login Service', () => {
-	let app: TestingModule
+	let app: INestApplication
 	let service: LoginService
 	let logger: Logger
 
 	beforeAll(async () => {
-		app = await Test.createTestingModule({
+		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
 		}).compile()
+
+		app = moduleRef.createNestApplication()
 
 		service = app.get<LoginService>(LoginService)
 		logger = app.get<Logger>(Logger)

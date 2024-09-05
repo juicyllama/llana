@@ -11,6 +11,7 @@ async function bootstrap() {
 	await app.listen(process.env.PORT)
 
 	const logger = new Logger()
+	logger.status()
 
 	let url = await app.getUrl()
 	url = url.replace('[::1]', 'localhost')

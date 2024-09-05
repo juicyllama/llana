@@ -28,14 +28,12 @@ import {
 	FindOneResponseObject,
 	IsUniqueResponse,
 } from '../types/response.types'
-import { Request } from '../helpers/Request'
 
 @Injectable()
 export class MySQL {
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
-		private readonly request: Request,
 		private readonly pagination: Pagination,
 	) {}
 
@@ -49,16 +47,28 @@ export class MySQL {
 		return await mysql.createConnection(this.configService.get('database.host'))
 	}
 
-	async performQuery(query: string): Promise<any> {
+	async performQuery(sql: string, values?: any[]): Promise<any> {
 		const connection = await this.createConnection()
+
 		try {
-			const [results] = await connection.query<any[]>(query)
+			let results
+			this.logger.debug(`[MySQL][Query] ${sql}`)
+
+			if (!values || !values.length) {
+				;[results] = await connection.query<any[]>(sql)
+			} else {
+				;[results] = await connection.query<any[]>(sql, values)
+			}
+			this.logger.debug(`[MySQL][Query] Results`, results)
 			connection.end()
 			return results
 		} catch (e) {
 			this.logger.error('Error executing mysql database query')
 			this.logger.error({
-				sql: query,
+				sql: {
+					sql,
+					values: values ?? [],
+				},
 				error: {
 					message: e.message,
 				},
@@ -119,17 +129,18 @@ export class MySQL {
 
 	async createOne(options: DatabaseCreateOneOptions): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
+		const values: any[] = []
 
 		options = this.pipeJsToMySQL(options) as DatabaseCreateOneOptions
 
 		const columns = Object.keys(options.data)
-		const values = Object.values(options.data)
+		const dataValues = Object.values(options.data)
 
-		const command = `INSERT INTO ${table_name} (${columns.join(', ')}) VALUES (${values.map(value => `${this.request.sqlEscapeText(value)}`).join(', ')})`
+		values.push(...dataValues)
 
-		this.logger.debug(`[Query][Create][One][${options.schema.table}] ` + command)
+		const command = `INSERT INTO ${table_name} (${columns.join(', ')}) VALUES ( ?${values.map(() => ``).join(', ?')} )`
 
-		const result = await this.performQuery(command)
+		const result = await this.performQuery(command, values)
 
 		return await this.findOne({
 			schema: options.schema,
@@ -148,12 +159,10 @@ export class MySQL {
 	 */
 
 	async findOne(options: DatabaseFindOneOptions): Promise<FindOneResponseObject | undefined> {
-		let command = this.find(options)
+		let [command, values] = this.find(options)
 		command += ` LIMIT 1`
 
-		this.logger.debug(`[Query][Find][One][${options.schema.table}] ` + command)
-
-		const results = await this.performQuery(command)
+		const results = await this.performQuery(command, values)
 
 		if (!results[0]) {
 			return
@@ -175,7 +184,7 @@ export class MySQL {
 	async findMany(options: DatabaseFindManyOptions): Promise<FindManyResponseObject> {
 		const total = await this.findTotalRecords(options)
 
-		let command = this.find(options)
+		let [command, values] = this.find(options)
 
 		let sort: SortCondition[] = []
 		if (options.sort) {
@@ -196,9 +205,7 @@ export class MySQL {
 
 		command += ` LIMIT ${options.limit} OFFSET ${options.offset}`
 
-		this.logger.debug(`[Query][Find][Many][${options.schema.table}] ` + command)
-
-		const results = await this.performQuery(command)
+		const results = await this.performQuery(command, values)
 
 		for (const r in results) {
 			results[r] = this.pipeMySQLToJs(results[r])
@@ -230,15 +237,25 @@ export class MySQL {
 	async findTotalRecords(options: DatabaseFindTotalRecords): Promise<number> {
 		const table_name = options.schema.table
 
+		const values: any[] = []
 		let command = `SELECT COUNT(*) as total FROM ${table_name} `
 
 		const where = options.where?.filter(where => !where.column.includes('.'))
 
 		if (where?.length) {
-			command += `WHERE ${where.map(w => `${w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.value ? `'` + (w.operator === WhereOperator.search ? '%' : '') + w.value + (w.operator === WhereOperator.search ? '%' : '') + `'` : ''}`).join(' AND ')} `
+			command += `WHERE `
+
+			for (const w in where) {
+				if (where[w].operator === WhereOperator.search) {
+					where[w].value = '%' + where[w].value + '%'
+				}
+			}
+
+			command += `${where.map(w => `${w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ? `).join(' AND ')} `
+			values.push(...where.map(w => w.value))
 		}
 
-		const results = await this.performQuery(command)
+		const results = await this.performQuery(command, values)
 		return results[0].total
 	}
 
@@ -289,14 +306,6 @@ export class MySQL {
 					}
 				}
 
-				this.logger.debug(`[Query][Find][Many][${options.schema.table}][Relation][${relation}]`, {
-					fields,
-					where,
-					sort,
-					limit,
-					offset: 0,
-				})
-
 				const relation_result = await this.findMany({
 					schema: schema_relation,
 					fields,
@@ -319,19 +328,18 @@ export class MySQL {
 	async updateOne(options: DatabaseUpdateOneOptions): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
 
+		const values = [...Object.values(options.data), options.id.toString()]
 		let command = `UPDATE ${table_name} SET `
 
 		options = this.pipeJsToMySQL(options) as DatabaseUpdateOneOptions
 
 		command += `${Object.keys(options.data)
-			.map(key => `${key} = '${options.data[key]}'`)
+			.map(key => `${key} = ?`)
 			.join(', ')} `
 
-		command += `WHERE ${options.schema.primary_key} = ${options.id}`
+		command += `WHERE ${options.schema.primary_key} = ?`
 
-		this.logger.debug(`[Query][Update][One][${options.schema.table}] ` + command)
-
-		await this.performQuery(command)
+		await this.performQuery(command, values)
 
 		return await this.findOne({
 			schema: options.schema,
@@ -355,7 +363,7 @@ export class MySQL {
 				id: options.id,
 				schema: options.schema,
 				data: {
-					[options.softDelete]: new Date().toISOString(),
+					[options.softDelete]: new Date().toISOString().slice(0, 19).replace('T', ' '),
 				},
 			})
 
@@ -368,21 +376,21 @@ export class MySQL {
 
 		const table_name = options.schema.table
 
+		const values = [options.id]
 		let command = `DELETE FROM ${table_name} `
 
-		command += `WHERE ${options.schema.primary_key} = ${options.id}`
+		command += `WHERE ${options.schema.primary_key} = ?`
 
-		this.logger.debug(`[Query][Delete][One][${options.schema.table}] ` + command)
-
-		const result = await this.performQuery(command)
+		const result = await this.performQuery(command, values)
 
 		return {
 			deleted: result.affectedRows,
 		}
 	}
 
-	find(options: DatabaseFindOneOptions | DatabaseFindManyOptions): string {
+	find(options: DatabaseFindOneOptions | DatabaseFindManyOptions): [string, string[]] {
 		const table_name = options.schema.table
+		const values: any[] = []
 
 		const fields = options.joins ? options.fields : options.fields?.filter(field => !field.includes('.'))
 		const where = options.joins ? options.where : options.where?.filter(where => !where.column.includes('.'))
@@ -394,6 +402,7 @@ export class MySQL {
 		}
 
 		let command = `SELECT ${fields?.length ? fields.join(`, `) : '*'} `
+
 		command += `FROM ${table_name} `
 
 		if (options.joins && options.relations?.length) {
@@ -404,10 +413,19 @@ export class MySQL {
 		}
 
 		if (where?.length) {
-			command += `WHERE ${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.value ? this.request.sqlEscapeText((w.operator === WhereOperator.search ? '%' : '') + w.value + (w.operator === WhereOperator.search ? '%' : '')) : ''}`).join(' AND ')} `
+			command += `WHERE `
+
+			for (const w in where) {
+				if (where[w].operator === WhereOperator.search) {
+					where[w].value = '%' + where[w].value + '%'
+				}
+			}
+
+			command += `${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ? `).join(' AND ')} `
+			values.push(...where.map(w => w.value))
 		}
 
-		return command
+		return [command, values]
 	}
 
 	async uniqueCheck(options: DatabaseUniqueCheckOptions): Promise<IsUniqueResponse> {

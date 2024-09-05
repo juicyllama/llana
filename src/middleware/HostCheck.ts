@@ -1,9 +1,9 @@
-import { Env } from '../utils/Env'
 import { Injectable, NestMiddleware } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NextFunction, Request, Response } from 'express'
 
 import { Logger } from '../helpers/Logger'
+import { Env } from '../utils/Env'
 
 @Injectable()
 export class HostCheckMiddleware implements NestMiddleware {

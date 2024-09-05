@@ -1,4 +1,5 @@
 import 'dotenv/config'
+
 import * as escape from 'escape-html'
 
 import { DatabaseType } from '../types/database.types'

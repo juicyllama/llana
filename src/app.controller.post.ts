@@ -4,7 +4,6 @@ import { LoginService } from './app.service.login'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
-import { Request } from './helpers/Request'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
@@ -20,7 +19,6 @@ export class PostController {
 		private readonly loginService: LoginService,
 		private readonly query: Query,
 		private readonly schema: Schema,
-		private readonly request: Request,
 		private readonly response: Response,
 		private readonly roles: Roles,
 	) {}
