@@ -14,6 +14,8 @@ import {
 } from '../types/schema.types'
 import { Logger } from './Logger'
 
+import * as sqlstring from 'sqlstring'
+
 @Injectable()
 export class Schema {
 	constructor(
@@ -118,6 +120,8 @@ export class Schema {
 
 			if (column.type === DatabaseColumnType.DATE) {
 				sanitizedData[column.field] = new Date(data[column.field]).toISOString()
+			} else if(column.type === DatabaseColumnType.STRING) {
+				sanitizedData[column.field] = sqlstring.escape(data[column.field].toString())
 			} else {
 				sanitizedData[column.field] = data[column.field]
 			}

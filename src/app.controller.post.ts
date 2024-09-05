@@ -4,6 +4,7 @@ import { LoginService } from './app.service.login'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
+import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { AuthTablePermissionFailResponse } from './types/auth.types'
@@ -18,6 +19,7 @@ export class PostController {
 		private readonly loginService: LoginService,
 		private readonly query: Query,
 		private readonly schema: Schema,
+		private readonly response: Response,
 		private readonly roles: Roles,
 	) {}
 
@@ -39,7 +41,7 @@ export class PostController {
 		try {
 			schema = await this.schema.getSchema(table_name)
 		} catch (e) {
-			return res.status(404).send(e.message)
+			return res.status(404).send(this.response.text(e.message))
 		}
 
 		const auth = await this.authentication.auth(req)
@@ -52,14 +54,14 @@ export class PostController {
 			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.WRITE)
 
 			if (!permission.valid) {
-				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
+				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
 		}
 
 		//validate input data
 		const validate = await this.schema.validateData(schema, req.body)
 		if (!validate.valid) {
-			return res.status(400).send(validate.message)
+			return res.status(400).send(this.response.text(validate.message))
 		}
 
 		//validate uniqueness
@@ -68,7 +70,7 @@ export class PostController {
 			data: req.body,
 		})) as IsUniqueResponse
 		if (!uniqueValidation.valid) {
-			return res.status(400).send(uniqueValidation.message)
+			return res.status(400).send(this.response.text(uniqueValidation.message))
 		}
 
 		try {
@@ -79,7 +81,7 @@ export class PostController {
 				}),
 			)
 		} catch (e) {
-			return res.status(400).send(e.message)
+			return res.status(400).send(this.response.text(e.message))
 		}
 	}
 }

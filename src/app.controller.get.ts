@@ -5,6 +5,7 @@ import { UrlToTable } from './helpers/Database'
 import { Logger } from './helpers/Logger'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
+import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Sort } from './helpers/Sort'
@@ -21,6 +22,7 @@ export class GetController {
 		private readonly pagination: Pagination,
 		private readonly query: Query,
 		private readonly schema: Schema,
+		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly sort: Sort,
 	) {}
@@ -47,12 +49,12 @@ export class GetController {
 		try {
 			schema = await this.schema.getSchema(table_name)
 		} catch (e) {
-			return res.status(404).send(e.message)
+			return res.status(404).send(this.response.text(e.message))
 		}
 
 		const auth = await this.authentication.auth(req)
 		if (!auth.valid) {
-			return res.status(401).send(auth.message)
+			return res.status(401).send(this.response.text(auth.message))
 		}
 
 		//perform role check
@@ -60,7 +62,7 @@ export class GetController {
 			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
 
 			if (!permission.valid) {
-				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
+				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
 		}
 
@@ -76,12 +78,12 @@ export class GetController {
 		try {
 			schema = await this.schema.getSchema(table_name)
 		} catch (e) {
-			return res.status(404).send(e.message)
+			return res.status(404).send(this.response.text(e.message))
 		}
 
 		const auth = await this.authentication.auth(req)
 		if (!auth.valid) {
-			return res.status(401).send(auth.message)
+			return res.status(401).send(this.response.text(auth.message))
 		}
 
 		//perform role check
@@ -92,7 +94,7 @@ export class GetController {
 			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
 
 			if (!permission.valid) {
-				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
+				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
 
 			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
@@ -104,19 +106,19 @@ export class GetController {
 		const primary_key = this.schema.getPrimaryKey(schema)
 
 		if (!primary_key) {
-			return res.status(400).send(`No primary key found for table ${table_name}`)
+			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
 		const validateKey = await this.schema.validateData(schema, { [primary_key]: req.params.id })
 		if (!validateKey.valid) {
-			return res.status(400).send(validateKey.message)
+			return res.status(400).send(this.response.text(validateKey.message))
 		}
 
 		let validateFields
 		if (req.query.fields) {
 			validateFields = this.schema.validateFields(schema, req.query.fields)
 			if (!validateFields.valid) {
-				return res.status(400).send(validateFields.message)
+				return res.status(400).send(this.response.text(validateFields.message))
 			}
 		}
 
@@ -126,7 +128,7 @@ export class GetController {
 		if (relations) {
 			validateRelations = await this.schema.validateRelations(schema, relations)
 			if (!validateRelations.valid) {
-				return res.status(400).send(validateRelations.message)
+				return res.status(400).send(this.response.text(validateRelations.message))
 			}
 
 			schema = validateRelations.schema
@@ -154,7 +156,7 @@ export class GetController {
 				}),
 			)
 		} catch (e) {
-			return res.status(400).send(e.message)
+			return res.status(400).send(this.response.text(e.message))
 		}
 	}
 
@@ -167,12 +169,12 @@ export class GetController {
 		try {
 			schema = await this.schema.getSchema(table_name)
 		} catch (e) {
-			return res.status(404).send(e.message)
+			return res.status(404).send(this.response.text(e.message))
 		}
 
 		const auth = await this.authentication.auth(req)
 		if (!auth.valid) {
-			return res.status(401).send(auth.message)
+			return res.status(401).send(this.response.text(auth.message))
 		}
 
 		//perform role check
@@ -183,7 +185,7 @@ export class GetController {
 			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
 
 			if (!permission.valid) {
-				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
+				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
 
 			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
@@ -197,7 +199,7 @@ export class GetController {
 		if (req.query.fields) {
 			validateFields = this.schema.validateFields(schema, req.query.fields)
 			if (!validateFields.valid) {
-				return res.status(400).send(validateFields.message)
+				return res.status(400).send(this.response.text(validateFields.message))
 			}
 		}
 
@@ -205,7 +207,7 @@ export class GetController {
 
 		const validateWhere = await this.schema.validateWhereParams(schema, req.query)
 		if (!validateWhere.valid) {
-			return res.status(400).send(validateWhere.message)
+			return res.status(400).send(this.response.text(validateWhere.message))
 		}
 
 		if (role_where.length > 0) {
@@ -217,7 +219,7 @@ export class GetController {
 			validateRelations = await this.schema.validateRelations(schema, relations)
 
 			if (!validateRelations.valid) {
-				return res.status(400).send(validateRelations.message)
+				return res.status(400).send(this.response.text(validateRelations.message))
 			}
 
 			schema = validateRelations.schema
@@ -228,7 +230,7 @@ export class GetController {
 				try {
 					relation_schema = await this.schema.getSchema(relation)
 				} catch (e) {
-					return res.status(400).send(e.message)
+					return res.status(400).send(this.response.text(e.message))
 				}
 
 				const relation_fields = req.query.fields?.split(',')?.filter(field => field.includes(relation))
@@ -240,7 +242,7 @@ export class GetController {
 						relation_fields_no_prefix.join(','),
 					)
 					if (!validateRelationFields.valid) {
-						return res.status(400).send(validateRelationFields.message)
+						return res.status(400).send(this.response.text(validateRelationFields.message))
 					}
 				}
 
@@ -258,7 +260,7 @@ export class GetController {
 						relationship_where_fields,
 					)
 					if (!relationshipValidateWhere.valid) {
-						return res.status(400).send(relationshipValidateWhere.message)
+						return res.status(400).send(this.response.text(relationshipValidateWhere.message))
 					}
 
 					for (const r in relationshipValidateWhere.where) {
@@ -276,7 +278,7 @@ export class GetController {
 						relationship_sort_fields.join(', '),
 					)
 					if (!validateOrder.valid) {
-						return res.status(400).send(validateOrder.message)
+						return res.status(400).send(this.response.text(validateOrder.message))
 					}
 				}
 			}
@@ -286,7 +288,7 @@ export class GetController {
 		if (req.query.sort) {
 			validateOrder = this.schema.validateOrder(schema, req.query.sort)
 			if (!validateOrder.valid) {
-				return res.status(400).send(validateOrder.message)
+				return res.status(400).send(this.response.text(validateOrder.message))
 			}
 		}
 
@@ -304,7 +306,7 @@ export class GetController {
 				}),
 			)
 		} catch (e) {
-			return res.status(400).send(e.message)
+			return res.status(400).sendthis.response.text((e.message))
 		}
 	}
 }

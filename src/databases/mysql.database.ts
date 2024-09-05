@@ -348,8 +348,6 @@ export class MySQL {
 	 */
 
 	async deleteOne(options: DatabaseDeleteOneOptions): Promise<DeleteResponseObject> {
-		console.log(options)
-
 		if (options.softDelete) {
 			const result = await this.updateOne({
 				id: options.id,

@@ -3,6 +3,7 @@ import { Controller, Put, Req, Res } from '@nestjs/common'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
+import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
@@ -15,6 +16,7 @@ export class PutController {
 	constructor(
 		private readonly authentication: Authentication,
 		private readonly query: Query,
+		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
 	) {}
@@ -28,12 +30,12 @@ export class PutController {
 		try {
 			schema = await this.schema.getSchema(table_name)
 		} catch (e) {
-			return res.status(404).send(e.message)
+			return res.status(404).send(this.response.text(e.message))
 		}
 
 		const auth = await this.authentication.auth(req)
 		if (!auth.valid) {
-			return res.status(401).send(auth.message)
+			return res.status(401).send(this.response.text(auth.message))
 		}
 
 		//perform role check
@@ -44,7 +46,7 @@ export class PutController {
 			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.WRITE)
 
 			if (!permission.valid) {
-				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
+				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
 
 			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
@@ -55,19 +57,19 @@ export class PutController {
 		//validate input data
 		const validate = await this.schema.validateData(schema, req.body)
 		if (!validate.valid) {
-			return res.status(400).send(validate.message)
+			return res.status(400).send(this.response.text(validate.message))
 		}
 
 		//validate :id field
 		const primary_key = this.schema.getPrimaryKey(schema)
 
 		if (!primary_key) {
-			return res.status(400).send(`No primary key found for table ${table_name}`)
+			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
 		const validateKey = await this.schema.validateData(schema, { [primary_key]: req.params.id })
 		if (!validateKey.valid) {
-			return res.status(400).send(validateKey.message)
+			return res.status(400).send(this.response.text(validateKey.message))
 		}
 
 		//validate uniqueness
@@ -77,7 +79,7 @@ export class PutController {
 			id: req.params.id,
 		})) as IsUniqueResponse
 		if (!uniqueValidation.valid) {
-			return res.status(400).send(uniqueValidation.message)
+			return res.status(400).send(this.response.text(uniqueValidation.message))
 		}
 
 		const where = <DatabaseWhere[]>[
@@ -100,7 +102,7 @@ export class PutController {
 		})
 
 		if (!record) {
-			return res.status(400).send(`Record with id ${req.params.id} not found`)
+			return res.status(400).send(this.response.text(`Record with id ${req.params.id} not found`))
 		}
 
 		try {
@@ -112,7 +114,7 @@ export class PutController {
 				}),
 			)
 		} catch (e) {
-			return res.status(400).send(e.message)
+			return res.status(400).send(this.response.text(e.message))
 		}
 	}
 }

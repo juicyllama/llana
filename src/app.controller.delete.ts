@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
+import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
@@ -17,6 +18,7 @@ export class DeleteController {
 		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
 		private readonly query: Query,
+		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
 	) {}
@@ -30,12 +32,12 @@ export class DeleteController {
 		try {
 			schema = await this.schema.getSchema(table_name)
 		} catch (e) {
-			return res.status(404).send(e.message)
+			return res.status(404).send(this.response.text(e.message))
 		}
 
 		const auth = await this.authentication.auth(req)
 		if (!auth.valid) {
-			return res.status(401).send(auth.message)
+			return res.status(401).send(this.response.text(auth.message))
 		}
 
 		//perform role check
@@ -46,7 +48,7 @@ export class DeleteController {
 			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.DELETE)
 
 			if (!permission.valid) {
-				return res.status(401).send((permission as AuthTablePermissionFailResponse).message)
+				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
 
 			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
@@ -58,12 +60,12 @@ export class DeleteController {
 		const primary_key = this.schema.getPrimaryKey(schema)
 
 		if (!primary_key) {
-			return res.status(400).send(`No primary key found for table ${table_name}`)
+			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
 		const validateKey = await this.schema.validateData(schema, { [primary_key]: req.params.id })
 		if (!validateKey.valid) {
-			return res.status(400).send(validateKey.message)
+			return res.status(400).send(this.response.text(validateKey.message))
 		}
 
 		const where = <DatabaseWhere[]>[
@@ -107,7 +109,7 @@ export class DeleteController {
 				}),
 			)
 		} catch (e) {
-			return res.status(400).send(e.message)
+			return res.status(400).send(this.response.text(e.message))
 		}
 	}
 }

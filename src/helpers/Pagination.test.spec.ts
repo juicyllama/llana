@@ -30,9 +30,6 @@ describe('Pagination', () => {
 
 	describe('get', () => {
 		it('No params passed', () => {
-			console.log('service.get({})', service.get({}))
-			console.log('configService', configService.get<string>('database'))
-
 			const query = {}
 			const result = service.get(query)
 			expect(result.limit).toBe(Number(configService.get<string>('database.defaults.limit')))
