@@ -1,7 +1,7 @@
 {
 	"name": "@juicyllama/llana",
-	"version": "0.0.32",
-	"description": "API Wrapper for Databases - Llana is a no-code API wrapper that exposes a REST API for any database within minuites. No longer spend time building APIs, just connect your database and start using the API. Open source, free to use, and no vendor lock-in.",
+	"version": "1.0.0",
+	"description": "API Wrapper for Databases - Llana is a no-code API wrapper that exposes a REST API for any database within minutes. No longer spend time building APIs, just connect your database and start using the API. Open source, free to use, and no vendor lock-in.",
 	"author": {
 		"name": "JuicyLlama Studio",
 		"email": "studio@juicyllama.com",
@@ -27,8 +27,10 @@
 		"start": "nest start",
 		"start:dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
-		"start:docker": "docker compose --project-name llana up --build --detach",
-		"start:ngrok": "~/ngrok http http://localhost:3030/ --subdomain=llana",
+		"start:ngrok": "~/ngrok http http://localhost:3000/ --subdomain=llana",
+		"docker:dev": "sh ./scripts/docker-dev.sh",
+		"docker:build": "sh ./scripts/docker-build.sh",
+		"docker:push": "sh ./scripts/docker-push.sh",
 		"test": "jest --clear-cache && jest --runInBand --detectOpenHandles --forceExit",
 		"precommit": "npm run test && npm run lint && npm run format",
 		"commit": "git pull && git add . && git commit -m \"chore: update\" && git push"
@@ -82,7 +84,8 @@
 		"ts-loader": "^9.5.1",
 		"ts-node": "^10.9.2",
 		"tsconfig-paths": "^4.2.0",
-		"typescript": "^5.3.3"
+		"typescript": "^5.3.3",
+		"webpack": "^5.94.0"
 	},
 	"jest": {
 		"moduleFileExtensions": [

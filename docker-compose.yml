@@ -1,4 +1,38 @@
+name: llana
+
+networks:
+    llana-network:
+        driver: bridge
+        name: llana-network
+
+volumes:
+    llana-mysql-data:
+        driver: local
+
 services:
+
+    llana-app:
+        container_name: llana-app
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "3000:3000"
+        networks:
+            - llana-network
+        command: npm run start:dev
+        develop:
+            watch:
+                - action: sync
+                #- action: sync+restart
+                  path: .
+                  target: /usr/src/app
+                  ignore:
+                    - node_modules/
+
+                - action: rebuild
+                  path: package.json
+
     llana-mysql:
         image: mysql:8.0
         container_name: llana-mysql
@@ -10,7 +44,7 @@ services:
         command: --init-file /mysql/init.sql
         volumes:
             - llana-mysql-data:/var/lib/mysql
-            - ./.docker/demo/mysql.sql:/mysql/init.sql
+            - ./.docker/databases/mysql.sql:/mysql/init.sql
         networks:
             - llana-network
     llana-redis:
@@ -20,12 +54,3 @@ services:
             - "6379:6379"
         networks:
             - llana-network
-
-networks:
-    llana-network:
-        driver: bridge
-        name: llana-network
-
-volumes:
-    llana-mysql-data:
-        driver: local

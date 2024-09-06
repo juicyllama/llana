@@ -1,5 +1,7 @@
 import { Controller, Get, Req, Res } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 
+import { version } from '../package.json'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Logger } from './helpers/Logger'
@@ -18,6 +20,7 @@ import { RolePermission } from './types/roles.types'
 export class GetController {
 	constructor(
 		private readonly authentication: Authentication,
+		private readonly configService: ConfigService,
 		private readonly logger: Logger,
 		private readonly pagination: Pagination,
 		private readonly query: Query,
@@ -28,11 +31,17 @@ export class GetController {
 	) {}
 
 	@Get('')
-	getDocs(@Res() res): string {
-		this.logger.log('docs')
-		return res.send(`
-        <link rel="icon" href="/favicon.ico">
-        <h1>Docs</h1>`)
+	homepage(@Res() res): string {
+		const showDocs = this.configService.get('DOCS') ?? false
+
+		if (showDocs) {
+			//TODO: build doc portal - https://github.com/juicyllama/llana/issues/27
+			return res.send(`
+			<link rel="icon" href="/favicon.ico">
+			<h1>Docs</h1>`)
+		} else {
+			return res.send(`🦙 v${version}`)
+		}
 	}
 
 	@Get('/favicon.ico')

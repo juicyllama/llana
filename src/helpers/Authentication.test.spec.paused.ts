@@ -28,10 +28,7 @@ describe('Authentication', () => {
 		configService = app.get<ConfigService>(ConfigService)
 		logger = app.get<Logger>(Logger)
 
-		await app.listen(
-			Number(configService.get<number>('PORT_TESTING')) ?? Number(configService.get<number>('PORT')) + 1,
-			testing.host,
-		)
+		await app.listen(3000, testing.host)
 		await app.init()
 
 		testing.port = app.getHttpServer().address().port

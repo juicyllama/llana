@@ -15,7 +15,7 @@ describe('Roles', () => {
 
 	const testing = {
 		host: 'localhost',
-		port: 0,
+		port: 3000,
 		address: '',
 	}
 
@@ -31,10 +31,7 @@ describe('Roles', () => {
 
 		configService.set('hosts', [`${testing.host}:${testing.port}`])
 
-		await app.listen(
-			Number(configService.get<number>('PORT_TESTING')) ?? Number(configService.get<number>('PORT')) + 1,
-			testing.host,
-		)
+		await app.listen(3000, testing.host)
 		await app.init()
 
 		testing.port = app.getHttpServer().address().port

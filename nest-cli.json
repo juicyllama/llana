@@ -4,5 +4,9 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true
-  }
+  },
+  "watchOptions": {
+    "aggregateTimeout": 500,
+    "poll": 1000
+}
 }

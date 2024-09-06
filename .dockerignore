@@ -1,4 +1,10 @@
-.dockerignore
-node_modules
-npm-debug.log
-dist
+/.docker
+/.github
+/.vscode
+/docker
+/Dockerfile
+/docker-compose.yml
+/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
