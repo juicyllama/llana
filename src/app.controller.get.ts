@@ -37,7 +37,6 @@ export class GetController {
 		if (showDocs) {
 			//TODO: build doc portal - https://github.com/juicyllama/llana/issues/27
 			return res.send(`
-			<link rel="icon" href="/favicon.ico">
 			<h1>Docs</h1>`)
 		} else {
 			return res.send(`🦙 v${version}`)

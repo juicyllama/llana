@@ -49,6 +49,7 @@
 		"class-transformer": "^0.5.1",
 		"class-validator": "^0.14.1",
 		"escape-html": "^1.0.3",
+		"express-basic-auth": "^1.2.1",
 		"jwt-simple": "^0.5.6",
 		"lodash": "^4.17.21",
 		"mysql2": "^3.11.0",

@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 
+import { ConfigController } from './app.controller.config'
 import { DeleteController } from './app.controller.delete'
 import { GetController } from './app.controller.get'
 import { PostController } from './app.controller.post'
@@ -31,7 +32,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		}),
 		JwtModule.register(jwt()),
 	],
-	controllers: [DeleteController, GetController, PostController, PutController],
+	controllers: [ConfigController, DeleteController, GetController, PostController, PutController],
 	providers: [
 		Authentication,
 		Encryption,
