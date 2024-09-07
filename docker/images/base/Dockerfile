@@ -12,10 +12,10 @@ RUN apk add --no-cache git
 
 WORKDIR /usr/src/app
 
-RUN export VERSION=$(npm run version) echo "Building version $VERSION"
+RUN export VERSION=$(npm run version) && echo "Building version $VERSION"
 
 # Download the application from github
-RUN git clone --depth 1 --branch VERSION https://github.com/juicyllama/llana.git .
+RUN git clone --depth 1 --branch $VERSION https://github.com/juicyllama/llana.git .
 
 # Install the dependencies
 RUN npm install
