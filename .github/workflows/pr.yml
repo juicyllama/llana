@@ -49,7 +49,7 @@ jobs:
                 run: sudo /etc/init.d/mysql start
 
             -   name: Seed database
-                run:  mysql -u root -p root < .docker/databases/mysql.sql
+                run:  mysql -u root -p root -h 127.0.0.1 < .docker/databases/mysql.sql
 
             -   name: Test
-                run:  export DATABASE_URI="mysql://root:root@localhost:3306/llana" && npm run test
+                run:  export DATABASE_URI="mysql://root:root@127.0.0.1:3306/llana" && npm run test
