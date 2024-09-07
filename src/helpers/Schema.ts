@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { plainToClass } from 'class-transformer'
 import { IsBoolean, IsDateString, IsJSON, IsNumber, IsOptional, IsString, validate } from 'class-validator'
-import * as sqlstring from 'sqlstring'
 
 import { NON_FIELD_PARAMS } from '../app.constants'
 import { MySQL } from '../databases/mysql.database'
@@ -104,32 +103,6 @@ export class Schema {
 	}
 
 	/**
-	 * Sanitize data for schema
-	 *
-	 * * Convert date strings to Date objects
-	 */
-
-	sanitizeData(schema: DatabaseSchema, data: { [key: string]: any }): { [key: string]: any } {
-		const sanitizedData = {}
-
-		for (const column of schema.columns) {
-			if (!data[column.field]) {
-				continue
-			}
-
-			if (column.type === DatabaseColumnType.DATE) {
-				sanitizedData[column.field] = new Date(data[column.field]).toISOString()
-			} else if (column.type === DatabaseColumnType.STRING) {
-				sanitizedData[column.field] = sqlstring.escape(data[column.field].toString())
-			} else {
-				sanitizedData[column.field] = data[column.field]
-			}
-		}
-
-		return sanitizedData
-	}
-
-	/**
 	 * Pipe response from database to class
 	 */
 
@@ -165,8 +138,7 @@ export class Schema {
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
 		try {
 			const DynamicClass = this.schemaToClass(schema, data)
-			const sanitizedData = this.sanitizeData(schema, data)
-			const instance: object = plainToClass(DynamicClass, sanitizedData)
+			const instance: object = plainToClass(DynamicClass, data)
 			const errors = await validate(instance)
 
 			if (errors.length > 0) {
@@ -190,40 +162,60 @@ export class Schema {
 
 	validateFields(schema: DatabaseSchema, fields: string): ValidateFieldsResponse {
 		try {
-			const params = fields?.split(',')?.filter(field => !field.includes('.'))
-			const params_relations = fields?.split(',')?.filter(field => field.includes('.'))
+			const validated = []
+			const relations = []
 
-			const validatedFields = []
-
-			for (const field of params) {
+			for (const field of fields.split(',')) {
 				if (field === '') {
 					continue
 				}
-				if (!schema.columns.find(col => col.field === field)) {
+
+				const pieces = field.split('.')
+				if (pieces.length > 2) {
 					return {
 						valid: false,
-						message: `Field ${field} not found in table schema for ${schema.table}`,
+						message: `Invalid field ${field}`,
 					}
 				}
 
-				validatedFields.push(field)
-			}
+				if (pieces.length === 2) {
+					const relation = pieces[0]
+					const column = pieces[1]
 
-			const relations = []
+					if (!schema.relations.find(rel => rel.table === relation)) {
+						return {
+							valid: false,
+							message: `Relation ${relation} not found in table schema for ${schema.table}`,
+						}
+					}
 
-			for (const relation of params_relations) {
-				relations.push(relation.split('.')[0])
-			}
+					if (
+						!schema.relations
+							.find(rel => rel.table === relation)
+							.schema.columns.find(col => col.field === column)
+					) {
+						return {
+							valid: false,
+							message: `Column ${column} not found in relation ${relation} schema`,
+						}
+					}
 
-			// Add back relation fields
-			const relation_params = fields?.split(',')?.filter(field => field.includes('.'))
-			for (const relation of relation_params) {
-				validatedFields.push(relation)
+					relations.push(relation)
+				} else {
+					if (!schema.columns.find(col => col.field === field)) {
+						return {
+							valid: false,
+							message: `Field ${field} not found in table schema for ${schema.table}`,
+						}
+					}
+				}
+
+				validated.push(field)
 			}
 
 			return {
 				valid: true,
-				params: validatedFields,
+				validated,
 				relations,
 			}
 		} catch (e) {
