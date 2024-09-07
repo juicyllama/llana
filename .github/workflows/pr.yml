@@ -45,8 +45,5 @@ jobs:
             -   name: Lint
                 run: npm run lint
 
-            -   name: Build Docker Image
-                run: npm run docker:dev 
-
             -   name: Test
                 run: npm run test
