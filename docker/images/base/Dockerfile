@@ -12,6 +12,8 @@ RUN apk add --no-cache git
 
 WORKDIR /usr/src/app
 
+COPY package*.json /usr/src/app
+
 RUN export VERSION=$(npm run version) && echo "Building version $VERSION"
 
 # Download the application from github
