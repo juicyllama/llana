@@ -50,12 +50,16 @@ jobs:
 
             -   name: Lint
                 run: npm run lint
-            
-            -   name: Start MySQL
+
+            -   name: MySQL Password Override
                 run: |
-                  sudo /etc/init.d/mysql start
-                  mysql -uroot -ppass -e 'SELECT version()'
-              # Add more steps for testing and other tasks
+                    sudo systemctl stop mysql
+                    sudo mysqld_safe --skip-grant-tables --skip-networking &
+                    mysql -uroot -e "UPDATE mysql.user SET authentication_string=PASSWORD('pass') WHERE User='root';
+                    FLUSH PRIVILEGES;"
+                    sudo systemctl restart mysql
+                    mysql -uroot -ppass -e 'SELECT version()'
+
 
             -   name: Seed database
                 run:  mysql -uroot -ppass < .docker/databases/mysql.sql
