@@ -26,7 +26,6 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-
             -   name: 'Checkout'
                 uses: actions/checkout@v4
                 with:
@@ -37,9 +36,6 @@ jobs:
                 with:
                     node-version: 18.18.2
 
-            -   name: Prepare
-                run: echo -e "shamefully-hoist=true\\n@fortawesome:registry=https://npm.fontawesome.com/\n//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_AUTH_TOKEN }}" > .npmrc
-
             -   name: Install dependencies
                 run: npm install
 
@@ -47,7 +43,7 @@ jobs:
                 run: npm run lint
 
             -   name: MySQL Sudo Access
-                run: sudo mysql -uroot -e "SELECT version()""
+                run: sudo mysql -uroot -e "SELECT version();"
             
             -   name: MySQL Set Root Password
                 run: sudo mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'pass'; exit;"
