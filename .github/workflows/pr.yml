@@ -45,11 +45,11 @@ jobs:
             -   name: Lint
                 run: npm run lint
 
-            -   name: Run Docker Container
-                run: docker compose up --build --detach
+            -   name: Start mysql
+                run: sudo /etc/init.d/mysql start
+
+            -   name: Seed database
+                run:  mysql -u root -p root < .docker/mysql/mysql.sql
 
             -   name: Test
-                run: npm run test
-
-            -   name: Stop Docker Container
-                run: docker compose down
+                run:  export DATABASE_URI="mysql://root:root@localhost:3306/llana" && npm run test
