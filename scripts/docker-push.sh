@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd docker/images/base
+cd docker/images/base || exit
 
 # Set the DOCKER_REPO to the name of your Docker repository
 
@@ -18,4 +18,4 @@ docker image tag $DOCKER_REPO $DOCKER_REPO:v${VERSION%%.*}
 
 docker image push --all-tags $DOCKER_REPO
 
-cd ../../..
+cd ../../.. || exit
