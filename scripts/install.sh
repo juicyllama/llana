@@ -7,8 +7,7 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
-
-export $(grep -v '^#' .env | xargs)
+export $(grep -v '^#' ~/.env | xargs)
 
 ## generate a randomly secure JWT_KEY for the .env file if ! exists
 
