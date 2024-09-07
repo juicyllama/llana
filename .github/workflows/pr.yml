@@ -42,6 +42,9 @@ jobs:
             -   name: Lint
                 run: npm run lint
 
+            -   name: MySQL Start
+                run: sudo /etc/init.d/mysql start
+
             -   name: MySQL Sudo Access
                 run: sudo mysql -uroot -e "SELECT version();"
             
