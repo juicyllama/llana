@@ -24,6 +24,16 @@ jobs:
     pr_checks:
         name: 'Pull Request Package: Llana'
         runs-on: ubuntu-latest
+        services:
+            mysql:
+                image: mysql:8.0
+                env:
+                    MYSQL_ROOT_PASSWORD: root
+                    MYSQL_DATABASE: pass
+                ports:
+                    - '3307:3306'
+                options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
         steps:
 
             -   name: 'Checkout'
@@ -49,7 +59,7 @@ jobs:
                 run: sudo /etc/init.d/mysql start
 
             -   name: Seed database
-                run:  mysql -u root -p root -h 127.0.0.1 < .docker/databases/mysql.sql
+                run:  mysql -u root -p pass -h 127.0.0.1 --port 3307 < .docker/databases/mysql.sql
 
             -   name: Test
-                run:  export DATABASE_URI="mysql://root:root@127.0.0.1:3306/llana" && npm run test
+                run:  export DATABASE_URI="mysql://root:pass@127.0.0.1:3307/llana" && npm run test
