@@ -2,12 +2,16 @@
 
 ## check if .env file exists, if not create it from .env.example
 
+sed -e "" "" .env.example
+
 if [ ! -f .env ]; then
     echo "Creating .env file from .env.example"
     cp .env.example .env
 fi
 
-export $(grep -v '^#' ~/.env | xargs)
+sed -e "" "" .env
+
+export $(grep -v '^#' .env | xargs)
 
 ## generate a randomly secure JWT_KEY for the .env file if ! exists
 
