@@ -25,11 +25,6 @@ jobs:
         name: 'Pull Request Package: Llana'
         runs-on: ubuntu-latest
 
-        env:
-            DB_DATABASE: llana
-            DB_USER: root
-            DB_PASSWORD: pass
-
         steps:
 
             -   name: 'Checkout'
@@ -51,15 +46,11 @@ jobs:
             -   name: Lint
                 run: npm run lint
 
-            -   name: MySQL Password Override
-                run: |
-                    sudo systemctl stop mysql
-                    sudo mysqld_safe --skip-grant-tables --skip-networking &
-                    mysql -uroot -e "UPDATE mysql.user SET authentication_string=PASSWORD('pass') WHERE User='root';
-                    FLUSH PRIVILEGES;"
-                    sudo systemctl restart mysql
-                    mysql -uroot -ppass -e 'SELECT version()'
-
+            -   name: MySQL Sudo Access
+                run: sudo mysql -uroot -e "SELECT version()""
+            
+            -   name: MySQL Set Root Password
+                run: sudo mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'pass'; exit;"
 
             -   name: Seed database
                 run:  mysql -uroot -ppass < .docker/databases/mysql.sql
