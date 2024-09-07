@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ## check if .env file exists, if not create it from .env.example
 
 if [ ! -f .env ]; then
