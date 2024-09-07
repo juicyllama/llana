@@ -45,5 +45,11 @@ jobs:
             -   name: Lint
                 run: npm run lint
 
+            -   name: Run Docker Container
+                run: docker compose up --build --detach
+
             -   name: Test
                 run: npm run test
+
+            -   name: Stop Docker Container
+                run: docker compose down
