@@ -17,7 +17,7 @@ if [ -z "${JWT_KEY}" ]; then
     JWT_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'));")
 
     ## Replace the JWT_KEY in the .env file
-    sed -i '' 's/JWT_KEY=/JWT_KEY='"${JWT_KEY}"'/' .env
+    sed -i "" "s/JWT_KEY=/JWT_KEY=${JWT_KEY}/" .env
 fi
 
 ## generate randomly secure config auth details for the .env file if ! exists
@@ -25,19 +25,19 @@ fi
 if [ -z "${CONFIG_AUTH_USERNAME}" ]; then
     echo "Generating a secure CONFIG_AUTH_USERNAME"
     CONFIG_AUTH_USERNAME=$(node -e "console.log(require('crypto').randomBytes(8).toString('hex'));")
-    sed -i '' 's/CONFIG_AUTH_USERNAME=/CONFIG_AUTH_USERNAME='"${CONFIG_AUTH_USERNAME}"'/' .env
+    sed -i "" "s/CONFIG_AUTH_USERNAME=/CONFIG_AUTH_USERNAME=${CONFIG_AUTH_USERNAME}/" .env
 fi
 
 if [ -z "${CONFIG_AUTH_PASSWORD}" ]; then
     echo "Generating a secure CONFIG_AUTH_PASSWORD"
     CONFIG_AUTH_PASSWORD=$(node -e "console.log(require('crypto').randomBytes(16).toString('hex'));")
-    sed -i '' 's/CONFIG_AUTH_PASSWORD=/CONFIG_AUTH_PASSWORD='"${CONFIG_AUTH_PASSWORD}"'/' .env
+    sed -i "" "s/CONFIG_AUTH_PASSWORD=/CONFIG_AUTH_PASSWORD=${CONFIG_AUTH_PASSWORD}/" .env
 fi
 
 if [ -z "${CONFIG_AUTH_REALM}" ]; then
     echo "Generating a secure CONFIG_AUTH_REALM"
     CONFIG_AUTH_REALM=$(node -e "console.log(require('crypto').randomBytes(16).toString('hex'));")
-    sed -i '' 's/CONFIG_AUTH_REALM=/CONFIG_AUTH_REALM='"${CONFIG_AUTH_REALM}"'/' .env
+    sed -i "" "s/CONFIG_AUTH_REALM=/CONFIG_AUTH_REALM=${CONFIG_AUTH_REALM}/" .env
 fi
 
 ## TODO:  create config files from *.examples.ts if they don't exist
