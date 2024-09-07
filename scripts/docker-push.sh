@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd docker/images/llana
+cd docker/images/base
 
 # Set the DOCKER_REPO to the name of your Docker repository
 
