@@ -112,11 +112,7 @@ export interface DatabaseSchemaRelation {
 
 export interface DatabaseCreateOneOptions {
 	schema: DatabaseSchema
-	data:
-		| {
-				[key: string]: string | number | boolean
-		  }
-		| object
+	data: object
 }
 
 export interface DatabaseFindOneOptions extends DatabaeseFindOptions {
@@ -140,9 +136,7 @@ export interface DatabaeseFindOptions {
 export interface DatabaseUpdateOneOptions {
 	id: string
 	schema: DatabaseSchema
-	data: {
-		[key: string]: string | number | boolean
-	}
+	data: object
 }
 
 export interface DatabaseDeleteOneOptions {

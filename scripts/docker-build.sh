@@ -1,3 +1,4 @@
-cd docker/images/llana
+#!/bin/bash
+cd docker/images/base || exit
 docker build -t juicyllama/llana .
-cd ../../..
+cd ../../.. || exit

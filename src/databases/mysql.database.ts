@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as mysql from 'mysql2/promise'
 import { Connection } from 'mysql2/promise'
+import * as sqlstring from 'sqlstring'
 import { SortCondition } from 'src/types/schema.types'
 
 import { Logger } from '../helpers/Logger'
@@ -131,7 +132,7 @@ export class MySQL {
 		const table_name = options.schema.table
 		const values: any[] = []
 
-		options = this.pipeJsToMySQL(options) as DatabaseCreateOneOptions
+		options = this.pipeObjectToMySQL(options) as DatabaseCreateOneOptions
 
 		const columns = Object.keys(options.data)
 		const dataValues = Object.values(options.data)
@@ -168,7 +169,7 @@ export class MySQL {
 			return
 		}
 
-		results[0] = this.pipeMySQLToJs(results[0])
+		results[0] = this.pipeMySQLToObject(results[0])
 
 		if (!options.joins) {
 			return await this.addRelations(options, results[0])
@@ -208,7 +209,7 @@ export class MySQL {
 		const results = await this.performQuery(command, values)
 
 		for (const r in results) {
-			results[r] = this.pipeMySQLToJs(results[r])
+			results[r] = this.pipeMySQLToObject(results[r])
 			results[r] = await this.addRelations(options, results[r])
 		}
 
@@ -331,7 +332,7 @@ export class MySQL {
 		const values = [...Object.values(options.data), options.id.toString()]
 		let command = `UPDATE ${table_name} SET `
 
-		options = this.pipeJsToMySQL(options) as DatabaseUpdateOneOptions
+		options = this.pipeObjectToMySQL(options) as DatabaseUpdateOneOptions
 
 		command += `${Object.keys(options.data)
 			.map(key => `${key} = ?`)
@@ -482,11 +483,31 @@ export class MySQL {
 		}
 	}
 
-	pipeJsToMySQL(
+	pipeObjectToMySQL(
 		options: DatabaseCreateOneOptions | DatabaseUpdateOneOptions,
 	): DatabaseCreateOneOptions | DatabaseUpdateOneOptions {
-		//convert dates to mysql format
 		for (const column of options.schema.columns) {
+			switch (column.type) {
+				case DatabaseColumnType.STRING:
+					options.data[column.field] = sqlstring.escape(options.data[column.field].toString())
+					break
+				case DatabaseColumnType.BOOLEAN:
+					if (options.data[column.field] === true) {
+						options.data[column.field] = 1
+					} else if (options.data[column.field] === false) {
+						options.data[column.field] = 0
+					}
+					break
+				case DatabaseColumnType.DATE:
+					if (options.data[column.field]) {
+						options.data[column.field] = new Date(options.data[column.field])
+							.toISOString()
+							.slice(0, 19)
+							.replace('T', ' ')
+					}
+					break
+			}
+
 			if (column.type === DatabaseColumnType.DATE && options.data[column.field]) {
 				options.data[column.field] = new Date().toISOString().slice(0, 19).replace('T', ' ')
 			}
@@ -495,7 +516,7 @@ export class MySQL {
 		return options
 	}
 
-	pipeMySQLToJs(data: { [key: string]: any }): { [key: string]: any } {
+	pipeMySQLToObject(data: { [key: string]: any }): object {
 		for (const key in data) {
 			if (data[key] instanceof Date) {
 				data[key] = data[key].toISOString()

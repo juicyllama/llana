@@ -1,7 +1,7 @@
 import { DatabaseSchema, DatabaseWhere } from './database.types'
 
 export interface ValidateFieldsResponse extends ValidateResponse {
-	params?: string[]
+	validated?: string[]
 	relations?: string[]
 }
 

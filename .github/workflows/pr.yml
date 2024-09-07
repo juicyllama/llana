@@ -24,8 +24,8 @@ jobs:
     pr_checks:
         name: 'Pull Request Package: Llana'
         runs-on: ubuntu-latest
-        steps:
 
+        steps:
             -   name: 'Checkout'
                 uses: actions/checkout@v4
                 with:
@@ -36,17 +36,20 @@ jobs:
                 with:
                     node-version: 18.18.2
 
-            -   name: Prepare
-                run: echo -e "shamefully-hoist=true\\n@fortawesome:registry=https://npm.fontawesome.com/\n//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_AUTH_TOKEN }}" > .npmrc
-
             -   name: Install dependencies
                 run: npm install
 
             -   name: Lint
                 run: npm run lint
 
-            -   name: Build Docker Image
-                run: npm run start:docker
+            -  name: Setup MySQL
+               uses: ankane/setup-mysql@v1
+               with:
+                  mysql-version: 8.0
+                  database: llana
+            
+            -   name: Seed MySQL
+                run:  mysql -uroot < .docker/databases/mysql.sql
 
             -   name: Test
-                run: npm run test
+                run:  export DATABASE_URI="mysql://root@127.0.0.1:3306/llana" && npm run test

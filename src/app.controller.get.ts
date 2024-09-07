@@ -159,7 +159,7 @@ export class GetController {
 			return res.status(200).send(
 				await this.query.perform(QueryPerform.FIND, {
 					schema,
-					fields: validateFields?.params ?? [],
+					fields: validateFields.validated ?? [],
 					relations,
 					where,
 				}),

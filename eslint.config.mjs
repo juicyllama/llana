@@ -38,7 +38,6 @@ export default [
 
 			parserOptions: {
 				project: 'tsconfig.json',
-				tsconfigRootDir: '/Users/andrewslack/Sites/JuicyLlama/llana',
 			},
 		},
 
