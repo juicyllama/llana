@@ -12,8 +12,7 @@ WORKDIR /usr/src/app
 
 COPY ./package*.json /usr/src/app
 COPY ./scripts /usr/src/app/scripts
-COPY ./.env /usr/src/app/.env
-COPY ./.env.example /usr/src/app/.env.example
+COPY ./.env.example ./.env /usr/src/app/
 COPY ./src/config /usr/src/app/src/config
 
 RUN cd /usr/src/app
