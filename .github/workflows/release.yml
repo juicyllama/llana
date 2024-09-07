@@ -50,11 +50,16 @@ jobs:
                     major-wording: 'JLMAJOR'
                     minor-wording: 'feature,feat'
                     patch-wording: 'patch,fixes,fix,misc,docs,refactor'    # Providing patch-wording will override commits
-                    commit-message: 'Release Package: CLI Bump Version [skip ci]'
-                    skip-tag: true
+                    commit-message: 'CI: Bump Version to {{version}} [skip ci]'
 
             -   name: 'Authenticate with NPM'
                 run: echo -e "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
 
             -   name: 'Publishing package'
                 run: npm publish --no-git-checks --access public
+
+            -   name: 'Docker Build'
+                run: npm run docker:build
+
+            -  name: 'Docker Push'
+                run: npm run docker:push
