@@ -68,4 +68,6 @@ jobs:
                 run: npm run docker:build
 
             -  name: 'Docker Push'
-                run: npm run docker:push
+               run: npm run docker:push
+
+#TODO: add release to hosting providers, e.g. heroku or via elest.io
