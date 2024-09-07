@@ -2,14 +2,16 @@
 
 ## check if .env file exists, if not create it from .env.example
 
-sed -e "" "" .env.example
+echo "Print .env.example"
+cat .env.example
 
 if [ ! -f .env ]; then
     echo "Creating .env file from .env.example"
     cp .env.example .env
 fi
 
-sed -e "" "" .env
+echo "Print .env to make sure it was copied over"
+cat .env
 
 export $(grep -v '^#' .env | xargs)
 
