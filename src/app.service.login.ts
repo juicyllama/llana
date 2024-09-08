@@ -61,21 +61,21 @@ export class LoginService {
 			throw new UnauthorizedException()
 		}
 
-		let passwordEncyrpted
-
 		try {
-			passwordEncyrpted = await this.encryption.encrypt(
-				(jwtAuthConfig.table as AuthJWT).password.encryption,
-				pass,
-				(jwtAuthConfig.table as AuthJWT).password.salt,
-			)
+			if (
+				!(await this.encryption.compare(
+					pass,
+					user[(jwtAuthConfig.table as AuthJWT).columns.password],
+					(jwtAuthConfig.table as AuthJWT).password.encryption,
+					(jwtAuthConfig.table as AuthJWT).password.salt,
+				))
+			) {
+				throw new UnauthorizedException()
+			}
 		} catch (e) {
-			this.logger.error(e)
+			this.logger.debug(e)
 			throw new UnauthorizedException()
 		}
-
-		if (passwordEncyrpted !== user[(jwtAuthConfig.table as AuthJWT).columns.password])
-			throw new UnauthorizedException()
 
 		const userIdentifier = user[(jwtAuthConfig.table as AuthJWT).identity_column ?? schema.primary_key]
 

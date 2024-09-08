@@ -62,8 +62,10 @@ describe('Login Service', () => {
 	describe('Successful Login', () => {
 		it('Correct username & password', async () => {
 			try {
-				const access_token = await service.signIn('test@test.com', 'test')
-				expect(access_token).toBeDefined()
+				const result = await service.signIn('test@test.com', 'test')
+				expect(result).toBeDefined()
+				expect(result.access_token).toBeDefined()
+				expect(result.id).toBeDefined()
 			} catch (e) {
 				logger.error(e.message)
 				expect(e).toBeUndefined()

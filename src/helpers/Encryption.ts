@@ -2,7 +2,7 @@ import { createHash, createHmac } from 'node:crypto'
 
 import { Injectable } from '@nestjs/common'
 import * as argon2 from 'argon2'
-import bcrypt from 'bcrypt'
+import * as bcrypt from 'bcrypt'
 
 import { AuthPasswordEncryption } from '../types/auth.types'
 import { Logger } from './Logger'
@@ -10,6 +10,26 @@ import { Logger } from './Logger'
 @Injectable()
 export class Encryption {
 	constructor(private readonly logger: Logger) {}
+
+	/**
+	 * Compare a string with an encrypted string
+	 */
+
+	async compare(raw: string, encrypted: string, type: AuthPasswordEncryption, salt?: string): Promise<boolean> {
+		switch (type) {
+			case AuthPasswordEncryption.BCRYPT:
+				return await bcrypt.compare(raw, encrypted)
+			case AuthPasswordEncryption.SHA1:
+			case AuthPasswordEncryption.SHA256:
+			case AuthPasswordEncryption.SHA512:
+			case AuthPasswordEncryption.MD5:
+				return !!((await this.encrypt(type, raw, salt)) === encrypted)
+			case AuthPasswordEncryption.ARGON2:
+				return await argon2.verify(encrypted, raw)
+			default:
+				throw new Error(`Encryption type ${type} not supported`)
+		}
+	}
 
 	/**
 	 * Encrypt a string
@@ -21,7 +41,7 @@ export class Encryption {
 				if (!salt) {
 					throw new Error(`Encryption type ${type} requires a salt`)
 				}
-				return bcrypt.hashSync(string, salt)
+				return await bcrypt.hash(string, salt)
 			case AuthPasswordEncryption.SHA1:
 				if (salt) {
 					return createHmac('sha1', salt).update(string).digest('hex')

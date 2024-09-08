@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS OrderDetail (
 
 -- Populate Users table
 
-INSERT IGNORE INTO `User` (`id`, `email`, `password`, `role`, `firstName`, `lastName`, `createdAt`, `updatedAt`, `deletedAt`) VALUES (1, 'test@test.com', 'ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff', 'ADMIN', 'Jon', 'Doe', '2000-01-01 00:00:01', '2000-01-01 00:00:00', NULL);
+INSERT IGNORE INTO `User` (`id`, `email`, `password`, `role`, `firstName`, `lastName`, `createdAt`, `updatedAt`, `deletedAt`) VALUES (1, 'test@test.com', '$2a$10$jm6bM7acpRa18Vdy8FSqIu4yzWAdSgZgRtRrx8zknIeZhSqPJjJU.', 'ADMIN', 'Jon', 'Doe', '2000-01-01 00:00:01', '2000-01-01 00:00:00', NULL);
 INSERT IGNORE INTO `UserApiKey` (`id`, `userId`, `apiKey`, `createdAt`, `updatedAt`, `deletedAt`) VALUES (1, 1, 'Ex@mp1eS$Cu7eAp!K3y', '2024-08-25 13:26:05', '2024-09-01 06:55:08', NULL);
 
 -- Populate Employess table 
