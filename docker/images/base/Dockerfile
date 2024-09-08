@@ -12,12 +12,7 @@ RUN apk add --no-cache git
 
 WORKDIR /usr/src/app
 
-COPY package*.json /usr/src/app
-
-RUN export VERSION=$(npm run version) && echo "Building version $VERSION"
-
-# Download the application from github
-RUN git clone --depth 1 --branch $VERSION https://github.com/juicyllama/llana.git .
+COPY . /usr/src/app
 
 # Install the dependencies
 RUN npm install
@@ -43,6 +38,8 @@ FROM node:${NODE_VERSION}-alpine AS production
 COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
 COPY --chown=node:node --from=build /usr/src/app/dist ./dist
 COPY --chown=node:node --from=build /usr/src/app/.env ./.env
+
+USER node
 
 # Start the server using the production build node dist/main.js
 CMD [ "node", "dist/main.js" ]

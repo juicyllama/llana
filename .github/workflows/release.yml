@@ -64,10 +64,17 @@ jobs:
                     username: juicyllama
                     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-            -   name: 'Docker Build'
-                run: npm run docker:build
+            -   name: 'Docker Release'
+                run: npm run docker:release
 
-            -  name: 'Docker Push'
-               run: npm run docker:push
+            -   name: Docker Scout
+                id: docker-scout
+                uses: docker/scout-action@v1
+                with:
+                    command: cves,recommendations,compare
+                    to-latest: true
+                    ignore-base: true
+                    ignore-unchanged: true
+                    only-fixed: true
 
-#TODO: add release to hosting providers, e.g. heroku or via elest.io
+#TODO: add release to hosting provider, e.g. heroku or via elest.io
