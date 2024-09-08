@@ -44,8 +44,8 @@ jobs:
 
             -   name: 'Version Bump'
                 id: version
-                uses: phips28/gh-action-bump-version@master
                 if: ${{ !contains(github.event.head_commit.message, '#skip-version-bump') }}
+                uses: phips28/gh-action-bump-version@master
                 env:
                     GITHUB_TOKEN: ${{ secrets.GH_CI_CD_RELEASE }}
                 with:
@@ -53,14 +53,15 @@ jobs:
                     minor-wording: 'feature,feat'
                     patch-wording: 'patch,fixes,fix,misc,docs,refactor'    # Providing patch-wording will override commits
                     commit-message: 'CI: Bump Version to {{version}} [skip ci]'
-                    tag-prefix:  'v'
+                    tag-prefix: 'v'
 
             -   name: 'Authenticate with NPM'
+                if: ${{ !contains(github.event.head_commit.message, '#skip-npm-publish') }}
                 run: echo -e "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
 
             -   name: 'Publishing package'
-                run: npm publish --no-git-checks --access public
                 if: ${{ !contains(github.event.head_commit.message, '#skip-npm-publish') }}
+                run: npm publish --no-git-checks --access public
 
             -   name: Docker meta
                 id: meta
@@ -73,12 +74,9 @@ jobs:
                   # generate Docker tags based on the following events/attributes
                   tags: |
                     latest
-                    type=semver,pattern=v{{version}}
-                    type=semver,pattern=v{{major}}.{{minor}}
-                    type=semver,pattern=v{{major}}
-                    type=semver,pattern={{version}}
-                    type=semver,pattern={{major}}.{{minor}}
-                    type=semver,pattern={{major}}
+                    type=semver,pattern=v{{version}},value=${{ steps.version.outputs.newTag }}
+                    type=semver,pattern=v{{major}}.{{minor}},value=${{ steps.version.outputs.newTag }}
+                    type=semver,pattern=v{{major}},value=${{ steps.version.outputs.newTag }}
                     type=sha
 
             -   name: Set up QEMU
