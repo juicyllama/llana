@@ -71,9 +71,12 @@ jobs:
                   # generate Docker tags based on the following events/attributes
                   tags: |
                     latest
-                    type=semver,pattern=v{{version}}
-                    type=semver,pattern=v{{major}}.{{minor}}
-                    type=semver,pattern=v{{major}}
+                    v{{version}}
+                    v{{major}}.{{minor}}
+                    v{{major}}
+                    {{version}}
+                    {{major}}.{{minor}}
+                    {{major}}
                     type=sha
 
             -   name: Set up QEMU
@@ -102,7 +105,7 @@ jobs:
                 id: docker-scout
                 uses: docker/scout-action@v1
                 with:
-                    command: cves,recommendations
+                    command: cves
                     to-latest: true
                     ignore-base: true
                     ignore-unchanged: true
