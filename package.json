@@ -28,8 +28,9 @@
 		"start:dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
 		"start:ngrok": "~/ngrok http http://localhost:3000/ --subdomain=llana",
-		"docker:dev": "sh ./scripts/docker-dev.sh",
-		"docker::test:prod": "sh ./scripts/docker-prod.sh",
+		"docker:dev": "sh ./scripts/docker.dev.sh",
+		"docker:prod:build": "sh ./scripts/docker.build.prod.sh",
+		"docker:prod:test": "sh ./scripts/docker.prod.sh",
 		"test": "jest --clear-cache && jest --runInBand --detectOpenHandles --forceExit",
 		"precommit": "npm run test && npm run lint && npm run format",
 		"commit": "git pull && git add . && git commit -m \"chore: update\" && git push"

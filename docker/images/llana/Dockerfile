@@ -2,9 +2,7 @@
 # PRODUCTION
 ###################
 
-ARG LLANA_VERSION=latest
-
-FROM juicyllama/llana:${LLANA_VERSION}
+FROM juicyllama/llana:latest
 
 USER node
 
