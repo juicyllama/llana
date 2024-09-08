@@ -34,7 +34,8 @@ export default registerAs(
 						password: process.env.AUTH_USER_TABLE_PASSWORD_FIELD ?? 'password',
 					},
 					password: {
-						encryption: process.env.AUTH_USER_TABLE_PASSWORD_ENCRYPTION ?? AuthPasswordEncryption.SHA512,
+						encryption: process.env.AUTH_USER_TABLE_PASSWORD_ENCRYPTION ?? AuthPasswordEncryption.BCRYPT,
+						salt: process.env.AUTH_USER_TABLE_PASSWORD_SALT ?? 10
 					},
 					where: [
 						{
