@@ -9,11 +9,11 @@ export default registerAs(
 		<Auth[]>[
 			{
 				type: AuthType.APIKEY,
-				location: AuthLocation.HEADER,
-				name: 'x-api-key',
+				location: process.env.AUTH_USER_API_KEY_LOCATION ?? AuthLocation.HEADER,
+				name: process.env.AUTH_USER_API_KEY_NAME ?? 'x-api-key',
 				table: <AuthAPIKey>{
-					name: 'User', //should start at your main users indentity table
-					column: 'UserApiKey.apiKey',
+					name: process.env.AUTH_USER_TABLE_NAME ?? 'User', //should start at your main users identity table
+					column: process.env.AUTH_USER_API_KEY_FIELD ?? 'UserApiKey.apiKey',
 					where: [
 						{
 							column: 'deletedAt',
@@ -28,10 +28,13 @@ export default registerAs(
 					exclude: ['auth/login'],
 				},
 				table: <AuthJWT>{
-					name: 'User', //should start at your main users indentity table
-					columns: { username: 'email', password: 'password' },
+					name: process.env.AUTH_USER_TABLE_NAME ?? 'User', //should start at your main users identity table
+					columns: { 
+						username: process.env.AUTH_USER_TABLE_USERNAME_FIELD ?? 'email', 
+						password: process.env.AUTH_USER_TABLE_PASSWORD_FIELD ?? 'password', 
+					},
 					password: {
-						encryption: AuthPasswordEncryption.SHA512,
+						encryption: process.env.AUTH_USER_TABLE_PASSWORD_ENCRYPTION ?? AuthPasswordEncryption.SHA512,
 					},
 					where: [
 						{
