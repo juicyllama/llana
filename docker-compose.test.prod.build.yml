@@ -1,0 +1,21 @@
+name: llana-test-prod-build
+
+services:
+    llana-app:
+        container_name: llana-test-prod-build-app
+        build:
+            context: .
+            dockerfile: docker/images/base/Dockerfile
+        ports:
+            - "3000:3000"
+        environment:
+            DATABASE_URI: ${DATABASE_URI}
+            JWT_KEY: ${JWT_KEY}
+            DEFAULT_LIMIT: ${DEFAULT_LIMIT}
+            DEFAULT_RELATIONS_LIMIT: ${DEFAULT_RELATIONS_LIMIT}
+            SOFT_DELETE: ${SOFT_DELETE}
+            SOFT_DELETE_KEY: ${SOFT_DELETE_KEY}
+            LOG_LEVELS_PROD: ${LOG_LEVELS_PROD}
+            LOG_LEVELS_SANDBOX: ${LOG_LEVELS_SANDBOX}
+            LOG_LEVELS_TEST: ${LOG_LEVELS_TEST}
+            LOG_LEVELS_DEV: ${LOG_LEVELS_DEV}

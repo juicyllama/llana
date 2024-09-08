@@ -1,5 +1,5 @@
 ###################
-# BUILD FOR PRODUCTION
+# BUILD
 ###################
 
 ARG NODE_VERSION=22
@@ -12,21 +12,17 @@ RUN apk add --no-cache git
 
 WORKDIR /usr/src/app
 
-COPY . /usr/src/app
+COPY . .
 
-# Install the dependencies
-RUN npm install
-
-# Run the build command which creates the production bundle
-RUN npm run build
-
-# Set NODE_ENV environment variable
-ENV NODE_ENV=production
-
-# Running `npm ci` removes the existing node_modules directory and passing in --only=production ensures that only the production dependencies are installed. This ensures that the node_modules directory is as optimized as possible
-RUN npm ci --only=production && npm cache clean --force
+RUN chown -R node:node /usr/src/app
 
 USER node
+
+RUN cd /usr/src/app
+
+# Install the dependencies
+RUN npm ci
+RUN npm run build
 
 ###################
 # PRODUCTION
@@ -34,12 +30,16 @@ USER node
 
 FROM node:${NODE_VERSION}-alpine AS production
 
-# Copy the bundled code from the build stage to the production image
-COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
-COPY --chown=node:node --from=build /usr/src/app/dist ./dist
-COPY --chown=node:node --from=build /usr/src/app/.env ./.env
+WORKDIR /usr/src/app
+
+# Copy the app from the build stage
+COPY --chown=node:node --from=build /usr/src/app .
+
+RUN chown -R node:node /usr/src/app
 
 USER node
 
-# Start the server using the production build node dist/main.js
-CMD [ "node", "dist/main.js" ]
+RUN cd /usr/src/app
+
+CMD [ "npm", "run", "start" ]
+
