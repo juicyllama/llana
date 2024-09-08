@@ -58,14 +58,37 @@ jobs:
             -   name: 'Publishing package'
                 run: npm publish --no-git-checks --access public
 
+            -   name: Set up QEMU
+                uses: docker/setup-qemu-action@v3
+
+            -   name: Set up Docker Buildx
+                uses: docker/setup-buildx-action@v3
+
+            -   name: Docker meta
+                id: meta
+                uses: docker/metadata-action@v5
+                with:
+                    images: |
+                        juicyllama/llana
+                    tags: |
+                        type=semver,pattern=v{{version}}
+                        type=semver,pattern=v{{major}}.{{minor}}
+                        type=semver,pattern=v{{major}}
+
             -   name: Login to Docker Hub
                 uses: docker/login-action@v3
                 with:
                     username: juicyllama
                     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-            -   name: 'Docker Release'
-                run: npm run docker:release
+            -   name: Build and push image
+                uses: docker/build-push-action@v6
+                with:
+                    file: ./docker/images/base/Dockerfile
+                    sbom: true
+                    provenance: mode=max
+                    push: true
+                    tags: ${{ steps.meta.outputs.tags }}
 
             -   name: Docker Scout
                 id: docker-scout
