@@ -7,8 +7,8 @@ export default registerAs(
 	() =>
 		<RolesConfig>{
 			location: <RoleLocation>{
-				table: 'User',
-				column: 'role',
+				table: process.env.ROLE_LOCATION_USER_TABLE_NAME ?? 'User',
+				column: process.env.ROLE_LOCATION_USER_TABLE_ROLE_FIELD ?? 'role',
 			},
 			defaults: <Role[]>[
 				{
@@ -28,11 +28,11 @@ export default registerAs(
 				{
 					tables: [
 						{
-							table: 'User',
+							table: process.env.AUTH_USER_TABLE_NAME ?? 'User',
 						},
 						{
-							table: 'UserApiKey',
-							identity_column: 'userId',
+							table: process.env.AUTH_USER_API_KEY_TABLE_NAME ?? 'UserApiKey',
+							identity_column: process.env.AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN ?? 'userId',
 						},
 					],
 					roles: <TableRole[]>[
