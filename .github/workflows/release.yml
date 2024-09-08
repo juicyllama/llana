@@ -43,14 +43,16 @@ jobs:
             -   run: git pull --force
 
             -   name: 'Version Bump'
+                id: version
                 uses: phips28/gh-action-bump-version@master
                 env:
                     GITHUB_TOKEN: ${{ secrets.GH_CI_CD_RELEASE }}
                 with:
-                    major-wording: 'JLMAJOR'
+                    major-wording: 'MAJOR'
                     minor-wording: 'feature,feat'
                     patch-wording: 'patch,fixes,fix,misc,docs,refactor'    # Providing patch-wording will override commits
                     commit-message: 'CI: Bump Version to {{version}} [skip ci]'
+                    tag-prefix:  'v'
 
             -   name: 'Authenticate with NPM'
                 run: echo -e "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
@@ -68,9 +70,10 @@ jobs:
                    # ghcr.io/username/app            
                   # generate Docker tags based on the following events/attributes
                   tags: |
-                    type=semver,pattern={{version}}
-                    type=semver,pattern={{major}}.{{minor}}
-                    type=semver,pattern={{major}}
+                    latest
+                    type=semver,pattern=v{{version}}
+                    type=semver,pattern=v{{major}}.{{minor}}
+                    type=semver,pattern=v{{major}}
                     type=sha
 
             -   name: Set up QEMU
@@ -99,10 +102,12 @@ jobs:
                 id: docker-scout
                 uses: docker/scout-action@v1
                 with:
-                    command: cves,recommendations,compare
+                    command: cves,recommendations
                     to-latest: true
                     ignore-base: true
                     ignore-unchanged: true
                     only-fixed: true
+                    write-comment: true
+                    github-token: ${{ secrets.GH_CI_CD_RELEASE }} # to be able to write the comment
 
 #TODO: add release to hosting provider, e.g. heroku or via elest.io
