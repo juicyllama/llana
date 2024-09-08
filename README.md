@@ -3,7 +3,7 @@
 # Llana
 
   <a href="https://juicyllama.com/" target="_blank">
-    <img src="https://juicyllama.com/assets/images/icon.png" width="100" alt="JuicyLlama Logo" />
+    <img src="https://juicyllama.com/assets/images/llana-rounded.png" width="100" alt="JuicyLlama Logo" />
   </a>
 
 </div>
@@ -24,7 +24,7 @@ We are working to support all major databases, if you would like to contribute t
 [ExpressJs Database Integration Guide](https://expressjs.com/en/guide/database-integration.html)
 
 ![ORACLE](https://badgen.net/badge/ORACLE/Help%20Welcomed/red)<br>
-![MYSQL](https://badgen.net/badge/MYSQL/In%20Progress/yellow)<br>
+![MYSQL](https://badgen.net/badge/MYSQL/Beta%20Phase/green)<br>
 ![MSSQL](https://badgen.net/badge/MSSQL/Help%20Welcomed/red)<br>
 ![POSTGRES](https://badgen.net/badge/POSTGRES/Help%20Welcomed/red)<br>
 ![MONGODB](https://badgen.net/badge/MONGODB/Help%20Welcomed/red)<br>

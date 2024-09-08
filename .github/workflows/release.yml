@@ -101,17 +101,4 @@ jobs:
                     tags: ${{ steps.meta.outputs.tags }}
                     labels: ${{ steps.meta.outputs.labels }}
 
-            -   name: Docker Scout
-                id: docker-scout
-                uses: docker/scout-action@v1
-                if: ${{ !contains(github.event.head_commit.message, '#skip-docker-publish') }}
-                with:
-                    command: cves
-                    to-latest: true
-                    ignore-base: true
-                    ignore-unchanged: true
-                    only-fixed: true
-                    write-comment: true
-                    github-token: ${{ secrets.GH_CI_CD_RELEASE }} # to be able to write the comment
-
 #TODO: add release to hosting provider, e.g. heroku or via elest.io

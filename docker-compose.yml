@@ -44,7 +44,7 @@ services:
         command: --init-file /mysql/init.sql
         volumes:
             - llana-mysql-data:/var/lib/mysql
-            - ./.docker/databases/mysql.sql:/mysql/init.sql
+            - ./demo/databases/mysql.sql:/mysql/init.sql
         networks:
             - llana-network
     llana-redis:
