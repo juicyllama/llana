@@ -29,9 +29,9 @@ export default registerAs(
 				},
 				table: <AuthJWT>{
 					name: process.env.AUTH_USER_TABLE_NAME ?? 'User', //should start at your main users identity table
-					columns: { 
-						username: process.env.AUTH_USER_TABLE_USERNAME_FIELD ?? 'email', 
-						password: process.env.AUTH_USER_TABLE_PASSWORD_FIELD ?? 'password', 
+					columns: {
+						username: process.env.AUTH_USER_TABLE_USERNAME_FIELD ?? 'email',
+						password: process.env.AUTH_USER_TABLE_PASSWORD_FIELD ?? 'password',
 					},
 					password: {
 						encryption: process.env.AUTH_USER_TABLE_PASSWORD_ENCRYPTION ?? AuthPasswordEncryption.SHA512,

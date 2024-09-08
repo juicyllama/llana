@@ -20,7 +20,7 @@ export class LoginService {
 		private readonly schema: Schema,
 	) {}
 
-	async signIn(username: string, pass: string): Promise<{ access_token: string }> {
+	async signIn(username: string, pass: string): Promise<{ access_token: string; id: any }> {
 		if (!username) {
 			throw new BadRequestException('Username is required')
 		}
@@ -85,6 +85,7 @@ export class LoginService {
 
 		return {
 			access_token: await this.jwtService.signAsync(payload),
+			id: userIdentifier,
 		}
 	}
 }
