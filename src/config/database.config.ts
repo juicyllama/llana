@@ -18,8 +18,7 @@ export default registerAs(
 				},
 			},
 			deletes: {
-				soft: Boolean(process.env.SOFT_DELETE) || false,
-				column: process.env.SOFT_DELETE_COLUMN,
+				soft: process.env.SOFT_DELETE_COLUMN ?? undefined,
 			},
 		},
 )

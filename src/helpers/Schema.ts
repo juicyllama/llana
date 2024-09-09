@@ -27,6 +27,10 @@ export class Schema {
 	 */
 
 	async getSchema(table_name: string): Promise<DatabaseSchema> {
+		if (!table_name) {
+			throw new Error('Table name not provided')
+		}
+
 		try {
 			switch (this.configService.get<string>('database.type')) {
 				case DatabaseType.MYSQL:
@@ -37,7 +41,7 @@ export class Schema {
 					)
 			}
 		} catch (e) {
-			this.logger.error(`[Query][GetSchema] ${e.message}`)
+			this.logger.warn(`[Query][GetSchema] ${e.message}`)
 			throw new Error(`Table schema not found for table ${table_name}`)
 		}
 	}
