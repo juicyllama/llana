@@ -90,6 +90,12 @@ jobs:
                     username: juicyllama
                     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+            #Checkout again to get latest package.json after bump and before we deploy
+            -   name: 'Checkout'
+                uses: actions/checkout@v4
+                with:
+                    token: ${{ secrets.GH_CI_CD_RELEASE }}
+
             -   name: Build and push image
                 uses: docker/build-push-action@v6
                 if: ${{ !contains(github.event.head_commit.message, '#skip-docker-publish') }}
@@ -100,5 +106,3 @@ jobs:
                     push: true
                     tags: ${{ steps.meta.outputs.tags }}
                     labels: ${{ steps.meta.outputs.labels }}
-
-#TODO: add release to hosting provider, e.g. heroku or via elest.io

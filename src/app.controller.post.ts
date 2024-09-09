@@ -75,12 +75,12 @@ export class PostController {
 		}
 
 		try {
-			return res.status(201).send(
-				await this.query.perform(QueryPerform.CREATE, {
-					schema,
-					data: validate.instance,
-				}),
-			)
+			const result = await this.query.perform(QueryPerform.CREATE, {
+				schema,
+				data: validate.instance,
+			})
+
+			return res.status(201).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}

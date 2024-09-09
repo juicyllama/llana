@@ -1,7 +1,6 @@
 import { registerAs } from '@nestjs/config'
 
 import { Auth, AuthAPIKey, AuthJWT, AuthLocation, AuthPasswordEncryption, AuthType } from '../types/auth.types'
-import { WhereOperator } from '../types/database.types'
 
 export default registerAs(
 	'auth',
@@ -13,22 +12,15 @@ export default registerAs(
 				name: process.env.AUTH_USER_API_KEY_NAME ?? 'x-api-key',
 				table: <AuthAPIKey>{
 					name: process.env.AUTH_USER_TABLE_NAME ?? 'User', //should start at your main users identity table
+					identity_column: process.env.AUTH_USER_IDENTITY_COLUMN ?? undefined,
 					column: process.env.AUTH_USER_API_KEY_FIELD ?? 'UserApiKey.apiKey',
-					where: [
-						{
-							column: 'deletedAt',
-							operator: WhereOperator.null,
-						},
-					],
 				},
 			},
 			{
 				type: AuthType.JWT,
-				routes: {
-					exclude: ['auth/login'],
-				},
 				table: <AuthJWT>{
 					name: process.env.AUTH_USER_TABLE_NAME ?? 'User', //should start at your main users identity table
+					identity_column: process.env.AUTH_USER_IDENTITY_COLUMN ?? undefined,
 					columns: {
 						username: process.env.AUTH_USER_TABLE_USERNAME_FIELD ?? 'email',
 						password: process.env.AUTH_USER_TABLE_PASSWORD_FIELD ?? 'password',
@@ -37,12 +29,6 @@ export default registerAs(
 						encryption: process.env.AUTH_USER_TABLE_PASSWORD_ENCRYPTION ?? AuthPasswordEncryption.BCRYPT,
 						salt: process.env.AUTH_USER_TABLE_PASSWORD_SALT ?? 10,
 					},
-					where: [
-						{
-							column: 'deletedAt',
-							operator: WhereOperator.null,
-						},
-					],
 				},
 			},
 		],

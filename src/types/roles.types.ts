@@ -10,8 +10,17 @@ export interface TableRole extends Role {
 }
 
 export interface Role {
+	custom: boolean
 	role: string
 	records: RolePermission
+}
+
+export interface DefaultRole extends Role {}
+
+export interface CustomRole extends Role {
+	table: string // the table you want to apply the roles to
+	own_records?: RolePermission
+	identity_column?: string // the column in the table which holds the user identity (e.g. user_id), if not provided, we will use the tables primary key
 }
 
 export interface RoleLocation {
@@ -20,18 +29,6 @@ export interface RoleLocation {
 	identifier_column?: string // the column in the table which holds the user identity (e.g. user_id), if not provided, we will use the tables primary key
 }
 
-export interface TableRoleSettings {
-	table: string // the table you want to apply the roles to
-	identity_column?: string // the column in the table which holds the user identity (e.g. user_id), if not provided, we will use the tables primary key
-}
-
-export interface RoleProfiles {
-	tables: TableRoleSettings[]
-	roles: TableRole[]
-}
-
 export interface RolesConfig {
 	location: RoleLocation
-	defaults?: Role[]
-	profiles?: RoleProfiles[]
 }

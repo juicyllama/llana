@@ -7,6 +7,7 @@ import {
 	DatabaseDeleteOneOptions,
 	DatabaseFindManyOptions,
 	DatabaseFindOneOptions,
+	DatabaseSchema,
 	DatabaseType,
 	DatabaseUniqueCheckOptions,
 	DatabaseUpdateOneOptions,
@@ -103,6 +104,24 @@ export class Query {
 			}
 
 			throw new Error(`Error ${pluralAction}`)
+		}
+	}
+
+	/**
+	 * Create a table
+	 *
+	 * * Used as part of the setup process
+	 */
+
+	async createTable(schema: DatabaseSchema): Promise<boolean> {
+		switch (this.configService.get<string>('database.type')) {
+			case DatabaseType.MYSQL:
+				return await this.mysql.createTable(schema)
+			default:
+				this.logger.error(
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+				)
+				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
 	}
 
