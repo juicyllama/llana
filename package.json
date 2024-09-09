@@ -60,7 +60,7 @@
 	"devDependencies": {
 		"@eslint/eslintrc": "^3.1.0",
 		"@eslint/js": "^9.9.1",
-		"@faker-js/faker": "^8.4.1",
+		"@faker-js/faker": "^9.0.0",
 		"@nestjs/cli": "^10.3.1",
 		"@nestjs/schematics": "^10.1.0",
 		"@nestjs/testing": "^10.3.2",
