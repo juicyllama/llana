@@ -97,8 +97,8 @@ export class DeleteController {
 
 		let softDelete: string = null
 
-		if (databaseConfig.deletes.soft && schema.columns.find(col => col.field === databaseConfig.deletes.column)) {
-			softDelete = databaseConfig.deletes.column
+		if (databaseConfig.deletes.soft && schema.columns.find(col => col.field === databaseConfig.deletes.soft)) {
+			softDelete = databaseConfig.deletes.soft
 		}
 
 		try {
