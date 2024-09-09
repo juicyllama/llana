@@ -36,6 +36,7 @@ export enum DatabaseColumnType {
 	BOOLEAN = 'boolean',
 	DATE = 'date',
 	JSON = 'json',
+	ENUM = 'enum',
 	UNKNOWN = 'unknown',
 }
 
@@ -81,13 +82,13 @@ export interface DatabaseSchema {
 	table: string
 	primary_key: string
 	columns: DatabaseSchemaColumn[]
-	relations: DatabaseSchemaRelation[]
+	relations?: DatabaseSchemaRelation[]
 }
 
 export interface DatabaseWhere {
 	column: string
 	operator: WhereOperator
-	value: string
+	value?: string
 }
 
 export interface DatabaseSchemaColumn {
@@ -98,8 +99,10 @@ export interface DatabaseSchemaColumn {
 	primary_key: boolean
 	unique_key: boolean
 	foreign_key: boolean
+	auto_increment?: boolean
 	default?: any
 	extra?: any
+	enums?: string[]
 }
 
 export interface DatabaseSchemaRelation {
@@ -160,8 +163,7 @@ export interface DatabaseConfig {
 		}
 	}
 	deletes: {
-		soft: boolean
-		column: string
+		soft: string | undefined
 	}
 }
 

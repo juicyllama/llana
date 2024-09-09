@@ -49,7 +49,7 @@ jobs:
                   database: llana
             
             -   name: Seed MySQL
-                run:  mysql -uroot < .docker/databases/mysql.sql
+                run:  mysql -uroot < demo/databases/mysql.sql
 
             -   name: Test
                 run:  export DATABASE_URI="mysql://root@127.0.0.1:3306/llana" && npm run test
