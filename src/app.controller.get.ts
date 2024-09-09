@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config'
 import { version } from '../package.json'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
-import { Logger } from './helpers/Logger'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
@@ -21,7 +20,6 @@ export class GetController {
 	constructor(
 		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
-		private readonly logger: Logger,
 		private readonly pagination: Pagination,
 		private readonly query: Query,
 		private readonly schema: Schema,
@@ -143,7 +141,7 @@ export class GetController {
 			schema = validateRelations.schema
 		}
 
-		const where = <DatabaseWhere[]>[
+		const where: DatabaseWhere[] = [
 			{
 				column: primary_key,
 				operator: WhereOperator.equals,
@@ -151,19 +149,26 @@ export class GetController {
 			},
 		]
 
+		if (this.configService.get('database.deletes.soft')) {
+			where.push({
+				column: this.configService.get('database.deletes.soft'),
+				operator: WhereOperator.null,
+			})
+		}
+
 		if (role_where.length > 0) {
 			where.concat(role_where)
 		}
 
 		try {
-			return res.status(200).send(
-				await this.query.perform(QueryPerform.FIND, {
-					schema,
-					fields: validateFields.validated ?? [],
-					relations,
-					where,
-				}),
-			)
+			const result = await this.query.perform(QueryPerform.FIND, {
+				schema,
+				fields: validateFields?.validated ?? [],
+				relations,
+				where,
+			})
+
+			return res.status(200).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}
@@ -223,6 +228,15 @@ export class GetController {
 			validateWhere.where = validateWhere.where.concat(role_where)
 		}
 
+		let where: DatabaseWhere[] = validateWhere.where
+
+		if (this.configService.get('database.deletes.soft')) {
+			where.push({
+				column: this.configService.get('database.deletes.soft'),
+				operator: WhereOperator.null,
+			})
+		}
+
 		let validateRelations
 		if (relations) {
 			validateRelations = await this.schema.validateRelations(schema, relations)
@@ -277,7 +291,7 @@ export class GetController {
 							`${relation}.${relationshipValidateWhere.where[r].column}`
 					}
 
-					validateWhere.where = validateWhere.where.concat(relationshipValidateWhere.where)
+					where = where.concat(relationshipValidateWhere.where)
 				}
 
 				const relationship_sort_fields = req.query.sort?.split(',')?.filter(key => key.includes(`${relation}.`))
@@ -307,7 +321,7 @@ export class GetController {
 					schema,
 					fields: validateFields?.params ?? [],
 					relations,
-					where: validateWhere.where,
+					where,
 					limit,
 					offset,
 					sort: this.sort.createSortArray(req.query.sort),
@@ -315,7 +329,7 @@ export class GetController {
 				}),
 			)
 		} catch (e) {
-			return res.status(400).sendthis.response.text(e.message)
+			return res.status(400).send(this.response.text(e.message))
 		}
 	}
 }

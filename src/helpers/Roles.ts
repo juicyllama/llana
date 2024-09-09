@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
+import { LLANA_ROLES_TABLE } from '../app.constants'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from '../types/auth.types'
 import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
+import { FindManyResponseObject } from '../types/response.types'
 import { RolePermission, RolesConfig } from '../types/roles.types'
 import { Logger } from './Logger'
 import { Query } from './Query'
@@ -53,46 +55,86 @@ export class Roles {
 			}
 		}
 
-		const table_permissions = config.profiles?.find(p =>
-			p.tables.find(t => t.table === table && p.roles.find(r => r.role === role)),
-		)
-		const default_permissions = config.defaults?.find(r => r.role === role)
+		const permission_schema = await this.schema.getSchema(LLANA_ROLES_TABLE)
+
+		const custom_permissions = (await this.query.perform(QueryPerform.FIND_MANY, {
+			schema: permission_schema,
+			where: [
+				{
+					column: 'custom',
+					operator: WhereOperator.equals,
+					value: true,
+				},
+				{
+					column: 'table',
+					operator: WhereOperator.equals,
+					value: table,
+				},
+				{
+					column: 'role',
+					operator: WhereOperator.equals,
+					value: role,
+				},
+			],
+		})) as FindManyResponseObject
 
 		// check if there is a table role setting
-		if (table_permissions) {
-			if (this.rolePass(access, table_permissions.roles.find(r => r.role === role)?.records)) {
-				return {
-					valid: true,
-				}
-			}
-
-			if (this.rolePass(access, table_permissions.roles.find(r => r.role === role)?.own_records)) {
-				let schema: DatabaseSchema
-
-				try {
-					schema = await this.schema.getSchema(table)
-				} catch (e) {
-					return <AuthTablePermissionFailResponse>{
-						valid: false,
-						message: e.message,
+		if (custom_permissions.data?.length) {
+			for (const permission of custom_permissions.data) {
+				if (this.rolePass(access, permission.records)) {
+					return {
+						valid: true,
 					}
 				}
+			}
 
-				return {
-					valid: true,
-					restriction: {
-						column:
-							table_permissions.tables.find(t => t.table === table)?.identity_column ??
-							schema.primary_key,
-						operator: WhereOperator.equals,
-						value: identifier,
-					},
+			for (const permission of custom_permissions.data) {
+				if (this.rolePass(access, permission.own_records)) {
+					let schema: DatabaseSchema
+
+					try {
+						schema = await this.schema.getSchema(table)
+					} catch (e) {
+						return <AuthTablePermissionFailResponse>{
+							valid: false,
+							message: e.message,
+						}
+					}
+
+					return {
+						valid: true,
+						restriction: {
+							column: permission.identity_column ?? schema.primary_key,
+							operator: WhereOperator.equals,
+							value: identifier,
+						},
+					}
 				}
 			}
-		} else if (default_permissions) {
-			if (this.rolePass(access, default_permissions.records)) {
-				return {
-					valid: true,
+		}
+
+		const default_permissions = (await this.query.perform(QueryPerform.FIND_MANY, {
+			schema: permission_schema,
+			where: [
+				{
+					column: 'custom',
+					operator: WhereOperator.equals,
+					value: false,
+				},
+				{
+					column: 'role',
+					operator: WhereOperator.equals,
+					value: role,
+				},
+			],
+		})) as FindManyResponseObject
+
+		if (default_permissions.data?.length) {
+			for (const permission of default_permissions.data) {
+				if (this.rolePass(access, permission.records)) {
+					return {
+						valid: true,
+					}
 				}
 			}
 		}

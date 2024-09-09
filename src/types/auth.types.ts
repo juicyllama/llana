@@ -1,13 +1,9 @@
-import { DatabaseWhere, WhereOperator } from './database.types'
+import { DatabaseWhere } from './database.types'
 
 export interface Auth {
 	type: AuthType
 	location: AuthLocation
 	name: string
-	routes?: {
-		include?: string[]
-		exclude?: string[]
-	}
 	table: AuthAPIKey | AuthJWT
 }
 
@@ -39,11 +35,6 @@ export interface AuthJWT extends AuthTableSettings {
 
 export interface AuthTableSettings {
 	name: string
-	where?: {
-		column: string
-		operator: WhereOperator
-		value?: string
-	}[]
 	identity_column?: string // If your identity column is not the table primary key
 }
 

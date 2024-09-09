@@ -2,8 +2,10 @@ import { Injectable, Req } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 
+import { LLANA_AUTH_TABLE } from '../app.constants'
 import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
-import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
+import { DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from '../types/database.types'
+import { FindManyResponseObject } from '../types/response.types'
 import { Env } from '../utils/Env'
 import { Logger } from './Logger'
 import { Query } from './Query'
@@ -33,9 +35,11 @@ export class Authentication {
 			}
 		}
 
+		const auth_schema = await this.schema.getSchema(LLANA_AUTH_TABLE)
+
 		let auth_passed: AuthRestrictionsResponse = {
 			valid: false,
-			message: 'Unathorized',
+			message: 'Unauthorized',
 		}
 
 		for (const auth of authentications) {
@@ -52,37 +56,31 @@ export class Authentication {
 			//Is the restriction required on the current route?
 			let check_required = true
 
-			if (auth.routes?.exclude) {
-				for (const exclude of auth.routes.exclude) {
-					if (req.originalUrl.includes(exclude)) {
-						check_required = false
-					}
+			const rules = (await this.query.perform(QueryPerform.FIND_MANY, {
+				schema: auth_schema,
+				where: [
+					{
+						column: 'auth',
+						operator: WhereOperator.equals,
+						value: auth.type,
+					},
+				],
+			})) as FindManyResponseObject
 
-					if (exclude.includes('*')) {
-						if (req.originalUrl.includes(exclude.split('*')[0])) {
-							check_required = false
-						}
-					}
+			const excludes = rules.data.filter(rule => rule.exclude)
+			const includes = rules.data.filter(rule => rule.exclude)
 
-					if (exclude === '*') {
+			if (excludes) {
+				for (const exclude of excludes) {
+					if (req.originalUrl.includes(exclude.table)) {
 						check_required = false
 					}
 				}
 			}
 
-			if (auth.routes?.include) {
-				for (const include of auth.routes.include) {
-					if (req.originalUrl.includes(include)) {
-						check_required = true
-					}
-
-					if (include.includes('*')) {
-						if (req.originalUrl.includes(include.split('*')[0])) {
-							check_required = true
-						}
-					}
-
-					if (include === '*') {
+			if (includes) {
+				for (const include of includes) {
+					if (req.originalUrl.includes(include.table)) {
 						check_required = true
 					}
 				}
@@ -213,17 +211,26 @@ export class Authentication {
 						schema = validateRelations.schema
 					}
 
+					const where: DatabaseWhere[] = [
+						{
+							column: api_key_config.column,
+							operator: WhereOperator.equals,
+							value: req_api_key,
+						},
+					]
+
+					if (this.configService.get('database.deletes.soft')) {
+						where.push({
+							column: this.configService.get('database.deletes.soft'),
+							operator: WhereOperator.null,
+						})
+					}
+
 					const result = await this.query.perform(QueryPerform.FIND, {
 						schema,
 						relations,
 						fields: [`${api_key_config.name}.${identity_column}`, api_key_config.column],
-						where: [
-							{
-								column: api_key_config.column,
-								operator: WhereOperator.equals,
-								value: req_api_key,
-							},
-						],
+						where,
 						joins: true,
 					})
 
@@ -242,7 +249,7 @@ export class Authentication {
 							column,
 							result,
 						})
-						return { valid: false, message: 'Unathorized' }
+						return { valid: false, message: 'Unauthorized' }
 					}
 
 					if (!result[identity_column]) {

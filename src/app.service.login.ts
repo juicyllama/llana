@@ -7,7 +7,7 @@ import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
 import { Auth, AuthJWT, AuthType } from './types/auth.types'
-import { DatabaseSchema, QueryPerform, WhereOperator } from './types/database.types'
+import { DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from './types/database.types'
 
 @Injectable()
 export class LoginService {
@@ -46,15 +46,24 @@ export class LoginService {
 			throw new UnauthorizedException()
 		}
 
+		const where: DatabaseWhere[] = [
+			{
+				column: (jwtAuthConfig.table as AuthJWT).columns.username,
+				operator: WhereOperator.equals,
+				value: username,
+			},
+		]
+
+		if (this.configService.get('database.deletes.soft')) {
+			where.push({
+				column: this.configService.get('database.deletes.soft'),
+				operator: WhereOperator.null,
+			})
+		}
+
 		const user = await this.query.perform(QueryPerform.FIND, {
 			schema,
-			where: [
-				{
-					column: (jwtAuthConfig.table as AuthJWT).columns.username,
-					operator: WhereOperator.equals,
-					value: username,
-				},
-			],
+			where,
 		})
 
 		if (!user) {

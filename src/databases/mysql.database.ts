@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as mysql from 'mysql2/promise'
 import { Connection } from 'mysql2/promise'
-import * as sqlstring from 'sqlstring'
 import { SortCondition } from 'src/types/schema.types'
 
 import { Logger } from '../helpers/Logger'
@@ -64,8 +63,8 @@ export class MySQL {
 			connection.end()
 			return results
 		} catch (e) {
-			this.logger.error('Error executing mysql database query')
-			this.logger.error({
+			this.logger.warn('Error executing mysql database query')
+			this.logger.warn({
 				sql: {
 					sql,
 					values: values ?? [],
@@ -139,7 +138,7 @@ export class MySQL {
 
 		values.push(...dataValues)
 
-		const command = `INSERT INTO ${table_name} (${columns.join(', ')}) VALUES ( ?${values.map(() => ``).join(', ?')} )`
+		const command = `INSERT INTO ${table_name} (\`${columns.join('`, `')}\`) VALUES ( ?${values.map(() => ``).join(', ?')} )`
 
 		const result = await this.performQuery(command, values)
 
@@ -169,7 +168,7 @@ export class MySQL {
 			return
 		}
 
-		results[0] = this.pipeMySQLToObject(results[0])
+		results[0] = this.pipeMySQLToObject({ schema: options.schema, data: results[0] })
 
 		if (!options.joins) {
 			return await this.addRelations(options, results[0])
@@ -209,7 +208,7 @@ export class MySQL {
 		const results = await this.performQuery(command, values)
 
 		for (const r in results) {
-			results[r] = this.pipeMySQLToObject(results[r])
+			results[r] = this.pipeMySQLToObject({ schema: options.schema, data: results[r] })
 			results[r] = await this.addRelations(options, results[r])
 		}
 
@@ -252,74 +251,12 @@ export class MySQL {
 				}
 			}
 
-			command += `${where.map(w => `${w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ? `).join(' AND ')} `
+			command += `${where.map(w => `\`${w.column}\` ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''} `).join(' AND ')} `
 			values.push(...where.map(w => w.value))
 		}
 
 		const results = await this.performQuery(command, values)
 		return results[0].total
-	}
-
-	async addRelations(options: DatabaseFindOneOptions | DatabaseFindManyOptions, result: any): Promise<any> {
-		if (!result) return {}
-
-		if (options.relations?.length) {
-			for (const relation of options.relations) {
-				const schema_relation = options.schema.relations.find(r => r.table === relation).schema
-				const relation_table = options.schema.relations.find(r => r.table === relation)
-				const fields = options.fields?.filter(field => field.includes(schema_relation.table + '.'))
-
-				if (fields.length) {
-					fields.forEach((field, index) => {
-						fields[index] = field.replace(`${schema_relation.table}.`, '')
-					})
-				}
-
-				if (!fields.length) {
-					fields.push(...schema_relation.columns.map(column => column.field))
-				}
-
-				const limit = this.configService.get<number>('database.defaults.relations.limit')
-
-				let where: DatabaseWhere[] = [
-					{
-						column: relation_table.column,
-						operator: WhereOperator.equals,
-						value: result[relation_table.org_column],
-					},
-				]
-
-				if ('where' in options && options.where) {
-					where = where.concat(
-						options.where?.filter(where => where.column.includes(schema_relation.table + '.')),
-					)
-
-					for (const w of where) {
-						w.column = w.column.replace(`${schema_relation.table}.`, '')
-					}
-				}
-
-				let sort: SortCondition[] = []
-				if ('sort' in options && options.sort) {
-					sort = options.sort?.filter(sort => sort.column.includes(schema_relation.table + '.'))
-					for (const s of sort) {
-						s.column = s.column.replace(`${schema_relation.table}.`, '')
-					}
-				}
-
-				const relation_result = await this.findMany({
-					schema: schema_relation,
-					fields,
-					where,
-					sort,
-					limit,
-					offset: 0,
-				})
-
-				result[relation] = relation_result.data
-			}
-		}
-		return result
 	}
 
 	/**
@@ -389,9 +326,142 @@ export class MySQL {
 		}
 	}
 
-	find(options: DatabaseFindOneOptions | DatabaseFindManyOptions): [string, string[]] {
+	async uniqueCheck(options: DatabaseUniqueCheckOptions): Promise<IsUniqueResponse> {
+		for (const column of options.schema.columns) {
+			if (column.unique_key) {
+				const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE ${column.field} = ?`
+				const result = await this.performQuery(command, [options.data[column.field]])
+
+				if (result[0].total > 0) {
+					return {
+						valid: false,
+						message: `Record with ${column.field} ${options.data[column.field]} already exists`,
+					}
+				}
+			}
+		}
+
+		return {
+			valid: true,
+		}
+	}
+
+	/**
+	 * Create table from schema object
+	 */
+
+	async createTable(schema: DatabaseSchema): Promise<boolean> {
+		try {
+			const columns = schema.columns.map(column => {
+				let column_string = `\`${column.field}\` ${this.fieldMapperReverse(column.type)}`
+
+				if (column.type === DatabaseColumnType.STRING) {
+					column_string += `(${column.extra?.length ?? 255})`
+				}
+
+				if (column.type === DatabaseColumnType.ENUM) {
+					column_string += `(${column.enums?.map(e => `'${e}'`).join(', ')})`
+				}
+
+				if (column.required) {
+					column_string += ' NOT NULL'
+				}
+
+				if (column.unique_key) {
+					column_string += ' UNIQUE'
+				}
+
+				if (column.primary_key) {
+					column_string += ' PRIMARY KEY'
+				}
+
+				if (column.default) {
+					column_string += ` DEFAULT ${column.default}`
+				}
+
+				if (column.auto_increment) {
+					column_string += ' AUTO_INCREMENT'
+				}
+
+				return column_string
+			})
+
+			const command = `CREATE TABLE ${schema.table} (${columns.join(', ')})`
+
+			await this.performQuery(command)
+
+			return true
+		} catch (e) {
+			this.logger.error(`[MySQL][createTable] Error creating table ${schema.table}`, { e })
+			return false
+		}
+	}
+
+	private async addRelations(options: DatabaseFindOneOptions | DatabaseFindManyOptions, result: any): Promise<any> {
+		if (!result) return {}
+
+		if (options.relations?.length) {
+			for (const relation of options.relations) {
+				const schema_relation = options.schema.relations.find(r => r.table === relation).schema
+				const relation_table = options.schema.relations.find(r => r.table === relation)
+				const fields = options.fields?.filter(field => field.includes(schema_relation.table + '.'))
+
+				if (fields.length) {
+					fields.forEach((field, index) => {
+						fields[index] = field.replace(`${schema_relation.table}.`, '')
+					})
+				}
+
+				if (!fields.length) {
+					fields.push(...schema_relation.columns.map(column => column.field))
+				}
+
+				const limit = this.configService.get<number>('database.defaults.relations.limit')
+
+				let where: DatabaseWhere[] = [
+					{
+						column: relation_table.column,
+						operator: WhereOperator.equals,
+						value: result[relation_table.org_column],
+					},
+				]
+
+				if ('where' in options && options.where) {
+					where = where.concat(
+						options.where?.filter(where => where.column.includes(schema_relation.table + '.')),
+					)
+
+					for (const w of where) {
+						w.column = w.column.replace(`${schema_relation.table}.`, '')
+					}
+				}
+
+				let sort: SortCondition[] = []
+				if ('sort' in options && options.sort) {
+					sort = options.sort?.filter(sort => sort.column.includes(schema_relation.table + '.'))
+					for (const s of sort) {
+						s.column = s.column.replace(`${schema_relation.table}.`, '')
+					}
+				}
+
+				const relation_result = await this.findMany({
+					schema: schema_relation,
+					fields,
+					where,
+					sort,
+					limit,
+					offset: 0,
+				})
+
+				result[relation] = relation_result.data
+			}
+		}
+		return result
+	}
+
+	private find(options: DatabaseFindOneOptions | DatabaseFindManyOptions): [string, string[]] {
 		const table_name = options.schema.table
-		const values: any[] = []
+		let values: any[] = []
 
 		const fields = options.joins ? options.fields : options.fields?.filter(field => !field.includes('.'))
 		const where = options.joins ? options.where : options.where?.filter(where => !where.column.includes('.'))
@@ -422,24 +492,18 @@ export class MySQL {
 				}
 			}
 
-			command += `${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ? `).join(' AND ')} `
+			command += `${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}  `).join(' AND ')} `
 			values.push(...where.map(w => w.value))
 		}
 
 		return [command, values]
 	}
 
-	async uniqueCheck(options: DatabaseUniqueCheckOptions): Promise<IsUniqueResponse> {
-		console.error(`TODO: UNIQUE CHECK`, options.schema)
-
-		//TODO: complete unique check based on Unique Keys in schema
-
-		return {
-			valid: true,
+	private fieldMapper(type: MySQLColumnType): DatabaseColumnType {
+		if (type.includes('enum')) {
+			return DatabaseColumnType.ENUM
 		}
-	}
 
-	fieldMapper(type: MySQLColumnType): DatabaseColumnType {
 		switch (type) {
 			case MySQLColumnType.INT:
 			case MySQLColumnType.TINYINT:
@@ -483,14 +547,34 @@ export class MySQL {
 		}
 	}
 
-	pipeObjectToMySQL(
+	private fieldMapperReverse(type: DatabaseColumnType): MySQLColumnType {
+		switch (type) {
+			case DatabaseColumnType.STRING:
+				return MySQLColumnType.VARCHAR
+			case DatabaseColumnType.NUMBER:
+				return MySQLColumnType.INT
+			case DatabaseColumnType.BOOLEAN:
+				return MySQLColumnType.BOOLEAN
+			case DatabaseColumnType.DATE:
+				return MySQLColumnType.DATETIME
+			case DatabaseColumnType.JSON:
+				return MySQLColumnType.JSON
+			case DatabaseColumnType.ENUM:
+				return MySQLColumnType.ENUM
+			default:
+				return MySQLColumnType.VARCHAR
+		}
+	}
+
+	private pipeObjectToMySQL(
 		options: DatabaseCreateOneOptions | DatabaseUpdateOneOptions,
 	): DatabaseCreateOneOptions | DatabaseUpdateOneOptions {
 		for (const column of options.schema.columns) {
+			if (!options.data[column.field]) {
+				continue
+			}
+
 			switch (column.type) {
-				case DatabaseColumnType.STRING:
-					options.data[column.field] = sqlstring.escape(options.data[column.field].toString())
-					break
 				case DatabaseColumnType.BOOLEAN:
 					if (options.data[column.field] === true) {
 						options.data[column.field] = 1
@@ -506,22 +590,39 @@ export class MySQL {
 							.replace('T', ' ')
 					}
 					break
-			}
 
-			if (column.type === DatabaseColumnType.DATE && options.data[column.field]) {
-				options.data[column.field] = new Date().toISOString().slice(0, 19).replace('T', ' ')
+				default:
+					continue
 			}
 		}
 
 		return options
 	}
 
-	pipeMySQLToObject(data: { [key: string]: any }): object {
-		for (const key in data) {
-			if (data[key] instanceof Date) {
-				data[key] = data[key].toISOString()
+	private pipeMySQLToObject(options: { schema: DatabaseSchema; data: { [key: string]: any } }): object {
+		for (const column of options.schema.columns) {
+			if (!options.data[column.field]) {
+				continue
+			}
+
+			switch (column.type) {
+				case DatabaseColumnType.BOOLEAN:
+					if (options.data[column.field] === 1) {
+						options.data[column.field] = true
+					} else if (options.data[column.field] === 0) {
+						options.data[column.field] = false
+					}
+					break
+				case DatabaseColumnType.DATE:
+					if (options.data[column.field]) {
+						options.data[column.field] = new Date(options.data[column.field]).toISOString()
+					}
+					break
+				default:
+					continue
 			}
 		}
-		return data
+
+		return options.data
 	}
 }
