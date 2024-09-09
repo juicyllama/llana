@@ -1,6 +1,6 @@
 {
 	"name": "@juicyllama/llana",
-	"version": "1.1.0",
+	"version": "1.1.2",
 	"description": "API Wrapper for Databases - Llana is a no-code API wrapper that exposes a REST API for any database within minutes. No longer spend time building APIs, just connect your database and start using the API. Open source, free to use, and no vendor lock-in.",
 	"author": {
 		"name": "JuicyLlama Studio",
@@ -60,7 +60,7 @@
 	"devDependencies": {
 		"@eslint/eslintrc": "^3.1.0",
 		"@eslint/js": "^9.10.0",
-		"@faker-js/faker": "^8.4.1",
+		"@faker-js/faker": "^9.0.0",
 		"@nestjs/cli": "^10.3.1",
 		"@nestjs/schematics": "^10.1.0",
 		"@nestjs/testing": "^10.3.2",
