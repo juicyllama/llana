@@ -31,9 +31,18 @@ export class Roles {
 		const config = this.configService.get<RolesConfig>('roles')
 
 		if (!config.location?.table || !config.location?.column) {
-			this.logger.warn('Roles not defined, skipping role check')
+			this.logger.warn('Roles table not defined, skipping role check')
 			return <AuthTablePermissionSuccessResponse>{
 				valid: true,
+			}
+		}
+
+		const schema = await this.schema.getSchema(table)
+
+		if(!schema) {
+			return <AuthTablePermissionFailResponse>{
+				valid: false,
+				message: 'Table not found',
 			}
 		}
 
@@ -81,26 +90,14 @@ export class Roles {
 		// check if there is a table role setting
 		if (custom_permissions.data?.length) {
 			for (const permission of custom_permissions.data) {
+
 				if (this.rolePass(access, permission.records)) {
 					return {
 						valid: true,
 					}
 				}
-			}
 
-			for (const permission of custom_permissions.data) {
 				if (this.rolePass(access, permission.own_records)) {
-					let schema: DatabaseSchema
-
-					try {
-						schema = await this.schema.getSchema(table)
-					} catch (e) {
-						return <AuthTablePermissionFailResponse>{
-							valid: false,
-							message: e.message,
-						}
-					}
-
 					return {
 						valid: true,
 						restriction: {
@@ -149,7 +146,7 @@ export class Roles {
 	 * Get users role from the database
 	 */
 
-	async getRole(identifier: string): Promise<string | undefined> {
+	private async getRole(identifier: string): Promise<string | undefined> {
 		const config = this.configService.get<RolesConfig>('roles')
 
 		let table_schema
@@ -178,7 +175,7 @@ export class Roles {
 		return role?.[config.location.column]
 	}
 
-	rolePass(access: RolePermission, permission: RolePermission): boolean {
+	private rolePass(access: RolePermission, permission: RolePermission): boolean {
 		switch (access) {
 			case RolePermission.NONE:
 				return false

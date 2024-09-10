@@ -625,4 +625,8 @@ export class MySQL {
 
 		return options.data
 	}
+
+	async truncate(table_name: string): Promise<void> {
+		return await this.performQuery("TRUNCATE TABLE " + table_name)
+	}
 }

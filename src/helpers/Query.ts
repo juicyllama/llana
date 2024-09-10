@@ -21,6 +21,7 @@ import {
 } from '../types/response.types'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
+import { Env } from '../utils/Env'
 
 @Injectable()
 export class Query {
@@ -216,6 +217,28 @@ export class Query {
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+				)
+				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+	}
+
+
+	/**
+	 * Truncate a table - used for testing only, not for production
+	 */
+
+	async truncate(table_name: string): Promise<void> {
+
+		if(Env.IsProd()){
+			throw new Error('Truncate not allowed in production')
+		}
+
+		switch (this.configService.get<string>('database.type')) {
+			case DatabaseType.MYSQL:
+				return await this.mysql.truncate(table_name)
+			default:
+				this.logger.error(
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
