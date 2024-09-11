@@ -2,8 +2,8 @@ import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 
 import { AppModule } from '../app.module'
-import { Logger } from './Logger'
 import { CustomerTestingService } from '../testing/customer.testing.service'
+import { Logger } from './Logger'
 
 describe('Query > Create', () => {
 	let app: INestApplication
@@ -14,14 +14,13 @@ describe('Query > Create', () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
 			providers: [CustomerTestingService],
-			exports: [CustomerTestingService]
+			exports: [CustomerTestingService],
 		}).compile()
 
 		app = moduleRef.createNestApplication()
 
 		logger = app.get<Logger>(Logger)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
-
 	})
 
 	describe('createOne', () => {

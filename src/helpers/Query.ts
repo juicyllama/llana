@@ -19,9 +19,9 @@ import {
 	FindOneResponseObject,
 	IsUniqueResponse,
 } from '../types/response.types'
+import { Env } from '../utils/Env'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
-import { Env } from '../utils/Env'
 
 @Injectable()
 export class Query {
@@ -222,14 +222,12 @@ export class Query {
 		}
 	}
 
-
 	/**
 	 * Truncate a table - used for testing only, not for production
 	 */
 
 	async truncate(table_name: string): Promise<void> {
-
-		if(Env.IsProd()){
+		if (Env.IsProd()) {
 			throw new Error('Truncate not allowed in production')
 		}
 

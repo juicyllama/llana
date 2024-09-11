@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config'
 
 import { LLANA_ROLES_TABLE } from '../app.constants'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from '../types/auth.types'
-import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
+import { QueryPerform, WhereOperator } from '../types/database.types'
 import { FindManyResponseObject } from '../types/response.types'
 import { RolePermission, RolesConfig } from '../types/roles.types'
 import { Logger } from './Logger'
@@ -39,7 +39,7 @@ export class Roles {
 
 		const schema = await this.schema.getSchema(table)
 
-		if(!schema) {
+		if (!schema) {
 			return <AuthTablePermissionFailResponse>{
 				valid: false,
 				message: 'Table not found',
@@ -90,7 +90,6 @@ export class Roles {
 		// check if there is a table role setting
 		if (custom_permissions.data?.length) {
 			for (const permission of custom_permissions.data) {
-
 				if (this.rolePass(access, permission.records)) {
 					return {
 						valid: true,
@@ -168,8 +167,7 @@ export class Roles {
 					operator: WhereOperator.equals,
 					value: identifier,
 				},
-			],
-			joins: true,
+			]
 		})
 
 		return role?.[config.location.column]

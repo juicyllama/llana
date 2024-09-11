@@ -5,11 +5,21 @@ import { IsBoolean, IsDateString, IsJSON, IsNumber, IsOptional, IsString, valida
 
 import { NON_FIELD_PARAMS } from '../app.constants'
 import { MySQL } from '../databases/mysql.database'
-import { DatabaseColumnType, DatabaseSchema, DatabaseType, DatabaseWhere, WhereOperator } from '../types/database.types'
 import {
+	DatabaseColumnType,
+	DatabaseJoinStage,
+	DatabaseJoinType,
+	DatabaseRelations,
+	DatabaseSchema,
+	DatabaseType,
+	DatabaseWhere,
+	WhereOperator,
+} from '../types/database.types'
+import {
+	SortCondition,
 	ValidateFieldsResponse,
 	validateRelationsResponse,
-	ValidateResponse,
+	ValidateSortResponse,
 	validateWhereResponse,
 } from '../types/schema.types'
 import { Logger } from './Logger'
@@ -164,47 +174,18 @@ export class Schema {
 		}
 	}
 
-	validateFields(schema: DatabaseSchema, fields: string): ValidateFieldsResponse {
+	async validateFields(schema: DatabaseSchema, fields: string): Promise<ValidateFieldsResponse> {
 		try {
-			const validated = []
-			const relations = []
+			const validated: string[] = []
+			let relations: DatabaseRelations[] = []
 
 			for (const field of fields.split(',')) {
 				if (field === '') {
 					continue
 				}
 
-				const pieces = field.split('.')
-				if (pieces.length > 2) {
-					return {
-						valid: false,
-						message: `Invalid field ${field}`,
-					}
-				}
-
-				if (pieces.length === 2) {
-					const relation = pieces[0]
-					const column = pieces[1]
-
-					if (!schema.relations.find(rel => rel.table === relation)) {
-						return {
-							valid: false,
-							message: `Relation ${relation} not found in table schema for ${schema.table}`,
-						}
-					}
-
-					if (
-						!schema.relations
-							.find(rel => rel.table === relation)
-							.schema.columns.find(col => col.field === column)
-					) {
-						return {
-							valid: false,
-							message: `Column ${column} not found in relation ${relation} schema`,
-						}
-					}
-
-					relations.push(relation)
+				if (field.includes('.')) {
+					relations = await this.convertDeepField(field, schema, relations)
 				} else {
 					if (!schema.columns.find(col => col.field === field)) {
 						return {
@@ -212,14 +193,14 @@ export class Schema {
 							message: `Field ${field} not found in table schema for ${schema.table}`,
 						}
 					}
-				}
 
-				validated.push(field)
+					validated.push(field)
+				}
 			}
 
 			return {
 				valid: true,
-				validated,
+				fields: validated,
 				relations,
 			}
 		} catch (e) {
@@ -235,21 +216,49 @@ export class Schema {
 	 * Validate relations by ensuring that the relation exists in the schema
 	 */
 
-	async validateRelations(schema: DatabaseSchema, relations: string[]): Promise<validateRelationsResponse> {
+	async validateRelations(
+		schema: DatabaseSchema,
+		relations: string[],
+		existing_relations: DatabaseRelations[],
+	): Promise<validateRelationsResponse> {
 		try {
+			//const relation_fields = req.query.fields?.split(',')?.filter(field => field.includes(relation))
+
 			for (const relation of relations) {
-				if (!schema.relations.find(col => col.table === relation)) {
-					return {
-						valid: false,
-						message: `Relation ${relation} not found in table schema for ${schema.table} `,
+				if (relation.includes('.')) {
+					const relations = await this.convertDeepRelation(relation, schema)
+
+					for (const rel of relations) {
+						if (existing_relations.find(relation => relation.table === rel.table)) {
+							continue
+						}
+						existing_relations.push(rel)
 					}
+				} else {
+					if (!schema.relations.find(col => col.table === relation)) {
+						return {
+							valid: false,
+							message: `Relation ${relation} not found in table schema for ${schema.table} `,
+						}
+					}
+
+					if (existing_relations.find(rel => rel.table === relation)) {
+						continue
+					}
+
+					existing_relations.push({
+						table: relation,
+						join: {
+							...schema.relations.find(col => col.table === relation),
+							type: DatabaseJoinType.INNER,
+						},
+					})
 				}
-				schema.relations.find(col => col.table === relation).schema = await this.getSchema(relation)
 			}
 
 			return {
 				valid: true,
-				schema: schema,
+				relations: existing_relations,
 			}
 		} catch (e) {
 			this.logger.debug(`[validateRelations] ${e.message}`)
@@ -345,7 +354,7 @@ export class Schema {
 	 * Example: ?sort=name.asc,id.desc,content.title.asc
 	 */
 
-	validateOrder(schema: DatabaseSchema, sort: string): ValidateResponse {
+	validateSort(schema: DatabaseSchema, sort: string): ValidateSortResponse {
 		const array = sort?.split(',')?.filter(sort => !sort.includes('.'))
 
 		for (const item of array) {
@@ -379,6 +388,132 @@ export class Schema {
 
 		return {
 			valid: true,
+			sort: this.createSortArray(sort),
 		}
+	}
+
+	/**
+	 * Convert where into where and relations
+	 */
+
+	async convertDeepWhere(where: DatabaseWhere, previous_schema: DatabaseSchema): Promise<DatabaseRelations[]> {
+		const relations: DatabaseRelations[] = []
+
+		//deconstruct the column to create the relations of each table in the items object
+		let items = where.column.split('.')
+
+		for (let i = 0; i < items.length - 1; i++) {
+			const schema = await this.getSchema(items[i])
+
+			if (!schema.relations.find(col => col.table === items[i])) {
+				this.logger.warn(`Relation ${items[i]} not found in schema for ${previous_schema.table}`)
+			}
+			
+			relations.push({
+				table: items[i],
+				join: {
+					...previous_schema.relations.find(col => col.table === items[i]),
+					type: DatabaseJoinType.INNER,
+				},
+				where: i === items.length - 1 ? where : undefined,
+			})
+
+			previous_schema = schema
+		}
+
+		return relations
+	}
+
+	/**
+	 * Convert where into where and relations
+	 */
+
+	async convertDeepField(
+		field: string,
+		previous_schema: DatabaseSchema,
+		existing_relations: DatabaseRelations[],
+	): Promise<DatabaseRelations[]> {
+		const relations: DatabaseRelations[] = existing_relations
+
+		//deconstruct the column to create the relations of each table in the items object
+		let items = field.split('.')
+
+		for (let i = 0; i < items.length - 1; i++) {
+			const schema = await this.getSchema(items[i])
+
+			if (!schema.relations.find(col => col.table === items[i])) {
+				this.logger.warn(`Relation ${items[i]} not found in schema for ${previous_schema.table}`)
+			}
+	
+			if (existing_relations.find(rel => rel.table === items[i]) && i === items.length - 1) {
+				const index = existing_relations.findIndex(rel => rel.table === items[i])
+				relations[index].columns.push(items[i])
+			} else {
+				relations.push({
+					table: items[i],
+					join: {
+						...previous_schema.relations.find(col => col.table === items[i]),
+						type: DatabaseJoinType.INNER,
+					},
+					columns: i === items.length - 1 ? [items[i]] : undefined,
+				})
+			}
+
+			previous_schema = schema
+		}
+
+		return relations
+	}
+
+	/**
+	 * Convert relation into relations
+	 */
+
+	async convertDeepRelation(
+		relation: string,
+		previous_schema: DatabaseSchema,
+	): Promise<DatabaseRelations[]> {
+		const relations: DatabaseRelations[] = []
+
+		//deconstruct the column to create the relations of each table in the items object
+		let items = relation.split('.')
+
+		for (let i = 0; i < items.length - 1; i++) {
+			const schema = await this.getSchema(items[i])
+
+			if (!schema.relations.find(col => col.table === items[i])) {
+				this.logger.warn(`Relation ${items[i]} not found in schema for ${previous_schema.table}`)
+			}
+
+			relations.push({
+				table: items[i],
+				join: {
+					...previous_schema.relations.find(col => col.table === items[i]),
+					type: DatabaseJoinType.INNER,
+				},
+			})
+		}
+
+		return relations
+	}
+
+	/**
+	 * Takes the sort query parameter and returns the sort object
+	 */
+
+	createSortArray(sort: string): SortCondition[] {
+		if (!sort) return []
+
+		const array = sort.split(',')
+		const sortArray = []
+
+		for (const item of array) {
+			const direction = item.lastIndexOf('.')
+			const column = item.substring(0, direction)
+			const operator = item.substring(direction + 1)
+			sortArray.push({ column, operator: operator.toUpperCase() })
+		}
+
+		return sortArray
 	}
 }

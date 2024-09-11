@@ -13,6 +13,7 @@ import {
 	DatabaseFindManyOptions,
 	DatabaseFindOneOptions,
 	DatabaseFindTotalRecords,
+	DatabaseJoinStage,
 	DatabaseSchema,
 	DatabaseSchemaColumn,
 	DatabaseSchemaRelation,
@@ -168,13 +169,7 @@ export class MySQL {
 			return
 		}
 
-		results[0] = this.pipeMySQLToObject({ schema: options.schema, data: results[0] })
-
-		if (!options.joins) {
-			return await this.addRelations(options, results[0])
-		} else {
-			return results[0]
-		}
+		return this.pipeMySQLToObject({ schema: options.schema, data: results[0] })
 	}
 
 	/**
@@ -209,7 +204,6 @@ export class MySQL {
 
 		for (const r in results) {
 			results[r] = this.pipeMySQLToObject({ schema: options.schema, data: results[r] })
-			results[r] = await this.addRelations(options, results[r])
 		}
 
 		return {
@@ -235,26 +229,7 @@ export class MySQL {
 	 */
 
 	async findTotalRecords(options: DatabaseFindTotalRecords): Promise<number> {
-		const table_name = options.schema.table
-
-		const values: any[] = []
-		let command = `SELECT COUNT(*) as total FROM ${table_name} `
-
-		const where = options.where?.filter(where => !where.column.includes('.'))
-
-		if (where?.length) {
-			command += `WHERE `
-
-			for (const w in where) {
-				if (where[w].operator === WhereOperator.search) {
-					where[w].value = '%' + where[w].value + '%'
-				}
-			}
-
-			command += `${where.map(w => `\`${w.column}\` ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''} `).join(' AND ')} `
-			values.push(...where.map(w => w.value))
-		}
-
+		let [command, values] = this.find(options, true)
 		const results = await this.performQuery(command, values)
 		return results[0].total
 	}
@@ -397,103 +372,48 @@ export class MySQL {
 		}
 	}
 
-	private async addRelations(options: DatabaseFindOneOptions | DatabaseFindManyOptions, result: any): Promise<any> {
-		if (!result) return {}
-
-		if (options.relations?.length) {
-			for (const relation of options.relations) {
-				const schema_relation = options.schema.relations.find(r => r.table === relation).schema
-				const relation_table = options.schema.relations.find(r => r.table === relation)
-				const fields = options.fields?.filter(field => field.includes(schema_relation.table + '.'))
-
-				if (fields.length) {
-					fields.forEach((field, index) => {
-						fields[index] = field.replace(`${schema_relation.table}.`, '')
-					})
-				}
-
-				if (!fields.length) {
-					fields.push(...schema_relation.columns.map(column => column.field))
-				}
-
-				const limit = this.configService.get<number>('database.defaults.relations.limit')
-
-				let where: DatabaseWhere[] = [
-					{
-						column: relation_table.column,
-						operator: WhereOperator.equals,
-						value: result[relation_table.org_column],
-					},
-				]
-
-				if ('where' in options && options.where) {
-					where = where.concat(
-						options.where?.filter(where => where.column.includes(schema_relation.table + '.')),
-					)
-
-					for (const w of where) {
-						w.column = w.column.replace(`${schema_relation.table}.`, '')
-					}
-				}
-
-				let sort: SortCondition[] = []
-				if ('sort' in options && options.sort) {
-					sort = options.sort?.filter(sort => sort.column.includes(schema_relation.table + '.'))
-					for (const s of sort) {
-						s.column = s.column.replace(`${schema_relation.table}.`, '')
-					}
-				}
-
-				const relation_result = await this.findMany({
-					schema: schema_relation,
-					fields,
-					where,
-					sort,
-					limit,
-					offset: 0,
-				})
-
-				result[relation] = relation_result.data
-			}
-		}
-		return result
-	}
-
-	private find(options: DatabaseFindOneOptions | DatabaseFindManyOptions): [string, string[]] {
+	private find(
+		options: DatabaseFindOneOptions | DatabaseFindManyOptions,
+		count: boolean = false,
+	): [string, string[]] {
 		const table_name = options.schema.table
 		let values: any[] = []
 
-		const fields = options.joins ? options.fields : options.fields?.filter(field => !field.includes('.'))
-		const where = options.joins ? options.where : options.where?.filter(where => !where.column.includes('.'))
+		console.log(options)
 
+		const fields = options.fields?.length ? options.fields : options.schema.columns.map(column => column.field)
+	
 		for (const f in fields) {
 			if (!fields[f].includes('.')) {
 				fields[f] = `${table_name}.` + fields[f]
 			}
 		}
 
-		let command = `SELECT ${fields?.length ? fields.join(`, `) : '*'} `
+		let command
+
+		if (count) {
+			command = `SELECT COUNT(*) as total `
+		} else {
+			command = `SELECT ${fields?.length ? fields.join(`, `) : '*'} `
+		}
 
 		command += `FROM ${table_name} `
 
-		if (options.joins && options.relations?.length) {
-			for (const relation of options.relations) {
-				const schema_relation = options.schema.relations.find(r => r.table === relation)
-				command += `LEFT JOIN ${schema_relation.table} ON ${schema_relation.org_table}.${schema_relation.org_column} = ${schema_relation.table}.${schema_relation.column} `
-			}
+		for (const relation of options.relations) {
+			command += `${relation.join.type ?? 'INNER JOIN'} ${relation.join.table} ON ${relation.join.org_table}.${relation.join.org_column} = ${relation.join.table}.${relation.join.column} `	
 		}
 
-		if (where?.length) {
+		if (options.where?.length) {
 			command += `WHERE `
 
-			for (const w in where) {
-				if (where[w].operator === WhereOperator.search) {
-					where[w].value = '%' + where[w].value + '%'
+			for (const w in options.where) {
+				if (options.where[w].operator === WhereOperator.search) {
+					options.where[w].value = '%' + options.where[w].value + '%'
 				}
 			}
 
-			command += `${where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}  `).join(' AND ')} `
-			values.push(...where.map(w => w.value))
+			command += `${options.where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}  `).join(' AND ')} `
+			values.push(...options.where.map(w => w.value))
 		}
 
 		return [command, values]
@@ -600,6 +520,9 @@ export class MySQL {
 	}
 
 	private pipeMySQLToObject(options: { schema: DatabaseSchema; data: { [key: string]: any } }): object {
+
+		//TODO: remove items not in the object, loop over relations and do the same for them... (returning in nice clean json format)
+
 		for (const column of options.schema.columns) {
 			if (!options.data[column.field]) {
 				continue
@@ -627,6 +550,6 @@ export class MySQL {
 	}
 
 	async truncate(table_name: string): Promise<void> {
-		return await this.performQuery("TRUNCATE TABLE " + table_name)
+		return await this.performQuery('TRUNCATE TABLE ' + table_name)
 	}
 }

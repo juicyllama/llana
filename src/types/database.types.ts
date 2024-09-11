@@ -58,6 +58,17 @@ export declare enum ChartsPeriod {
 	YEAR = 'YEAR',
 }
 
+export enum DatabaseJoinType {
+	INNER = 'INNER',
+	LEFT = 'LEFT',
+	RIGHT = 'RIGHT',
+}
+
+export enum DatabaseJoinStage {
+	WITH_QUERY = 'WITH_QUERY',
+	POST_QUERY = 'POST_QUERY',
+}
+
 export interface ChartResult {
 	count: number
 	[key: string]: any
@@ -110,7 +121,6 @@ export interface DatabaseSchemaRelation {
 	column: string
 	org_table: string
 	org_column: string
-	schema?: DatabaseSchema
 }
 
 export interface DatabaseCreateOneOptions {
@@ -118,12 +128,20 @@ export interface DatabaseCreateOneOptions {
 	data: object
 }
 
-export interface DatabaseFindOneOptions extends DatabaeseFindOptions {
-	where?: DatabaseWhere[]
+export interface DatabaseJoin extends DatabaseSchemaRelation {
+	type?: DatabaseJoinType
 }
 
+export interface DatabaseRelations {
+	table: string
+	join: DatabaseJoin
+	columns?: string[]
+	where?: DatabaseWhere
+}
+
+export interface DatabaseFindOneOptions extends DatabaeseFindOptions {}
+
 export interface DatabaseFindManyOptions extends DatabaeseFindOptions {
-	where?: DatabaseWhere[]
 	limit?: number
 	offset?: number
 	sort?: SortCondition[]
@@ -132,8 +150,8 @@ export interface DatabaseFindManyOptions extends DatabaeseFindOptions {
 export interface DatabaeseFindOptions {
 	schema: DatabaseSchema
 	fields?: string[]
-	relations?: string[]
-	joins?: boolean // Do join at database level, default false
+	where?: DatabaseWhere[]
+	relations?: DatabaseRelations[]
 }
 
 export interface DatabaseUpdateOneOptions {
