@@ -100,6 +100,7 @@ export class MySQL {
 			}
 		})
 
+
 		const relations_query = `SELECT TABLE_NAME as 'table', COLUMN_NAME as 'column', REFERENCED_TABLE_NAME as 'org_table', REFERENCED_COLUMN_NAME as 'org_column' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = '${table_name}';`
 		const relations_result = await this.performQuery(relations_query)
 		const relations = relations_result
@@ -116,8 +117,8 @@ export class MySQL {
 
 		return {
 			table: table_name,
-			primary_key: columns.find(column => column.primary_key).field,
 			columns,
+			primary_key: columns.find(column => column.primary_key)?.field,
 			relations,
 		}
 	}

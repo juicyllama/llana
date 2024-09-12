@@ -55,7 +55,7 @@ export class Query {
 				case QueryPerform.FIND:
 					result = await this.findOne(options as DatabaseFindOneOptions)
 					if (!result) {
-						return {}
+						return null
 					}
 					return this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
 				case QueryPerform.FIND_MANY:

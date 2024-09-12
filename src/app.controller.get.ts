@@ -83,6 +83,7 @@ export class GetController {
 	async getById(@Req() req, @Res() res): Promise<FindOneResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
 		const id = req.params.id
+		let primary_key
 
 		const options: DatabaseFindOneOptions = {
 			schema: null,
@@ -102,76 +103,82 @@ export class GetController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
-		//perform role check
-		if (auth.user_identifier) {
-			let permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
+		try{
 
-			if (!permission.valid) {
-				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-			}
+			//perform role check
+			if (auth.user_identifier) {
+				let permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
 
-			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-				permission = permission as AuthTablePermissionSuccessResponse
-
-				if (permission.restriction.column.includes('.')) {
-					options.relations.concat(await this.schema.convertDeepWhere(permission.restriction, options.schema))
-				} else {
-					options.where.push(permission.restriction)
+				if (!permission.valid) {
+					return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 				}
-			}
-		}
 
-		//validate :id field
-		const primary_key = this.schema.getPrimaryKey(options.schema)
+				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
+					permission = permission as AuthTablePermissionSuccessResponse
 
-		if (!primary_key) {
-			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
-		}
-
-		const validateKey = await this.schema.validateData(options.schema, { [primary_key]: id })
-		if (!validateKey.valid) {
-			return res.status(400).send(this.response.text(validateKey.message))
-		}
-
-		if (req.query.fields) {
-			const { valid, message, fields, relations } = await this.schema.validateFields(
-				options.schema,
-				req.query.fields,
-			)
-			if (!valid) {
-				return res.status(400).send(this.response.text(message))
-			}
-
-			for (const field of fields) {
-				if (!options.fields.includes(field)) {
-					options.fields.push(field)
+					if (permission.restriction.column.includes('.')) {
+						options.relations.concat(await this.schema.convertDeepWhere(permission.restriction, options.schema))
+					} else {
+						options.where.push(permission.restriction)
+					}
 				}
 			}
 
-			for (const relation of relations) {
-				if (!options.relations.find(r => r.table === relation.table)) {
-					options.relations.push(relation)
+			//validate :id field
+			primary_key = this.schema.getPrimaryKey(options.schema)
+
+			if (!primary_key) {
+				return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
+			}
+
+			const validateKey = await this.schema.validateData(options.schema, { [primary_key]: id })
+			if (!validateKey.valid) {
+				return res.status(400).send(this.response.text(validateKey.message))
+			}
+
+			if (req.query.fields) {
+				const { valid, message, fields, relations } = await this.schema.validateFields(
+					options.schema,
+					req.query.fields,
+				)
+				if (!valid) {
+					return res.status(400).send(this.response.text(message))
 				}
-			}
-		}
 
-		if (req.query.relations) {
-			const { valid, message, relations } = await this.schema.validateRelations(
-				options.schema,
-				req.query.relations,
-				options.relations,
-			)
-			if (!valid) {
-				return res.status(400).send(this.response.text(message))
-			}
+				for (const field of fields) {
+					if (!options.fields.includes(field)) {
+						options.fields.push(field)
+					}
+				}
 
-			if (relations) {
 				for (const relation of relations) {
 					if (!options.relations.find(r => r.table === relation.table)) {
 						options.relations.push(relation)
 					}
 				}
 			}
+
+			if (req.query.relations) {
+				const { valid, message, relations } = await this.schema.validateRelations(
+					options.schema,
+					req.query.relations,
+					options.relations,
+				)
+				if (!valid) {
+					return res.status(400).send(this.response.text(message))
+				}
+
+				if (relations) {
+					for (const relation of relations) {
+						if (!options.relations.find(r => r.table === relation.table)) {
+							options.relations.push(relation)
+						}
+					}
+				}
+			}
+
+		}catch (e) {
+			return res.status(400).send(this.response.text(e.message))
 		}
 
 		options.where.push({
@@ -189,6 +196,10 @@ export class GetController {
 
 		try {
 			const result = await this.query.perform(QueryPerform.FIND, options)
+
+			if(!result) {
+				return res.status(204).send(this.response.text(`No record found for id ${id}`))
+			}
 
 			return res.status(200).send(result)
 		} catch (e) {
@@ -221,87 +232,92 @@ export class GetController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
-		//perform role check
-		if (auth.user_identifier) {
-			let permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
+		try{
 
-			if (!permission.valid) {
-				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-			}
+			//perform role check
+			if (auth.user_identifier) {
+				let permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
 
-			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-				permission = permission as AuthTablePermissionSuccessResponse
-
-				if (permission.restriction.column.includes('.')) {
-					options.relations.concat(await this.schema.convertDeepWhere(permission.restriction, options.schema))
-				} else {
-					options.where.push(permission.restriction)
+				if (!permission.valid) {
+					return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 				}
-			}
-		}
 
-		const { limit, offset } = this.pagination.get(req.query)
-		options.limit = limit
-		options.offset = offset
+				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
+					permission = permission as AuthTablePermissionSuccessResponse
 
-		if (req.query.fields) {
-			const { valid, message, fields, relations } = await this.schema.validateFields(
-				options.schema,
-				req.query.fields,
-			)
-			if (!valid) {
-				return res.status(400).send(this.response.text(message))
-			}
-
-			for (const field of fields) {
-				if (!options.fields.includes(field)) {
-					options.fields.push(field)
+					if (permission.restriction.column.includes('.')) {
+						options.relations.concat(await this.schema.convertDeepWhere(permission.restriction, options.schema))
+					} else {
+						options.where.push(permission.restriction)
+					}
 				}
 			}
 
-			for (const relation of relations) {
-				if (!options.relations.find(r => r.table === relation.table)) {
-					options.relations.push(relation)
+			const { limit, offset } = this.pagination.get(req.query)
+			options.limit = limit
+			options.offset = offset
+
+			if (req.query.fields) {
+				const { valid, message, fields, relations } = await this.schema.validateFields(
+					options.schema,
+					req.query.fields,
+				)
+				if (!valid) {
+					return res.status(400).send(this.response.text(message))
 				}
-			}
-		}
 
-		if (req.query.relations) {
-			const { valid, message, relations } = await this.schema.validateRelations(
-				options.schema,
-				req.query.relations,
-				options.relations,
-			)
-			if (!valid) {
-				return res.status(400).send(this.response.text(message))
-			}
+				for (const field of fields) {
+					if (!options.fields.includes(field)) {
+						options.fields.push(field)
+					}
+				}
 
-			if (relations) {
 				for (const relation of relations) {
 					if (!options.relations.find(r => r.table === relation.table)) {
 						options.relations.push(relation)
 					}
 				}
 			}
-		}
 
-		const validateWhere = await this.schema.validateWhereParams(options.schema, req.query)
-		if (!validateWhere.valid) {
-			return res.status(400).send(this.response.text(validateWhere.message))
-		}
+			if (req.query.relations) {
+				const { valid, message, relations } = await this.schema.validateRelations(
+					options.schema,
+					req.query.relations,
+					options.relations,
+				)
+				if (!valid) {
+					return res.status(400).send(this.response.text(message))
+				}
 
-		if (validateWhere.where.length) {
-			options.where = options.where.concat(validateWhere.where)
-		}
-
-		let validateSort
-		if (req.query.sort) {
-			validateSort = this.schema.validateSort(options.schema, req.query.sort)
-			if (!validateSort.valid) {
-				return res.status(400).send(this.response.text(validateSort.message))
+				if (relations) {
+					for (const relation of relations) {
+						if (!options.relations.find(r => r.table === relation.table)) {
+							options.relations.push(relation)
+						}
+					}
+				}
 			}
 
-			options.sort = validateSort.sort
+			const validateWhere = await this.schema.validateWhereParams(options.schema, req.query)
+			if (!validateWhere.valid) {
+				return res.status(400).send(this.response.text(validateWhere.message))
+			}
+
+			if (validateWhere.where.length) {
+				options.where = options.where.concat(validateWhere.where)
+			}
+
+			let validateSort
+			if (req.query.sort) {
+				validateSort = this.schema.validateSort(options.schema, req.query.sort)
+				if (!validateSort.valid) {
+					return res.status(400).send(this.response.text(validateSort.message))
+				}
+
+				options.sort = validateSort.sort
+			}
+		}catch (e) {
+			return res.status(400).send(this.response.text(e.message))
 		}
 
 		if (this.configService.get('database.deletes.soft')) {

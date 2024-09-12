@@ -52,8 +52,8 @@ export class Schema {
 					)
 			}
 		} catch (e) {
-			this.logger.warn(`[Query][GetSchema] ${e.message}`)
-			throw new Error(`Table schema not found for table ${table_name}`)
+			this.logger.error(`[Query][GetSchema] ${e.message}`)
+			throw new Error(`Error processing schema for ${table_name}`)
 		}
 	}
 
@@ -234,14 +234,14 @@ export class Schema {
 				if (field.includes('.')) {
 					relations = await this.convertDeepField(field, schema, relations)
 				} else {
-					if (!schema.columns.find(col => col.field === field)) {
+					if (this.validateField(schema, field)) {
+						validated.push(field)
+					} else {
 						return {
 							valid: false,
 							message: `Field ${field} not found in table schema for ${schema.table}`,
 						}
-					}
-
-					validated.push(field)
+					}					
 				}
 			}
 
@@ -257,6 +257,10 @@ export class Schema {
 				message: `Error parsing fields ${fields}`,
 			}
 		}
+	}
+
+	validateField(schema: DatabaseSchema, field: string): boolean {
+		return schema.columns.find(col => col.field === field) ? true : false
 	}
 
 	/**
@@ -455,7 +459,8 @@ export class Schema {
 
 		for (let i = 0; i < items.length - 1; i++) {
 			if (!schema.relations.find(col => col.table === items[i])) {
-				this.logger.warn(`Relation ${items[i]} not found in schema for ${schema.table}`)
+				this.logger.error(`Relation ${items[i]} not found in schema for ${schema.table}`)
+				throw new Error(`Relation ${items[i]} not found in schema for ${schema.table}`)
 			}
 
 			const relation_schema = await this.getSchema(items[i])
@@ -490,7 +495,8 @@ export class Schema {
 
 		for (let i = 0; i < items.length - 1; i++) {
 			if (!schema.relations.find(col => col.table === items[i])) {
-				this.logger.warn(`Relation ${items[i]} not found in schema for ${schema.table}`)
+				this.logger.error(`Relation ${items[i]} not found in schema for ${schema.table}`)
+				throw new Error(`Relation ${items[i]} not found in schema for ${schema.table}`)
 			}
 
 			const relation_schema = await this.getSchema(items[i])
@@ -530,7 +536,8 @@ export class Schema {
 
 		for (let i = 0; i < items.length - 1; i++) {
 			if (!schema.relations.find(col => col.table === items[i])) {
-				this.logger.warn(`Relation ${items[i]} not found in schema for ${schema.table}`)
+				this.logger.error(`Relation ${items[i]} not found in schema for ${schema.table}`)
+				throw new Error(`Relation ${items[i]} not found in schema for ${schema.table}`)
 			}
 
 			const relation_schema = await this.getSchema(items[i])

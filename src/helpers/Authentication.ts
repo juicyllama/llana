@@ -202,7 +202,7 @@ export class Authentication {
 
 					const options: DatabaseFindOneOptions = {
 						schema,
-						fields: [`${api_key_config.name}.${identity_column}`],
+						fields: [identity_column],
 						where: [
 							{
 								column: api_key_config.column,
@@ -245,10 +245,17 @@ export class Authentication {
 
 					const result = await this.query.perform(QueryPerform.FIND, options)
 
+					if(!result) {
+						this.logger.debug(`[Authentication][auth] API key not found`, {
+								key: req_api_key,
+								column: api_key_config.column,
+								result,
+							})
+							return { valid: false, message: 'Unauthorized' }
+					}
+
 					//key does not match - return unauthorized immediately
-					if (
-						!result ||
-						(!result[api_key_config.column] && findDotNotation(result, api_key_config.column)) !==
+					if (!result[api_key_config.column] && findDotNotation(result, api_key_config.column) !==
 							req_api_key
 					) {
 						this.logger.debug(`[Authentication][auth] API key not found`, {

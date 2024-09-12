@@ -12,7 +12,7 @@ export default registerAs(
 				name: process.env.AUTH_USER_API_KEY_NAME ?? 'x-api-key',
 				table: <AuthAPIKey>{
 					name: process.env.AUTH_USER_TABLE_NAME ?? 'User', //should start at your main users identity table
-					identity_column: process.env.AUTH_USER_IDENTITY_COLUMN ?? undefined,
+					identity_column: process.env.AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN ?? undefined,
 					column: process.env.AUTH_USER_API_KEY_FIELD ?? 'UserApiKey.apiKey',
 				},
 			},
