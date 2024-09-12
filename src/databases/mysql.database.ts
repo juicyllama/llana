@@ -46,27 +46,33 @@ export class MySQL {
 		return await mysql.createConnection(this.configService.get('database.host'))
 	}
 
-	async performQuery(sql: string, values?: any[]): Promise<any> {
+	async performQuery(options: { sql: string; values?: any[]; x_request_id: string }): Promise<any> {
 		const connection = await this.createConnection()
 
 		try {
 			let results
-			this.logger.debug(`[MySQL][Query] ${sql}`, values)
+			this.logger.debug(
+				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[MySQL][Query] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`,
+			)
 
-			if (!values || !values.length) {
-				;[results] = await connection.query<any[]>(sql)
+			if (!options.values || !options.values.length) {
+				;[results] = await connection.query<any[]>(options.sql)
 			} else {
-				;[results] = await connection.query<any[]>(sql, values)
+				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
-			this.logger.debug(`[MySQL][Query] Results`, results)
+			this.logger.debug(
+				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[MySQL][Query] Results: ${JSON.stringify(results)}`,
+			)
 			connection.end()
 			return results
 		} catch (e) {
-			this.logger.warn('Error executing mysql database query')
+			this.logger.warn(
+				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[MySQL][Query] Error executing mysql database query`,
+			)
 			this.logger.warn({
 				sql: {
-					sql,
-					values: values ?? [],
+					sql: options.sql,
+					values: options.values ?? [],
 				},
 				error: {
 					message: e.message,
@@ -83,8 +89,11 @@ export class MySQL {
 	 * @param table_name
 	 */
 
-	async getSchema(table_name: string): Promise<DatabaseSchema> {
-		const columns_result = await this.performQuery(`DESCRIBE ${table_name}`)
+	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
+		const columns_result = await this.performQuery({
+			sql: `DESCRIBE ${options.table}`,
+			x_request_id: options.x_request_id,
+		})
 
 		const columns = columns_result.map((column: any) => {
 			return <DatabaseSchemaColumn>{
@@ -100,14 +109,17 @@ export class MySQL {
 			}
 		})
 
-		const relations_query = `SELECT TABLE_NAME as 'table', COLUMN_NAME as 'column', REFERENCED_TABLE_NAME as 'org_table', REFERENCED_COLUMN_NAME as 'org_column' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = '${table_name}';`
-		const relations_result = await this.performQuery(relations_query)
+		const relations_query = `SELECT TABLE_NAME as 'table', COLUMN_NAME as 'column', REFERENCED_TABLE_NAME as 'org_table', REFERENCED_COLUMN_NAME as 'org_column' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = '${options.table}';`
+		const relations_result = await this.performQuery({ sql: relations_query, x_request_id: options.x_request_id })
 		const relations = relations_result
 			.filter((row: DatabaseSchemaRelation) => row.table !== null)
 			.map((row: DatabaseSchemaRelation) => row)
 
-		const relation_back_query = `SELECT REFERENCED_TABLE_NAME as 'table', REFERENCED_COLUMN_NAME as 'column', TABLE_NAME as 'org_table', COLUMN_NAME as 'org_column' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = '${table_name}' AND REFERENCED_TABLE_NAME IS NOT NULL;`
-		const relation_back_result = await this.performQuery(relation_back_query)
+		const relation_back_query = `SELECT REFERENCED_TABLE_NAME as 'table', REFERENCED_COLUMN_NAME as 'column', TABLE_NAME as 'org_table', COLUMN_NAME as 'org_column' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = '${options.table}' AND REFERENCED_TABLE_NAME IS NOT NULL;`
+		const relation_back_result = await this.performQuery({
+			sql: relation_back_query,
+			x_request_id: options.x_request_id,
+		})
 		const relation_back = relation_back_result
 			.filter((row: DatabaseSchemaRelation) => row.table !== null)
 			.map((row: DatabaseSchemaRelation) => row)
@@ -115,7 +127,7 @@ export class MySQL {
 		relations.push(...relation_back)
 
 		return {
-			table: table_name,
+			table: options.table,
 			columns,
 			primary_key: columns.find(column => column.primary_key)?.field,
 			relations,
@@ -126,7 +138,7 @@ export class MySQL {
 	 * Insert a record
 	 */
 
-	async createOne(options: DatabaseCreateOneOptions): Promise<FindOneResponseObject> {
+	async createOne(options: DatabaseCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
 		const values: any[] = []
 
@@ -139,29 +151,32 @@ export class MySQL {
 
 		const command = `INSERT INTO ${table_name} (\`${columns.join('`, `')}\`) VALUES ( ?${values.map(() => ``).join(', ?')} )`
 
-		const result = await this.performQuery(command, values)
+		const result = await this.performQuery({ sql: command, values, x_request_id })
 
-		return await this.findOne({
-			schema: options.schema,
-			where: [
-				{
-					column: options.schema.primary_key,
-					operator: WhereOperator.equals,
-					value: result.insertId,
-				},
-			],
-		})
+		return await this.findOne(
+			{
+				schema: options.schema,
+				where: [
+					{
+						column: options.schema.primary_key,
+						operator: WhereOperator.equals,
+						value: result.insertId,
+					},
+				],
+			},
+			x_request_id,
+		)
 	}
 
 	/**
 	 * Find single record
 	 */
 
-	async findOne(options: DatabaseFindOneOptions): Promise<FindOneResponseObject | undefined> {
+	async findOne(options: DatabaseFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
 		let [command, values] = this.find(options)
 		command += ` LIMIT 1`
 
-		const results = await this.performQuery(command, values)
+		const results = await this.performQuery({ sql: command, values, x_request_id })
 
 		if (!results[0]) {
 			return
@@ -174,8 +189,8 @@ export class MySQL {
 	 * Find multiple records
 	 */
 
-	async findMany(options: DatabaseFindManyOptions): Promise<FindManyResponseObject> {
-		const total = await this.findTotalRecords(options)
+	async findMany(options: DatabaseFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
+		const total = await this.findTotalRecords(options, x_request_id)
 
 		let [command, values] = this.find(options)
 
@@ -198,7 +213,7 @@ export class MySQL {
 
 		command += ` LIMIT ${options.limit} OFFSET ${options.offset}`
 
-		const results = await this.performQuery(command, values)
+		const results = await this.performQuery({ sql: command, values, x_request_id })
 
 		for (const r in results) {
 			results[r] = this.formatOutput(options, results[r])
@@ -226,9 +241,9 @@ export class MySQL {
 	 * Get total records with where conditions
 	 */
 
-	async findTotalRecords(options: DatabaseFindTotalRecords): Promise<number> {
+	async findTotalRecords(options: DatabaseFindTotalRecords, x_request_id: string): Promise<number> {
 		let [command, values] = this.find(options, true)
-		const results = await this.performQuery(command, values)
+		const results = await this.performQuery({ sql: command, values, x_request_id })
 		return results[0].total
 	}
 
@@ -236,7 +251,7 @@ export class MySQL {
 	 * Update one records
 	 */
 
-	async updateOne(options: DatabaseUpdateOneOptions): Promise<FindOneResponseObject> {
+	async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
 
 		const values = [...Object.values(options.data), options.id.toString()]
@@ -250,33 +265,39 @@ export class MySQL {
 
 		command += `WHERE ${options.schema.primary_key} = ?`
 
-		await this.performQuery(command, values)
+		await this.performQuery({ sql: command, values, x_request_id })
 
-		return await this.findOne({
-			schema: options.schema,
-			where: [
-				{
-					column: options.schema.primary_key,
-					operator: WhereOperator.equals,
-					value: options.id,
-				},
-			],
-		})
+		return await this.findOne(
+			{
+				schema: options.schema,
+				where: [
+					{
+						column: options.schema.primary_key,
+						operator: WhereOperator.equals,
+						value: options.id,
+					},
+				],
+			},
+			x_request_id,
+		)
 	}
 
 	/**
 	 * Delete single record
 	 */
 
-	async deleteOne(options: DatabaseDeleteOneOptions): Promise<DeleteResponseObject> {
+	async deleteOne(options: DatabaseDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
 		if (options.softDelete) {
-			const result = await this.updateOne({
-				id: options.id,
-				schema: options.schema,
-				data: {
-					[options.softDelete]: new Date().toISOString().slice(0, 19).replace('T', ' '),
+			const result = await this.updateOne(
+				{
+					id: options.id,
+					schema: options.schema,
+					data: {
+						[options.softDelete]: new Date().toISOString().slice(0, 19).replace('T', ' '),
+					},
 				},
-			})
+				x_request_id,
+			)
 
 			if (result) {
 				return {
@@ -292,18 +313,22 @@ export class MySQL {
 
 		command += `WHERE ${options.schema.primary_key} = ?`
 
-		const result = await this.performQuery(command, values)
+		const result = await this.performQuery({ sql: command, values, x_request_id })
 
 		return {
 			deleted: result.affectedRows,
 		}
 	}
 
-	async uniqueCheck(options: DatabaseUniqueCheckOptions): Promise<IsUniqueResponse> {
+	async uniqueCheck(options: DatabaseUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		for (const column of options.schema.columns) {
 			if (column.unique_key) {
 				const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE ${column.field} = ?`
-				const result = await this.performQuery(command, [options.data[column.field]])
+				const result = await this.performQuery({
+					sql: command,
+					values: [options.data[column.field]],
+					x_request_id,
+				})
 
 				if (result[0].total > 0) {
 					return {
@@ -323,7 +348,7 @@ export class MySQL {
 	 * Create table from schema object
 	 */
 
-	async createTable(schema: DatabaseSchema): Promise<boolean> {
+	async createTable(schema: DatabaseSchema, x_request_id: string): Promise<boolean> {
 		try {
 			const columns = schema.columns.map(column => {
 				let column_string = `\`${column.field}\` ${this.fieldMapperReverse(column.type)}`
@@ -361,7 +386,7 @@ export class MySQL {
 
 			const command = `CREATE TABLE ${schema.table} (${columns.join(', ')})`
 
-			await this.performQuery(command)
+			await this.performQuery({ sql: command, x_request_id })
 
 			return true
 		} catch (e) {
@@ -411,7 +436,7 @@ export class MySQL {
 				command += `${relation.join.type ?? 'INNER JOIN'} ${relation.join.table} ON ${relation.join.org_table}.${relation.join.org_column} = ${relation.join.table}.${relation.join.column} `
 			}
 		}
-		
+
 		if (options.where?.length) {
 			command += `WHERE `
 
@@ -423,20 +448,20 @@ export class MySQL {
 
 			command += `${options.where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}  `).join(' AND ')} `
 			const where_values = options.where.map(w => w.value)
-			if(where_values.length) {
-				for(const w in where_values) {
-					if(where_values[w] === undefined) {
-						continue;
+			if (where_values.length) {
+				for (const w in where_values) {
+					if (where_values[w] === undefined) {
+						continue
 					}
 					values.push(where_values[w])
 				}
 			}
 		}
 
-		for(const r in options.relations) {
-			if(options.relations[r].where) {
+		for (const r in options.relations) {
+			if (options.relations[r].where) {
 				command += `AND ${options.relations[r].where.column} ${options.relations[r].where.operator} ? `
-				if(options.relations[r].where.value){
+				if (options.relations[r].where.value) {
 					values.push(options.relations[r].where.value)
 				}
 			}
@@ -581,7 +606,7 @@ export class MySQL {
 		}
 	}
 
-	async truncate(table_name: string): Promise<void> {
-		return await this.performQuery('TRUNCATE TABLE ' + table_name)
+	async truncate(table: string): Promise<void> {
+		return await this.performQuery({ sql: 'TRUNCATE TABLE ' + table, x_request_id: '' })
 	}
 }

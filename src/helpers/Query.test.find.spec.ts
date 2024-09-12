@@ -31,9 +31,9 @@ describe('Query > Find', () => {
 		schema = app.get<Schema>(Schema)
 		logger = app.get<Logger>(Logger)
 
-		usersTableSchema = await schema.getSchema('User')
-		customerTableSchema = await schema.getSchema('Customer')
-		salesOrderTableSchema = await schema.getSchema('SalesOrder')
+		usersTableSchema = await schema.getSchema({ table: 'User' })
+		customerTableSchema = await schema.getSchema({ table: 'Customer' })
+		salesOrderTableSchema = await schema.getSchema({ table: 'SalesOrder' })
 
 		customerRelation = {
 			table: 'Customer',

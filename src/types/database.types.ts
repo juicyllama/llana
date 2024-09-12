@@ -94,6 +94,7 @@ export interface DatabaseSchema {
 	primary_key: string
 	columns: DatabaseSchemaColumn[]
 	relations?: DatabaseSchemaRelation[]
+	_x_request_id?: string
 }
 
 export interface DatabaseWhere {

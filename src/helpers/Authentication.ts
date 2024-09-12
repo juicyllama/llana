@@ -1,4 +1,4 @@
-import { Injectable, Req } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 
@@ -8,7 +8,6 @@ import { DatabaseFindOneOptions, DatabaseSchema, QueryPerform, WhereOperator } f
 import { FindManyResponseObject } from '../types/response.types'
 import { Env } from '../utils/Env'
 import { findDotNotation } from '../utils/Find'
-import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
@@ -21,7 +20,6 @@ export class Authentication {
 		private readonly query: Query,
 		private readonly schema: Schema,
 		private readonly jwtService: JwtService,
-		private readonly encryption: Encryption,
 	) {}
 
 	/**
@@ -29,7 +27,7 @@ export class Authentication {
 	 * @param schema
 	 */
 
-	async auth(@Req() req): Promise<AuthRestrictionsResponse> {
+	async auth(options: { req; x_request_id: string }): Promise<AuthRestrictionsResponse> {
 		const authentications = this.configService.get<Auth[]>('auth')
 
 		if (!authentications) {
@@ -38,7 +36,7 @@ export class Authentication {
 			}
 		}
 
-		const auth_schema = await this.schema.getSchema(LLANA_AUTH_TABLE)
+		const auth_schema = await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: options.x_request_id })
 
 		let auth_passed: AuthRestrictionsResponse = {
 			valid: false,
@@ -59,23 +57,27 @@ export class Authentication {
 			//Is the restriction required on the current route?
 			let check_required = true
 
-			const rules = (await this.query.perform(QueryPerform.FIND_MANY, {
-				schema: auth_schema,
-				where: [
-					{
-						column: 'auth',
-						operator: WhereOperator.equals,
-						value: auth.type,
-					},
-				],
-			})) as FindManyResponseObject
+			const rules = (await this.query.perform(
+				QueryPerform.FIND_MANY,
+				{
+					schema: auth_schema,
+					where: [
+						{
+							column: 'auth',
+							operator: WhereOperator.equals,
+							value: auth.type,
+						},
+					],
+				},
+				options.x_request_id,
+			)) as FindManyResponseObject
 
 			const excludes = rules.data.filter(rule => rule.exclude)
 			const includes = rules.data.filter(rule => rule.exclude)
 
 			if (excludes) {
 				for (const exclude of excludes) {
-					if (req.originalUrl.includes(exclude.table)) {
+					if (options.req.originalUrl.includes(exclude.table)) {
 						check_required = false
 					}
 				}
@@ -83,7 +85,7 @@ export class Authentication {
 
 			if (includes) {
 				for (const include of includes) {
-					if (req.originalUrl.includes(include.table)) {
+					if (options.req.originalUrl.includes(include.table)) {
 						check_required = true
 					}
 				}
@@ -95,9 +97,12 @@ export class Authentication {
 			let schema: DatabaseSchema
 
 			try {
-				schema = await this.schema.getSchema(auth.table.name)
+				schema = await this.schema.getSchema({ table: auth.table.name, x_request_id: options.x_request_id })
 			} catch (e) {
-				this.logger.error(`[Authentication][auth] Table ${auth.table.name} not found`, { e })
+				this.logger.error(
+					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] Table ${auth.table.name} not found`,
+					{ e },
+				)
 				return { valid: false, message: `No Schema Found For Table ${auth.table.name}` }
 			}
 
@@ -129,36 +134,36 @@ export class Authentication {
 
 					switch (auth.location) {
 						case AuthLocation.HEADER:
-							if (!req.headers[auth.name]) {
+							if (!options.req.headers[auth.name]) {
 								auth_passed = {
 									valid: false,
 									message: `API key header ${auth.name} required`,
 								}
 								continue
 							}
-							req_api_key = req.headers[auth.name]
+							req_api_key = options.req.headers[auth.name]
 							break
 
 						case AuthLocation.QUERY:
-							if (!req.query[auth.name]) {
+							if (!options.req.query[auth.name]) {
 								auth_passed = {
 									valid: false,
 									message: `API key query ${auth.name} required`,
 								}
 								continue
 							}
-							req_api_key = req.query[auth.name]
+							req_api_key = options.req.query[auth.name]
 							break
 
 						case AuthLocation.BODY:
-							if (!req.body[auth.name]) {
+							if (!options.req.body[auth.name]) {
 								auth_passed = {
 									valid: false,
 									message: `API key body ${auth.name} required`,
 								}
 								continue
 							}
-							req_api_key = req.body[auth.name]
+							req_api_key = options.req.body[auth.name]
 							break
 					}
 
@@ -182,7 +187,7 @@ export class Authentication {
 
 					if (!api_key_config || !api_key_config.name) {
 						this.logger.error(
-							`[Authentication][auth] System configuration error: API Key lookup table not found`,
+							`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] System configuration error: API Key lookup table not found`,
 						)
 						auth_passed = {
 							valid: false,
@@ -193,7 +198,7 @@ export class Authentication {
 
 					if (!api_key_config.column) {
 						this.logger.error(
-							`[Authentication][auth] System configuration error: API Key lookup column not found`,
+							`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] System configuration error: API Key lookup column not found`,
 						)
 						auth_passed = {
 							valid: false,
@@ -202,7 +207,7 @@ export class Authentication {
 						continue
 					}
 
-					const options: DatabaseFindOneOptions = {
+					const db_options: DatabaseFindOneOptions = {
 						schema,
 						fields: [identity_column],
 						where: [
@@ -215,10 +220,11 @@ export class Authentication {
 						relations: [],
 					}
 
-					const { valid, message, fields, relations } = await this.schema.validateFields(
+					const { valid, message, fields, relations } = await this.schema.validateFields({
 						schema,
-						api_key_config.column,
-					)
+						fields: api_key_config.column,
+						x_request_id: options.x_request_id,
+					})
 					if (!valid) {
 						auth_passed = {
 							valid: false,
@@ -227,32 +233,35 @@ export class Authentication {
 					}
 
 					for (const field of fields) {
-						if (!options.fields.includes(field)) {
-							options.fields.push(field)
+						if (!db_options.fields.includes(field)) {
+							db_options.fields.push(field)
 						}
 					}
 
 					for (const relation of relations) {
-						if (!options.relations.find(r => r.table === relation.table)) {
-							options.relations.push(relation)
+						if (!db_options.relations.find(r => r.table === relation.table)) {
+							db_options.relations.push(relation)
 						}
 					}
 
 					if (this.configService.get('database.deletes.soft')) {
-						options.where.push({
+						db_options.where.push({
 							column: this.configService.get('database.deletes.soft'),
 							operator: WhereOperator.null,
 						})
 					}
 
-					const result = await this.query.perform(QueryPerform.FIND, options)
+					const result = await this.query.perform(QueryPerform.FIND, db_options, options.x_request_id)
 
 					if (!result) {
-						this.logger.debug(`[Authentication][auth] API key not found`, {
-							key: req_api_key,
-							column: api_key_config.column,
-							result,
-						})
+						this.logger.debug(
+							`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] API key not found`,
+							{
+								key: req_api_key,
+								column: api_key_config.column,
+								result,
+							},
+						)
 						return { valid: false, message: 'Unauthorized' }
 					}
 
@@ -261,17 +270,20 @@ export class Authentication {
 						!result[api_key_config.column] &&
 						findDotNotation(result, api_key_config.column) !== req_api_key
 					) {
-						this.logger.debug(`[Authentication][auth] API key not found`, {
-							key: req_api_key,
-							column: api_key_config.column,
-							result,
-						})
+						this.logger.debug(
+							`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] API key not found`,
+							{
+								key: req_api_key,
+								column: api_key_config.column,
+								result,
+							},
+						)
 						return { valid: false, message: 'Unauthorized' }
 					}
 
 					if (!result[identity_column]) {
 						this.logger.error(
-							`[Authentication][auth] Identity column ${identity_column} not found in result`,
+							`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] Identity column ${identity_column} not found in result`,
 							{ result },
 						)
 						return {
@@ -280,7 +292,9 @@ export class Authentication {
 						}
 					}
 
-					this.logger.debug(`[Authentication][auth] User #${result[identity_column]} identified successfully`)
+					this.logger.debug(
+						`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] User #${result[identity_column]} identified successfully`,
+					)
 
 					auth_passed = {
 						valid: true,
@@ -290,7 +304,7 @@ export class Authentication {
 					break
 
 				case AuthType.JWT:
-					const jwt_token = req.headers['authorization']?.split(' ')[1]
+					const jwt_token = options.req.headers['authorization']?.split(' ')[1]
 
 					if (!jwt_token) {
 						auth_passed = {

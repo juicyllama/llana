@@ -32,7 +32,7 @@ describe('Query > Delete', () => {
 		schema = app.get<Schema>(Schema)
 		logger = app.get<Logger>(Logger)
 
-		usersTableSchema = await schema.getSchema('User')
+		usersTableSchema = await schema.getSchema({ table: 'User' })
 		userTestingService = app.get<UserTestingService>(UserTestingService)
 	})
 

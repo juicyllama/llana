@@ -34,9 +34,9 @@ describe('Query > Update', () => {
 		logger = app.get<Logger>(Logger)
 
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
-		customerTableSchema = await schema.getSchema('Customer')
+		customerTableSchema = await schema.getSchema({ table: 'Customer' })
 		userTestingService = app.get<UserTestingService>(UserTestingService)
-		userTableSchema = await schema.getSchema('User')
+		userTableSchema = await schema.getSchema({ table: 'User' })
 	})
 
 	describe('update', () => {

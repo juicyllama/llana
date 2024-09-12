@@ -34,9 +34,10 @@ export type FindManyResponseObject = {
 		total: number
 	}
 	data: FindOneResponseObject[]
+	_x_request_id?: string
 }
 
-export type IsUniqueResponse = { valid: boolean; message?: string }
+export type IsUniqueResponse = { valid: boolean; message?: string; _x_request_id?: string }
 
 export class BulkUploadResponse {
 	@ApiProperty({
@@ -114,4 +115,5 @@ export class BulkUploadResponse {
 
 export type DeleteResponseObject = {
 	deleted: number
+	_x_request_id?: string
 }

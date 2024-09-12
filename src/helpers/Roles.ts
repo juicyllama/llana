@@ -23,11 +23,12 @@ export class Roles {
 	 * Check if a role has permission to access a table
 	 */
 
-	async tablePermission(
-		identifier: string,
-		table: string,
-		access: RolePermission,
-	): Promise<AuthTablePermissionSuccessResponse | AuthTablePermissionFailResponse> {
+	async tablePermission(options: {
+		identifier: string
+		table: string
+		access: RolePermission
+		x_request_id: string
+	}): Promise<AuthTablePermissionSuccessResponse | AuthTablePermissionFailResponse> {
 		const config = this.configService.get<RolesConfig>('roles')
 
 		if (!config.location?.table || !config.location?.column) {
@@ -37,7 +38,7 @@ export class Roles {
 			}
 		}
 
-		const schema = await this.schema.getSchema(table)
+		const schema = await this.schema.getSchema({ table: options.table, x_request_id: options.x_request_id })
 
 		if (!schema) {
 			return <AuthTablePermissionFailResponse>{
@@ -49,7 +50,7 @@ export class Roles {
 		let role
 
 		try {
-			role = await this.getRole(identifier)
+			role = await this.getRole(options.identifier, options.x_request_id)
 		} catch (e) {
 			return <AuthTablePermissionFailResponse>{
 				valid: false,
@@ -64,70 +65,81 @@ export class Roles {
 			}
 		}
 
-		const permission_schema = await this.schema.getSchema(LLANA_ROLES_TABLE)
+		const permission_schema = await this.schema.getSchema({
+			table: LLANA_ROLES_TABLE,
+			x_request_id: options.x_request_id,
+		})
 
-		const custom_permissions = (await this.query.perform(QueryPerform.FIND_MANY, {
-			schema: permission_schema,
-			where: [
-				{
-					column: 'custom',
-					operator: WhereOperator.equals,
-					value: true,
-				},
-				{
-					column: 'table',
-					operator: WhereOperator.equals,
-					value: table,
-				},
-				{
-					column: 'role',
-					operator: WhereOperator.equals,
-					value: role,
-				},
-			],
-		})) as FindManyResponseObject
+		const custom_permissions = (await this.query.perform(
+			QueryPerform.FIND_MANY,
+			{
+				schema: permission_schema,
+				where: [
+					{
+						column: 'custom',
+						operator: WhereOperator.equals,
+						value: true,
+					},
+					{
+						column: 'table',
+						operator: WhereOperator.equals,
+						value: options.table,
+					},
+					{
+						column: 'role',
+						operator: WhereOperator.equals,
+						value: role,
+					},
+				],
+			},
+			options.x_request_id,
+		)) as FindManyResponseObject
 
 		// check if there is a table role setting
 		if (custom_permissions.data?.length) {
 			for (const permission of custom_permissions.data) {
-				if (this.rolePass(access, permission.records)) {
+				if (this.rolePass(options.access, permission.records)) {
 					return {
 						valid: true,
 					}
 				}
 
-				if (this.rolePass(access, permission.own_records)) {
+				if (this.rolePass(options.access, permission.own_records)) {
 					return {
 						valid: true,
 						restriction: {
 							column: permission.identity_column ?? schema.primary_key,
 							operator: WhereOperator.equals,
-							value: identifier,
+							value: options.identifier,
 						},
 					}
 				}
 			}
 		}
 
-		const default_permissions = (await this.query.perform(QueryPerform.FIND_MANY, {
-			schema: permission_schema,
-			where: [
-				{
-					column: 'custom',
-					operator: WhereOperator.equals,
-					value: false,
-				},
-				{
-					column: 'role',
-					operator: WhereOperator.equals,
-					value: role,
-				},
-			],
-		})) as FindManyResponseObject
+		const default_permissions = (await this.query.perform(
+			QueryPerform.FIND_MANY,
+			{
+				schema: permission_schema,
+				where: [
+					{
+						column: 'custom',
+						operator: WhereOperator.equals,
+						value: false,
+					},
+					{
+						column: 'role',
+						operator: WhereOperator.equals,
+						value: role,
+					},
+				],
+			},
+			options.x_request_id,
+		)) as FindManyResponseObject
 
 		if (default_permissions.data?.length) {
 			for (const permission of default_permissions.data) {
-				if (this.rolePass(access, permission.records)) {
+				if (this.rolePass(options.access, permission.records)) {
 					return {
 						valid: true,
 					}
@@ -137,7 +149,7 @@ export class Roles {
 
 		return <AuthTablePermissionFailResponse>{
 			valid: false,
-			message: `Table Action ${access} - Permission Denied For Role ${role}`,
+			message: `Table Action ${options.access} - Permission Denied For Role ${role}`,
 		}
 	}
 
@@ -145,30 +157,34 @@ export class Roles {
 	 * Get users role from the database
 	 */
 
-	private async getRole(identifier: string): Promise<string | undefined> {
+	private async getRole(identifier: string, x_request_id: string): Promise<string | undefined> {
 		const config = this.configService.get<RolesConfig>('roles')
 
 		let table_schema
 
 		try {
-			table_schema = await this.schema.getSchema(config.location.table)
+			table_schema = await this.schema.getSchema({ table: config.location.table, x_request_id })
 		} catch (e) {
 			throw new Error(e)
 		}
 
 		const user_id_column = config.location?.identifier_column ?? table_schema.primary_key
 
-		const role = await this.query.perform(QueryPerform.FIND, {
-			schema: table_schema,
-			fields: [config.location.column],
-			where: [
-				{
-					column: user_id_column,
-					operator: WhereOperator.equals,
-					value: identifier,
-				},
-			],
-		})
+		const role = await this.query.perform(
+			QueryPerform.FIND,
+			{
+				schema: table_schema,
+				fields: [config.location.column],
+				where: [
+					{
+						column: user_id_column,
+						operator: WhereOperator.equals,
+						value: identifier,
+					},
+				],
+			},
+			x_request_id,
+		)
 
 		return role?.[config.location.column]
 	}
