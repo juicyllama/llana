@@ -458,6 +458,7 @@ export class Schema {
 		let items = where.column.split('.')
 
 		for (let i = 0; i < items.length - 1; i++) {
+			
 			if (!schema.relations.find(col => col.table === items[i])) {
 				this.logger.error(`Relation ${items[i]} not found in schema for ${schema.table}`)
 				throw new Error(`Relation ${items[i]} not found in schema for ${schema.table}`)
@@ -465,15 +466,17 @@ export class Schema {
 
 			const relation_schema = await this.getSchema(items[i])
 
-			relations.push({
+			const relation = {
 				table: items[i],
 				join: {
 					...schema.relations.find(col => col.table === items[i]),
 					type: DatabaseJoinType.INNER,
 				},
-				where: i === items.length - 1 ? where : undefined,
+				where: i === items.length - 2 ? where : undefined,
 				schema: relation_schema,
-			})
+			}
+
+			relations.push(relation)
 
 			schema = relation_schema
 		}

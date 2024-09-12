@@ -51,7 +51,7 @@ export class MySQL {
 
 		try {
 			let results
-			this.logger.debug(`[MySQL][Query] ${sql}`)
+			this.logger.debug(`[MySQL][Query] ${sql}`, values)
 
 			if (!values || !values.length) {
 				;[results] = await connection.query<any[]>(sql)
@@ -411,7 +411,7 @@ export class MySQL {
 				command += `${relation.join.type ?? 'INNER JOIN'} ${relation.join.table} ON ${relation.join.org_table}.${relation.join.org_column} = ${relation.join.table}.${relation.join.column} `
 			}
 		}
-
+		
 		if (options.where?.length) {
 			command += `WHERE `
 
@@ -422,7 +422,24 @@ export class MySQL {
 			}
 
 			command += `${options.where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}  `).join(' AND ')} `
-			values.push(...options.where.map(w => w.value))
+			const where_values = options.where.map(w => w.value)
+			if(where_values.length) {
+				for(const w in where_values) {
+					if(where_values[w] === undefined) {
+						continue;
+					}
+					values.push(where_values[w])
+				}
+			}
+		}
+
+		for(const r in options.relations) {
+			if(options.relations[r].where) {
+				command += `AND ${options.relations[r].where.column} ${options.relations[r].where.operator} ? `
+				if(options.relations[r].where.value){
+					values.push(options.relations[r].where.value)
+				}
+			}
 		}
 
 		return [command, values]
