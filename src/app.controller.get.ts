@@ -245,11 +245,11 @@ export class GetController {
 						.send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 				}
 
-				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-					permission = permission as AuthTablePermissionSuccessResponse
+				permission = permission as AuthTablePermissionSuccessResponse
 
+				if (permission.valid && permission.restriction) {
 					if (permission.restriction.column.includes('.')) {
-						options.relations.concat(
+						options.relations = options.relations.concat(
 							await this.schema.convertDeepWhere(permission.restriction, options.schema),
 						)
 					} else {
