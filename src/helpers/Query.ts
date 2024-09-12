@@ -294,7 +294,7 @@ export class Query {
 	 * Truncate a table - used for testing only, not for production
 	 */
 
-	async truncate(table_name: string, x_request_id: string): Promise<void> {
+	async truncate(table_name: string, x_request_id?: string): Promise<void> {
 		if (Env.IsProd()) {
 			throw new Error('Truncate not allowed in production')
 		}
