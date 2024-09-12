@@ -8,7 +8,7 @@ import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { AuthTablePermissionFailResponse } from './types/auth.types'
-import { DatabaseSchema, QueryPerform } from './types/database.types'
+import { DatabaseCreateOneOptions, QueryPerform } from './types/database.types'
 import { FindOneResponseObject, IsUniqueResponse } from './types/response.types'
 import { RolePermission } from './types/roles.types'
 
@@ -37,10 +37,13 @@ export class PostController {
 		const table_name = UrlToTable(req.originalUrl, 1)
 		const body = req.body
 
-		let schema: DatabaseSchema
+		const options: DatabaseCreateOneOptions = {
+			schema: null,
+			data: {},
+		}
 
 		try {
-			schema = await this.schema.getSchema(table_name)
+			options.schema = await this.schema.getSchema(table_name)
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
@@ -52,33 +55,33 @@ export class PostController {
 
 		//perform role check
 		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.WRITE)
+			const { valid, message } = (await this.roles.tablePermission(
+				auth.user_identifier,
+				table_name,
+				RolePermission.WRITE,
+			)) as AuthTablePermissionFailResponse
 
-			if (!permission.valid) {
-				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+			if (!valid) {
+				return res.status(401).send(this.response.text(message))
 			}
 		}
 
 		//validate input data
-		const validate = await this.schema.validateData(schema, body)
-		if (!validate.valid) {
-			return res.status(400).send(this.response.text(validate.message))
+		const { valid, message, instance } = await this.schema.validateData(options.schema, body)
+		if (!valid) {
+			return res.status(400).send(this.response.text(message))
 		}
 
+		options.data = instance
+
 		//validate uniqueness
-		const uniqueValidation = (await this.query.perform(QueryPerform.UNIQUE, {
-			schema,
-			data: body,
-		})) as IsUniqueResponse
+		const uniqueValidation = (await this.query.perform(QueryPerform.UNIQUE, options)) as IsUniqueResponse
 		if (!uniqueValidation.valid) {
 			return res.status(400).send(this.response.text(uniqueValidation.message))
 		}
 
 		try {
-			const result = await this.query.perform(QueryPerform.CREATE, {
-				schema,
-				data: validate.instance,
-			})
+			const result = await this.query.perform(QueryPerform.CREATE, options)
 
 			return res.status(201).send(result)
 		} catch (e) {

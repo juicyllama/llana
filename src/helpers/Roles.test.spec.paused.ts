@@ -1,23 +1,27 @@
 import { INestApplication } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { Test } from '@nestjs/testing'
-import axios from 'axios'
+import * as request from 'supertest'
 
+import { LLANA_ROLES_TABLE } from '../app.constants'
 import { AppModule } from '../app.module'
-import { Role, RoleLocation, RolePermission } from '../types/roles.types'
-import { Logger } from './Logger'
+import { CUSTOMER } from '../testing/customer.testing.service'
+import { DatabaseSchema, QueryPerform } from '../types/database.types'
+import { CustomRole, DefaultRole, RolePermission } from '../types/roles.types'
+//import { Logger } from './Logger'
+import { Query } from './Query'
+//import { Roles } from './Roles'
+import { Schema } from './Schema'
 
 describe('Roles', () => {
 	let app: INestApplication
-	let configService: ConfigService
-	let axiosInstance: any
-	let logger: Logger
+	//let service: Roles
+	//let logger: Logger
+	let query: Query
+	let schema: Schema
 
-	const testing = {
-		host: 'localhost',
-		port: 3000,
-		address: '',
-	}
+	let llanaRolesTableSchema: DatabaseSchema
+	//let customerTableSchema: DatabaseSchema
+	let role_record: DefaultRole | CustomRole
 
 	beforeEach(async () => {
 		const moduleRef = await Test.createTestingModule({
@@ -25,171 +29,181 @@ describe('Roles', () => {
 		}).compile()
 
 		app = moduleRef.createNestApplication()
-
-		configService = app.get<ConfigService>(ConfigService)
-		logger = app.get<Logger>(Logger)
-
-		configService.set('hosts', [`${testing.host}:${testing.port}`])
-
-		await app.listen(3000, testing.host)
+		await app.listen(3050)
 		await app.init()
 
-		testing.port = app.getHttpServer().address().port
-		testing.address = `http://${testing.host}:${testing.port}`
+		//service = app.get<Roles>(Roles)
+		schema = app.get<Schema>(Schema)
+		//logger = app.get<Logger>(Logger)
+		query = app.get<Query>(Query)
 
-		axiosInstance = axios.create({
-			baseURL: testing.address,
-			headers: {
-				'x-api-key': 'test',
-				Accept: 'application/json',
-			},
-		})
+		llanaRolesTableSchema = await schema.getSchema(LLANA_ROLES_TABLE)
+		//customerTableSchema = await schema.getSchema('Customer')
+
+		const home = await request(app.getHttpServer()).get('/').expect(200)
+
+		console.log(home.text)
 	})
 
-	describe('No Roles', () => {
-		it('Empty config', async function () {
-			configService.set('roles', {})
-			try {
-				const response = await axiosInstance.get('/User/1')
-				expect(response.status).toEqual(200)
-			} catch (e) {
-				logger.error(e.message, e)
-			}
+	describe('No roles', () => {
+		it('Full permissions for all', async function () {
+			await query.truncate(LLANA_ROLES_TABLE)
+			const customers = await request(app.getHttpServer())
+				.get('/Customer/')
+				.set('x-api-key', 'Ex@mp1eS$Cu7eAp!K3y')
+				.expect(200)
+			expect(customers).toBeDefined()
+			expect(customers.body).toBeDefined()
+			expect(customers.body.data).toBeDefined()
+			expect(customers.body.data.length).toBeGreaterThan(0)
 		})
 
-		it('No defualts', async function () {
-			configService.set('roles', {
-				location: <RoleLocation>{
-					table: 'User',
-					column: 'role',
+		it('Update Default Access to NONE', async function () {
+			role_record = (await query.perform(QueryPerform.CREATE, {
+				schema: llanaRolesTableSchema,
+				data: <DefaultRole>{
+					custom: false,
+					role: 'ADMIN',
+					records: RolePermission.NONE,
 				},
-			})
-			try {
-				const response = await axiosInstance.get('/User/1')
-				expect(response.status).toEqual(200)
-			} catch (e) {
-				logger.error(e.message, e)
-			}
+			})) as DefaultRole
+
+			console.log(role_record)
+
+			expect(role_record).toBeDefined()
+			expect(role_record.id).toBeDefined()
 		})
 
-		it('No admin role in defualts', async function () {
-			configService.set('roles', {
-				location: <RoleLocation>{
-					table: 'User',
-					column: 'role',
-				},
-				defaults: <Role[]>[
-					{
-						role: 'VIEWER',
-						records: RolePermission.WRITE,
-					},
-				],
-			})
-			try {
-				const response = await axiosInstance.get('/User/1')
-				expect(response.status).toEqual(200)
-			} catch (e) {
-				logger.error(e.message, e)
-			}
+		it('No Access', async function () {
+			const response = await request(app.getHttpServer())
+				.post('/Customer/')
+				.set('x-api-key', 'Ex@mp1eS$Cu7eAp!K3y')
+				.send(CUSTOMER)
+
+			expect(response.status).toEqual(401)
+			//expect(response.body.email).toEqual('foo@bar.com');
+
+			//Call create, expect 401
+			//Call read, expect 401
+			//Call update, expect 401
+			//Call delete, expect 401
 		})
 	})
 
 	describe('Default Roles', () => {
-		it('Delete Access', async function () {
-			configService.set('roles', {
-				location: <RoleLocation>{
-					table: 'User',
-					column: 'role',
-				},
-				defaults: <Role[]>[
-					{
-						role: 'ADMIN',
-						records: RolePermission.DELETE,
-					},
-				],
-			})
-
-			try {
-				const response = await axiosInstance.get('/User/1')
-				expect(response.status).toEqual(200)
-			} catch (e) {
-				logger.error(e.message)
-				expect(true).toEqual(false)
-			}
+		it('Read Access', async function () {
+			//TODO: update the default role to have read access
+			//Call create, expect 401
+			//Call read, expect 200
+			//Call update, expect 401
+			//Call delete, expect 401
 		})
 
 		it('Write Access', async function () {
-			configService.set('roles', {
-				location: <RoleLocation>{
-					table: 'User',
-					column: 'role',
-				},
-				defaults: <Role[]>[
-					{
-						role: 'ADMIN',
-						records: RolePermission.WRITE,
-					},
-				],
-			})
-
-			try {
-				const response = await axiosInstance.get('/User/1')
-				expect(response.status).toEqual(200)
-			} catch (e) {
-				logger.error(e.message)
-				expect(true).toEqual(false)
-			}
+			//TODO: update the default role to have write access
+			//Call create, expect 201
+			//Call read, expect 200
+			//Call update, expect 200
+			//Call delete, expect 401
 		})
 
-		it('Read Access', async function () {
-			configService.set('roles', {
-				location: <RoleLocation>{
-					table: 'User',
-					column: 'role',
-				},
-				defaults: <Role[]>[
-					{
-						role: 'ADMIN',
-						records: RolePermission.READ,
-					},
-				],
-			})
-
-			try {
-				const response = await axiosInstance.get('/User/1')
-				expect(response.status).toEqual(200)
-			} catch (e) {
-				logger.error(e.message)
-				expect(true).toEqual(false)
-			}
-		})
-
-		it('No Access', async function () {
-			configService.set('roles', {
-				location: <RoleLocation>{
-					table: 'User',
-					column: 'role',
-				},
-				defaults: <Role[]>[
-					{
-						role: 'ADMIN',
-						records: RolePermission.NONE,
-					},
-				],
-			})
-
-			try {
-				const response = await axiosInstance.get('/User/1')
-				expect(response.status).toEqual(403)
-			} catch (e) {
-				logger.error(e.message)
-				expect(e.response.status).toEqual(403)
-			}
+		it('Delete Access', async function () {
+			//TODO: update the default role to have delete access
+			//Call create, expect 201
+			//Call read, expect 200
+			//Call update, expect 200
+			//Call delete, expect 200
 		})
 	})
 
-	describe('Profile Roles', () => {
-		//Ensure it uses the correct profile, and the correct role, on the correct tables
+	describe('Table Roles - Own Records', () => {
+		it('No Access', async function () {
+			//TODO: add a table role that has no access to both own records and all records
+			//Own records: READ
+			//Call create, expect 401
+			//Call read, expect 401
+			//Call update, expect 401
+			//Call delete, expect 401
+			//Records: NONE
+			//Call create, expect 401
+			//Call read, expect 401
+			//Call update, expect 401
+			//Call delete, expect 401
+		})
+
+		it('Read own records', async function () {
+			//Own records: READ
+			//Call create, expect 401
+			//Call read, expect 200
+			//Call update, expect 401
+			//Call delete, expect 401
+			//Records: NONE
+			//Call create, expect 401
+			//Call read, expect 401
+			//Call update, expect 401
+			//Call delete, expect 401
+		})
+
+		it('Write own records', async function () {
+			//Own records: WRITE
+			//Call create, expect 201
+			//Call read, expect 200
+			//Call update, expect 200
+			//Call delete, expect 401
+			//Records: NONE
+			//Call create, expect 401
+			//Call read, expect 401
+			//Call update, expect 401
+			//Call delete, expect 401
+		})
+
+		it('Delete own records', async function () {
+			//Own records: DELETE
+			//Call create, expect 201
+			//Call read, expect 200
+			//Call update, expect 200
+			//Call delete, expect 200
+			//Records: NONE
+			//Call create, expect 401
+			//Call read, expect 401
+			//Call update, expect 401
+			//Call delete, expect 401
+		})
+	})
+
+	describe('Table Roles - Other Records', () => {
+		it('No Access', async function () {
+			//TODO: add a table role that has no access to both own records and all records
+			//Records: NONE
+			//Call create, expect 401
+			//Call read, expect 401
+			//Call update, expect 401
+			//Call delete, expect 401
+		})
+
+		it('Read records', async function () {
+			//Records: READ
+			//Call create, expect 401
+			//Call read, expect 200
+			//Call update, expect 401
+			//Call delete, expect 401
+		})
+
+		it('Write records', async function () {
+			//records: WRITE
+			//Call create, expect 201
+			//Call read, expect 200
+			//Call update, expect 200
+			//Call delete, expect 401
+		})
+
+		it('Delete records', async function () {
+			//Records: DELETE
+			//Call create, expect 201
+			//Call read, expect 200
+			//Call update, expect 200
+			//Call delete, expect 200
+		})
 	})
 
 	afterEach(async () => {

@@ -22,7 +22,6 @@ import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
-import { Sort } from './helpers/Sort'
 import { HostCheckMiddleware } from './middleware/HostCheck'
 
 @Module({
@@ -45,21 +44,8 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Response,
 		Roles,
 		Schema,
-		Sort,
 	],
-	exports: [
-		Authentication,
-		Encryption,
-		Logger,
-		LoginService,
-		MySQL,
-		Pagination,
-		Query,
-		Response,
-		Roles,
-		Schema,
-		Sort,
-	],
+	exports: [Authentication, Encryption, Logger, LoginService, MySQL, Pagination, Query, Response, Roles, Schema],
 })
 export class AppModule implements NestModule {
 	configure(consumer: MiddlewareConsumer) {

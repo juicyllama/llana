@@ -1,16 +1,20 @@
-import { DatabaseSchema, DatabaseWhere } from './database.types'
+import { DatabaseRelations, DatabaseWhere } from './database.types'
 
 export interface ValidateFieldsResponse extends ValidateResponse {
-	validated?: string[]
-	relations?: string[]
+	fields?: string[]
+	relations?: DatabaseRelations[]
 }
 
 export interface validateRelationsResponse extends ValidateResponse {
-	schema?: DatabaseSchema
+	relations?: DatabaseRelations[]
 }
 
 export interface validateWhereResponse extends ValidateResponse {
 	where?: DatabaseWhere[]
+}
+
+export interface ValidateSortResponse extends ValidateResponse {
+	sort?: SortCondition[]
 }
 
 export interface ValidateResponse {

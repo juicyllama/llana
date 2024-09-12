@@ -19,6 +19,7 @@ import {
 	FindOneResponseObject,
 	IsUniqueResponse,
 } from '../types/response.types'
+import { Env } from '../utils/Env'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
 
@@ -50,22 +51,25 @@ export class Query {
 			switch (action) {
 				case QueryPerform.CREATE:
 					result = await this.createOne(options as DatabaseCreateOneOptions)
-					return this.schema.pipeResponse(options.schema, result)
+					return this.schema.pipeResponse(options, result)
 				case QueryPerform.FIND:
 					result = await this.findOne(options as DatabaseFindOneOptions)
 					if (!result) {
-						return {}
+						return null
 					}
-					return this.schema.pipeResponse(options.schema, result)
+					return this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
 				case QueryPerform.FIND_MANY:
 					result = await this.findMany(options as DatabaseFindManyOptions)
 					for (let i = 0; i < result.data.length; i++) {
-						result.data[i] = await this.schema.pipeResponse(options.schema, result.data[i])
+						result.data[i] = await this.schema.pipeResponse(
+							options as DatabaseFindOneOptions,
+							result.data[i],
+						)
 					}
 					return result
 				case QueryPerform.UPDATE:
 					result = await this.updateOne(options as DatabaseUpdateOneOptions)
-					return this.schema.pipeResponse(options.schema, result)
+					return this.schema.pipeResponse(options, result)
 				case QueryPerform.DELETE:
 					return await this.deleteOne(options as DatabaseDeleteOneOptions)
 				case QueryPerform.UNIQUE:
@@ -216,6 +220,26 @@ export class Query {
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+				)
+				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+	}
+
+	/**
+	 * Truncate a table - used for testing only, not for production
+	 */
+
+	async truncate(table_name: string): Promise<void> {
+		if (Env.IsProd()) {
+			throw new Error('Truncate not allowed in production')
+		}
+
+		switch (this.configService.get<string>('database.type')) {
+			case DatabaseType.MYSQL:
+				return await this.mysql.truncate(table_name)
+			default:
+				this.logger.error(
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}

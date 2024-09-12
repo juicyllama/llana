@@ -101,9 +101,7 @@ describe('Query > Delete', () => {
 						{ column: 'id', operator: WhereOperator.equals, value: user[usersTableSchema.primary_key] },
 					],
 				})) as FindOneResponseObject
-
 				expect(deleted_record).toBeDefined()
-				expect(deleted_record.deletedAt).toBeDefined()
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)

@@ -4,9 +4,10 @@ import { JwtService } from '@nestjs/jwt'
 
 import { LLANA_AUTH_TABLE } from '../app.constants'
 import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
-import { DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from '../types/database.types'
+import { DatabaseFindOneOptions, DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
 import { FindManyResponseObject } from '../types/response.types'
 import { Env } from '../utils/Env'
+import { findDotNotation } from '../utils/Find'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
@@ -199,54 +200,67 @@ export class Authentication {
 						continue
 					}
 
-					const relations = api_key_config.column.includes('.') ? [api_key_config.column.split('.')[0]] : []
-
-					if (relations.length > 0) {
-						const validateRelations = await this.schema.validateRelations(schema, relations)
-						if (!validateRelations.valid) {
-							this.logger.error(validateRelations.message)
-							return validateRelations
-						}
-
-						schema = validateRelations.schema
+					const options: DatabaseFindOneOptions = {
+						schema,
+						fields: [identity_column],
+						where: [
+							{
+								column: api_key_config.column,
+								operator: WhereOperator.equals,
+								value: req_api_key,
+							},
+						],
+						relations: [],
 					}
 
-					const where: DatabaseWhere[] = [
-						{
-							column: api_key_config.column,
-							operator: WhereOperator.equals,
-							value: req_api_key,
-						},
-					]
+					const { valid, message, fields, relations } = await this.schema.validateFields(
+						schema,
+						api_key_config.column,
+					)
+					if (!valid) {
+						auth_passed = {
+							valid: false,
+							message,
+						}
+					}
+
+					for (const field of fields) {
+						if (!options.fields.includes(field)) {
+							options.fields.push(field)
+						}
+					}
+
+					for (const relation of relations) {
+						if (!options.relations.find(r => r.table === relation.table)) {
+							options.relations.push(relation)
+						}
+					}
 
 					if (this.configService.get('database.deletes.soft')) {
-						where.push({
+						options.where.push({
 							column: this.configService.get('database.deletes.soft'),
 							operator: WhereOperator.null,
 						})
 					}
 
-					const result = await this.query.perform(QueryPerform.FIND, {
-						schema,
-						relations,
-						fields: [`${api_key_config.name}.${identity_column}`, api_key_config.column],
-						where,
-						joins: true,
-					})
+					const result = await this.query.perform(QueryPerform.FIND, options)
 
-					let column
-
-					if (api_key_config.column.includes('.')) {
-						column = api_key_config.column.split('.')[1]
-					} else {
-						column = api_key_config.column
+					if(!result) {
+						this.logger.debug(`[Authentication][auth] API key not found`, {
+								key: req_api_key,
+								column: api_key_config.column,
+								result,
+							})
+							return { valid: false, message: 'Unauthorized' }
 					}
 
 					//key does not match - return unauthorized immediately
-					if (!result || !result[column] || result[column] !== req_api_key) {
+					if (!result[api_key_config.column] && findDotNotation(result, api_key_config.column) !==
+							req_api_key
+					) {
 						this.logger.debug(`[Authentication][auth] API key not found`, {
 							key: req_api_key,
-							column,
+							column: api_key_config.column,
 							result,
 						})
 						return { valid: false, message: 'Unauthorized' }

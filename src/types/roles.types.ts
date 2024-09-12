@@ -10,6 +10,7 @@ export interface TableRole extends Role {
 }
 
 export interface Role {
+	id?: number // the id of the role after creation
 	custom: boolean
 	role: string
 	records: RolePermission

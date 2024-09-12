@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 
 import { AppModule } from '../app.module'
-import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
+import { DatabaseRelations, DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
 import { FindManyResponseObject, FindOneResponseObject } from '../types/response.types'
 import { Logger, logLevel } from './Logger'
 import { Query } from './Query'
@@ -16,6 +16,7 @@ describe('Query > Find', () => {
 	let usersTableSchema: DatabaseSchema
 	let customerTableSchema: DatabaseSchema
 	let salesOrderTableSchema: DatabaseSchema
+	let customerRelation: DatabaseRelations
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
@@ -33,6 +34,17 @@ describe('Query > Find', () => {
 		usersTableSchema = await schema.getSchema('User')
 		customerTableSchema = await schema.getSchema('Customer')
 		salesOrderTableSchema = await schema.getSchema('SalesOrder')
+
+		customerRelation = {
+			table: 'Customer',
+			join: {
+				table: 'Customer',
+				column: 'custId',
+				org_table: 'SalesOrder',
+				org_column: 'custId',
+			},
+			schema: customerTableSchema,
+		}
 	})
 
 	describe('findOne', () => {
@@ -104,6 +116,29 @@ describe('Query > Find', () => {
 				expect(true).toBe(false)
 			}
 		})
+
+		it('Validate Response Fields', async () => {
+			try {
+				const results = (await service.perform(QueryPerform.FIND, {
+					schema: usersTableSchema,
+					where: [{ column: 'id', operator: WhereOperator.equals, value: '1' }],
+				})) as FindOneResponseObject
+
+				console.log(results)
+
+				expect(results.id).toEqual(1)
+				expect(results.email).toEqual('test@test.com')
+				expect(results.firstName).toEqual('Jon')
+				expect(results.lastName).toEqual('Doe')
+				expect(results.role).toEqual('ADMIN')
+				expect(results.createdAt).toBeDefined()
+				expect(new Date(results.createdAt)).toBeInstanceOf(Date)
+				expect(results.updatedAt).toBeDefined()
+			} catch (e) {
+				logger.error(e)
+				expect(true).toBe(false)
+			}
+		})
 	})
 
 	describe('findMany', () => {
@@ -139,42 +174,18 @@ describe('Query > Find', () => {
 		})
 
 		it('Passing Relations', async () => {
-			salesOrderTableSchema.relations.find(r => r.table === 'Customer').schema = customerTableSchema
-
 			try {
 				const results = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: ['orderId', 'shipAddress', 'custId', 'Customer.companyName'],
+					fields: ['orderId', 'shipAddress', 'custId'],
 					where: [{ column: 'custId', operator: WhereOperator.equals, value: '91' }],
-					relations: ['Customer'],
+					relations: [{ ...customerRelation, columns: ['companyName'] }],
 				})) as FindManyResponseObject
 				expect(results.data.length).toBeGreaterThan(0)
 				expect(results.data[0].orderId).toBeDefined()
 				expect(results.data[0].shipAddress).toBeDefined()
 				expect(results.data[0].custId).toBeDefined()
-				expect(results.data[0].Customer[0].companyName).toBeDefined()
-			} catch (e) {
-				logger.error(e)
-				expect(true).toBe(false)
-			}
-		})
-
-		it('Passing Relations (with Join override)', async () => {
-			salesOrderTableSchema.relations.find(r => r.table === 'Customer').schema = customerTableSchema
-
-			try {
-				const results = (await service.perform(QueryPerform.FIND_MANY, {
-					schema: salesOrderTableSchema,
-					fields: ['orderId', 'shipAddress', 'custId', 'Customer.companyName'],
-					where: [{ column: 'custId', operator: WhereOperator.equals, value: '91' }],
-					relations: ['Customer'],
-					joins: true,
-				})) as FindManyResponseObject
-				expect(results.data.length).toBeGreaterThan(0)
-				expect(results.data[0].orderId).toBeDefined()
-				expect(results.data[0].shipAddress).toBeDefined()
-				expect(results.data[0].custId).toBeDefined()
-				expect(results.data[0].Customer[0].companyName).toBeDefined()
+				expect(results.data[0].Customer.companyName).toBeDefined()
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
@@ -185,17 +196,16 @@ describe('Query > Find', () => {
 			try {
 				const results = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: ['orderId', 'shipAddress', 'custId', 'Customer.companyName'],
+					fields: ['orderId', 'shipAddress', 'custId'],
 					where: [{ column: 'custId', operator: WhereOperator.equals, value: '91' }],
-					relations: ['Customer'],
-					joins: true,
+					relations: [{ ...customerRelation, columns: ['companyName'] }],
 					limit: 3,
 				})) as FindManyResponseObject
 				expect(results.data.length).toEqual(3)
 				expect(results.data[0].orderId).toBeDefined()
 				expect(results.data[0].shipAddress).toBeDefined()
 				expect(results.data[0].custId).toBeDefined()
-				expect(results.data[0].Customer[0].companyName).toBeDefined()
+				expect(results.data[0].Customer.companyName).toBeDefined()
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
@@ -206,30 +216,28 @@ describe('Query > Find', () => {
 			try {
 				const results = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: ['orderId', 'shipAddress', 'custId', 'Customer.companyName'],
+					fields: ['orderId', 'shipAddress', 'custId'],
 					where: [{ column: 'custId', operator: WhereOperator.equals, value: '91' }],
-					relations: ['Customer'],
-					joins: true,
+					relations: [{ ...customerRelation, columns: ['companyName'] }],
 				})) as FindManyResponseObject
 				expect(results.data.length).toBeGreaterThan(0)
 				expect(results.data[0].orderId).toBeDefined()
 				expect(results.data[0].shipAddress).toBeDefined()
 				expect(results.data[0].custId).toBeDefined()
-				expect(results.data[0].Customer[0].companyName).toBeDefined()
+				expect(results.data[0].Customer.companyName).toBeDefined()
 
 				const results2 = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: ['orderId', 'shipAddress', 'custId', 'Customer.companyName'],
+					fields: ['orderId', 'shipAddress', 'custId'],
 					where: [{ column: 'custId', operator: WhereOperator.equals, value: '91' }],
-					relations: ['Customer'],
-					joins: true,
+					relations: [{ ...customerRelation, columns: ['companyName'] }],
 					offset: results.data.length - 2,
 				})) as FindManyResponseObject
 				expect(results2.data.length).toEqual(2)
 				expect(results2.data[0].orderId).toBeDefined()
 				expect(results2.data[0].shipAddress).toBeDefined()
 				expect(results2.data[0].custId).toBeDefined()
-				expect(results2.data[0].Customer[0].companyName).toBeDefined()
+				expect(results2.data[0].Customer.companyName).toBeDefined()
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
