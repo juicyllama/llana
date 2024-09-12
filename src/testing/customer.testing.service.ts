@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker'
 import { Injectable } from '@nestjs/common'
 
 import { Query } from '../helpers/Query'
@@ -6,14 +7,14 @@ import { QueryPerform } from '../types/database.types'
 import { FindOneResponseObject } from '../types/response.types'
 
 export const CUSTOMER = {
-	companyName: 'Customer AAAAA',
-	contactName: 'Doe, Jon',
-	contactTitle: 'Owner',
-	address: '1234 Elm St',
-	city: 'Springfield',
-	region: 'IL',
-	postalCode: '62701',
-	country: 'USA',
+	companyName: faker.company.name(),
+	contactName: faker.person.firstName() + ', ' + faker.person.lastName(),
+	contactTitle: faker.person.prefix(),
+	address: faker.location.streetAddress(),
+	city: faker.location.city().substring(0, 10),
+	region: faker.location.state(),
+	postalCode: faker.location.zipCode(),
+	country: faker.location.countryCode(),
 }
 
 @Injectable()

@@ -241,7 +241,7 @@ export class Schema {
 							valid: false,
 							message: `Field ${field} not found in table schema for ${schema.table}`,
 						}
-					}					
+					}
 				}
 			}
 
