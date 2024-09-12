@@ -54,7 +54,7 @@ describe('Query > Find', () => {
 					schema: usersTableSchema,
 					where: [{ column: 'id', operator: WhereOperator.equals, value: '9999' }],
 				})
-				expect(results).toEqual({})
+				expect(results).toBe(null)
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
@@ -123,9 +123,6 @@ describe('Query > Find', () => {
 					schema: usersTableSchema,
 					where: [{ column: 'id', operator: WhereOperator.equals, value: '1' }],
 				})) as FindOneResponseObject
-
-				console.log(results)
-
 				expect(results.id).toEqual(1)
 				expect(results.email).toEqual('test@test.com')
 				expect(results.firstName).toEqual('Jon')

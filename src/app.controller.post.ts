@@ -82,7 +82,6 @@ export class PostController {
 
 		try {
 			const result = await this.query.perform(QueryPerform.CREATE, options)
-
 			return res.status(201).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))

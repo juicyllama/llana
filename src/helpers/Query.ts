@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { MySQL } from '../databases/mysql.database'
+import { AuthType } from '../types/auth.types'
 import {
 	DatabaseCreateOneOptions,
 	DatabaseDeleteOneOptions,
@@ -20,6 +21,7 @@ import {
 	IsUniqueResponse,
 } from '../types/response.types'
 import { Env } from '../utils/Env'
+import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
 
@@ -27,6 +29,7 @@ import { Schema } from './Schema'
 export class Query {
 	constructor(
 		private readonly configService: ConfigService,
+		private readonly encryption: Encryption,
 		private readonly logger: Logger,
 		private readonly schema: Schema,
 		private readonly mysql: MySQL,
@@ -50,25 +53,28 @@ export class Query {
 
 			switch (action) {
 				case QueryPerform.CREATE:
-					result = await this.createOne(options as DatabaseCreateOneOptions)
+					const createOptions = options as DatabaseCreateOneOptions
+					createOptions.data = await this.identityOperationCheck(createOptions)
+					result = await this.createOne(createOptions)
 					return this.schema.pipeResponse(options, result)
 				case QueryPerform.FIND:
-					result = await this.findOne(options as DatabaseFindOneOptions)
+					const findOptions = options as DatabaseFindOneOptions
+					result = await this.findOne(findOptions)
 					if (!result) {
 						return null
 					}
 					return this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
 				case QueryPerform.FIND_MANY:
-					result = await this.findMany(options as DatabaseFindManyOptions)
+					const findManyOptions = options as DatabaseFindManyOptions
+					result = await this.findMany(findManyOptions)
 					for (let i = 0; i < result.data.length; i++) {
-						result.data[i] = await this.schema.pipeResponse(
-							options as DatabaseFindOneOptions,
-							result.data[i],
-						)
+						result.data[i] = await this.schema.pipeResponse(findManyOptions, result.data[i])
 					}
 					return result
 				case QueryPerform.UPDATE:
-					result = await this.updateOne(options as DatabaseUpdateOneOptions)
+					const updateOptions = options as DatabaseUpdateOneOptions
+					updateOptions.data = await this.identityOperationCheck(updateOptions)
+					result = await this.updateOne(updateOptions)
 					return this.schema.pipeResponse(options, result)
 				case QueryPerform.DELETE:
 					return await this.deleteOne(options as DatabaseDeleteOneOptions)
@@ -243,5 +249,25 @@ export class Query {
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
+	}
+
+	/**
+	 * If the table is the user identity table, hash the password
+	 */
+
+	private async identityOperationCheck(options: DatabaseCreateOneOptions | DatabaseUpdateOneOptions): Promise<any> {
+		const jwt_config = this.configService.get<any>('auth').find(auth => auth.type === AuthType.JWT)
+
+		if (options.data[jwt_config.table.columns.password]) {
+			if (options.schema.table === jwt_config.table.name) {
+				options.data[jwt_config.table.columns.password] = await this.encryption.encrypt(
+					jwt_config.table.password.encryption,
+					options.data[jwt_config.table.columns.password],
+					jwt_config.table.password.salt,
+				)
+			}
+		}
+
+		return options.data
 	}
 }

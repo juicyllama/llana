@@ -1,7 +1,7 @@
 import { ConsoleLogger, Injectable, LogLevel } from '@nestjs/common'
 
 import { Env } from '../utils/Env'
-import { Enviroment } from '../utils/Env.types'
+import { Environment } from '../utils/Env.types'
 
 @Injectable()
 export class Logger extends ConsoleLogger {
@@ -58,16 +58,16 @@ export function logLevel(): LogLevel[] {
 	let logLevels: LogLevel[] = ['error', 'warn']
 
 	switch (Env.get()) {
-		case Enviroment.production:
+		case Environment.production:
 			logLevels = <LogLevel[]>process.env.LOG_LEVELS_PROD?.split(',') ?? ['error', 'warn', 'log']
 			break
-		case Enviroment.sandbox:
+		case Environment.sandbox:
 			logLevels = <LogLevel[]>process.env.LOG_LEVELS_SANDBOX?.split(',') ?? ['error', 'warn', 'log', 'debug']
 			break
-		case Enviroment.test:
+		case Environment.test:
 			logLevels = <LogLevel[]>process.env.LOG_LEVELS_TEST?.split(',') ?? ['error', 'warn', 'log']
 			break
-		case Enviroment.development:
+		case Environment.development:
 			logLevels = <LogLevel[]>process.env.LOG_LEVELS_DEV?.split(',') ?? [
 				'error',
 				'warn',

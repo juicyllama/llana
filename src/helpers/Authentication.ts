@@ -8,6 +8,7 @@ import { DatabaseFindOneOptions, DatabaseSchema, QueryPerform, WhereOperator } f
 import { FindManyResponseObject } from '../types/response.types'
 import { Env } from '../utils/Env'
 import { findDotNotation } from '../utils/Find'
+import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
@@ -20,6 +21,7 @@ export class Authentication {
 		private readonly query: Query,
 		private readonly schema: Schema,
 		private readonly jwtService: JwtService,
+		private readonly encryption: Encryption,
 	) {}
 
 	/**
@@ -245,18 +247,19 @@ export class Authentication {
 
 					const result = await this.query.perform(QueryPerform.FIND, options)
 
-					if(!result) {
+					if (!result) {
 						this.logger.debug(`[Authentication][auth] API key not found`, {
-								key: req_api_key,
-								column: api_key_config.column,
-								result,
-							})
-							return { valid: false, message: 'Unauthorized' }
+							key: req_api_key,
+							column: api_key_config.column,
+							result,
+						})
+						return { valid: false, message: 'Unauthorized' }
 					}
 
 					//key does not match - return unauthorized immediately
-					if (!result[api_key_config.column] && findDotNotation(result, api_key_config.column) !==
-							req_api_key
+					if (
+						!result[api_key_config.column] &&
+						findDotNotation(result, api_key_config.column) !== req_api_key
 					) {
 						this.logger.debug(`[Authentication][auth] API key not found`, {
 							key: req_api_key,

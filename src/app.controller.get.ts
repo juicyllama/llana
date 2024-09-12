@@ -103,21 +103,24 @@ export class GetController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
-		try{
-
+		try {
 			//perform role check
 			if (auth.user_identifier) {
 				let permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
 
 				if (!permission.valid) {
-					return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+					return res
+						.status(401)
+						.send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 				}
 
 				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
 					permission = permission as AuthTablePermissionSuccessResponse
 
 					if (permission.restriction.column.includes('.')) {
-						options.relations.concat(await this.schema.convertDeepWhere(permission.restriction, options.schema))
+						options.relations.concat(
+							await this.schema.convertDeepWhere(permission.restriction, options.schema),
+						)
 					} else {
 						options.where.push(permission.restriction)
 					}
@@ -176,8 +179,7 @@ export class GetController {
 					}
 				}
 			}
-
-		}catch (e) {
+		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}
 
@@ -197,7 +199,7 @@ export class GetController {
 		try {
 			const result = await this.query.perform(QueryPerform.FIND, options)
 
-			if(!result) {
+			if (!result) {
 				return res.status(204).send(this.response.text(`No record found for id ${id}`))
 			}
 
@@ -232,21 +234,24 @@ export class GetController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
-		try{
-
+		try {
 			//perform role check
 			if (auth.user_identifier) {
 				let permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
 
 				if (!permission.valid) {
-					return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+					return res
+						.status(401)
+						.send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 				}
 
 				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
 					permission = permission as AuthTablePermissionSuccessResponse
 
 					if (permission.restriction.column.includes('.')) {
-						options.relations.concat(await this.schema.convertDeepWhere(permission.restriction, options.schema))
+						options.relations.concat(
+							await this.schema.convertDeepWhere(permission.restriction, options.schema),
+						)
 					} else {
 						options.where.push(permission.restriction)
 					}
@@ -316,7 +321,7 @@ export class GetController {
 
 				options.sort = validateSort.sort
 			}
-		}catch (e) {
+		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}
 

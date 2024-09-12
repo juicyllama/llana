@@ -1,8 +1,8 @@
-import { faker } from '@faker-js/faker'
 import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 
 import { AppModule } from '../app.module'
+import { UserTestingService } from '../testing/user.testing.service'
 import { DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
 import { DeleteResponseObject, FindOneResponseObject } from '../types/response.types'
 import { Logger, logLevel } from './Logger'
@@ -15,10 +15,13 @@ describe('Query > Delete', () => {
 	let schema: Schema
 	let logger: Logger
 	let usersTableSchema: DatabaseSchema
+	let userTestingService: UserTestingService
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
+			providers: [UserTestingService],
+			exports: [UserTestingService],
 		}).compile()
 
 		app = moduleRef.createNestApplication({
@@ -30,6 +33,7 @@ describe('Query > Delete', () => {
 		logger = app.get<Logger>(Logger)
 
 		usersTableSchema = await schema.getSchema('User')
+		userTestingService = app.get<UserTestingService>(UserTestingService)
 	})
 
 	describe('Hard Deletes', () => {
@@ -48,13 +52,7 @@ describe('Query > Delete', () => {
 
 		it('Valid Id - Hard', async () => {
 			try {
-				const user = (await service.perform(QueryPerform.CREATE, {
-					schema: usersTableSchema,
-					data: {
-						email: faker.internet.email(),
-						password: faker.internet.password(),
-					},
-				})) as FindOneResponseObject
+				const user = await userTestingService.createUser({})
 
 				const results = (await service.perform(QueryPerform.DELETE, {
 					id: user[usersTableSchema.primary_key],
@@ -69,7 +67,7 @@ describe('Query > Delete', () => {
 					],
 				})) as FindOneResponseObject
 
-				expect(JSON.stringify(deleted_record)).toBe('{}')
+				expect(deleted_record).toBe(null)
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
@@ -80,13 +78,7 @@ describe('Query > Delete', () => {
 	describe('Soft Deletes', () => {
 		it('Valid Id - Soft', async () => {
 			try {
-				const user = (await service.perform(QueryPerform.CREATE, {
-					schema: usersTableSchema,
-					data: {
-						email: faker.internet.email(),
-						password: faker.internet.password(),
-					},
-				})) as FindOneResponseObject
+				const user = await userTestingService.createUser({})
 
 				const results = (await service.perform(QueryPerform.DELETE, {
 					id: user[usersTableSchema.primary_key],

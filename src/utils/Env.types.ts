@@ -1,21 +1,21 @@
-export enum Enviroment {
+export enum Environment {
 	production = 'production',
 	sandbox = 'sandbox',
 	development = 'development',
 	test = 'test',
 }
 
-export function fromStringToEnv(env = process.env.NODE_ENV): Enviroment {
+export function fromStringToEnv(env = process.env.NODE_ENV): Environment {
 	switch (env) {
 		case 'production':
-			return Enviroment.production
+			return Environment.production
 		case 'sandbox':
-			return Enviroment.sandbox
+			return Environment.sandbox
 		case 'development':
-			return Enviroment.development
+			return Environment.development
 		case 'test':
-			return Enviroment.test
+			return Environment.test
 		default:
-			return Enviroment.development
+			return Environment.development
 	}
 }

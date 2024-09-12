@@ -2,14 +2,14 @@ import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 
-import { Enviroment, fromStringToEnv } from './Env.types'
+import { Environment, fromStringToEnv } from './Env.types'
 
 export class Env {
 	/**
 	 * Get an enum key based on it's value
 	 */
 
-	static get(): Enviroment {
+	static get(): Environment {
 		return fromStringToEnv()
 	}
 
@@ -18,7 +18,7 @@ export class Env {
 	 */
 
 	static IsProd(): boolean {
-		return this.get() === Enviroment.production
+		return this.get() === Environment.production
 	}
 
 	/**
@@ -26,7 +26,7 @@ export class Env {
 	 */
 
 	static IsDev(): boolean {
-		return this.get() === Enviroment.development
+		return this.get() === Environment.development
 	}
 
 	/**
@@ -34,7 +34,7 @@ export class Env {
 	 */
 
 	static IsTest(): boolean {
-		return this.get() === Enviroment.test
+		return this.get() === Environment.test
 	}
 
 	/**
@@ -42,7 +42,7 @@ export class Env {
 	 */
 
 	static IsNotTest(): boolean {
-		return this.get() !== Enviroment.test
+		return this.get() !== Environment.test
 	}
 
 	/**
@@ -50,7 +50,7 @@ export class Env {
 	 */
 
 	static IsNotProd(): boolean {
-		return this.get() !== Enviroment.production
+		return this.get() !== Environment.production
 	}
 
 	/**
@@ -58,7 +58,7 @@ export class Env {
 	 */
 
 	static IsSandbox(): boolean {
-		return this.get() === Enviroment.sandbox
+		return this.get() === Environment.sandbox
 	}
 
 	//todo allow a .env value to override this if exists
