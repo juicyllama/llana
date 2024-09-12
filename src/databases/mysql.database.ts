@@ -13,13 +13,11 @@ import {
 	DatabaseFindManyOptions,
 	DatabaseFindOneOptions,
 	DatabaseFindTotalRecords,
-	DatabaseJoinStage,
 	DatabaseSchema,
 	DatabaseSchemaColumn,
 	DatabaseSchemaRelation,
 	DatabaseUniqueCheckOptions,
 	DatabaseUpdateOneOptions,
-	DatabaseWhere,
 	WhereOperator,
 } from '../types/database.types'
 import { MySQLColumnType } from '../types/databases/mysql.types'
@@ -169,7 +167,7 @@ export class MySQL {
 			return
 		}
 
-		return this.pipeMySQLToObject({ schema: options.schema, data: results[0] })
+		return this.formatOutput(options, results[0])
 	}
 
 	/**
@@ -203,7 +201,7 @@ export class MySQL {
 		const results = await this.performQuery(command, values)
 
 		for (const r in results) {
-			results[r] = this.pipeMySQLToObject({ schema: options.schema, data: results[r] })
+			results[r] = this.formatOutput(options, results[r])
 		}
 
 		return {
@@ -379,28 +377,39 @@ export class MySQL {
 		const table_name = options.schema.table
 		let values: any[] = []
 
-		console.log(options)
-
-		const fields = options.fields?.length ? options.fields : options.schema.columns.map(column => column.field)
-	
-		for (const f in fields) {
-			if (!fields[f].includes('.')) {
-				fields[f] = `${table_name}.` + fields[f]
-			}
-		}
-
 		let command
 
 		if (count) {
 			command = `SELECT COUNT(*) as total `
 		} else {
-			command = `SELECT ${fields?.length ? fields.join(`, `) : '*'} `
+			command = `SELECT `
+
+			if (options.fields?.length) {
+				for (const f in options.fields) {
+					command += ` \`${options.schema.table}\`.\`${options.fields[f]}\` as \`${options.fields[f]}\`,`
+				}
+				command = command.slice(0, -1)
+			} else {
+				command += ` \`${options.schema.table}\`.* `
+			}
+
+			if (options.relations?.length) {
+				for (const r in options.relations) {
+					if (options.relations[r].columns?.length) {
+						for (const c in options.relations[r].columns) {
+							command += `, \`${options.relations[r].table}\`.\`${options.relations[r].columns[c]}\` as \`${options.relations[r].table}.${options.relations[r].columns[c]}\` `
+						}
+					}
+				}
+			}
 		}
 
-		command += `FROM ${table_name} `
+		command += ` FROM ${table_name} `
 
-		for (const relation of options.relations) {
-			command += `${relation.join.type ?? 'INNER JOIN'} ${relation.join.table} ON ${relation.join.org_table}.${relation.join.org_column} = ${relation.join.table}.${relation.join.column} `	
+		if (options.relations?.length) {
+			for (const relation of options.relations) {
+				command += `${relation.join.type ?? 'INNER JOIN'} ${relation.join.table} ON ${relation.join.org_table}.${relation.join.org_column} = ${relation.join.table}.${relation.join.column} `
+			}
 		}
 
 		if (options.where?.length) {
@@ -519,34 +528,40 @@ export class MySQL {
 		return options
 	}
 
-	private pipeMySQLToObject(options: { schema: DatabaseSchema; data: { [key: string]: any } }): object {
+	private formatOutput(options: DatabaseFindOneOptions, data: { [key: string]: any }): object {
+		//TODO: this will only work for one level deep, need to refactor to work with multiple levels
 
-		//TODO: remove items not in the object, loop over relations and do the same for them... (returning in nice clean json format)
-
-		for (const column of options.schema.columns) {
-			if (!options.data[column.field]) {
-				continue
-			}
-
-			switch (column.type) {
-				case DatabaseColumnType.BOOLEAN:
-					if (options.data[column.field] === 1) {
-						options.data[column.field] = true
-					} else if (options.data[column.field] === 0) {
-						options.data[column.field] = false
-					}
-					break
-				case DatabaseColumnType.DATE:
-					if (options.data[column.field]) {
-						options.data[column.field] = new Date(options.data[column.field]).toISOString()
-					}
-					break
-				default:
-					continue
+		for (const key in data) {
+			if (key.includes('.')) {
+				const [table, field] = key.split('.')
+				const relation = options.relations.find(r => r.table === table)
+				data[key] = this.formatField(relation.schema.columns.find(c => c.field === field).type, data[key])
+			} else {
+				const column = options.schema.columns.find(c => c.field === key)
+				data[key] = this.formatField(column.type, data[key])
 			}
 		}
 
-		return options.data
+		return data
+	}
+
+	/**
+	 *
+	 */
+
+	private formatField(type: DatabaseColumnType, value: any): any {
+		if (value === null) {
+			return null
+		}
+
+		switch (type) {
+			case DatabaseColumnType.BOOLEAN:
+				return value === 1
+			case DatabaseColumnType.DATE:
+				return new Date(value).toISOString()
+			default:
+				return value
+		}
 	}
 
 	async truncate(table_name: string): Promise<void> {

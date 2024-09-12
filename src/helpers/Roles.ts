@@ -167,7 +167,7 @@ export class Roles {
 					operator: WhereOperator.equals,
 					value: identifier,
 				},
-			]
+			],
 		})
 
 		return role?.[config.location.column]

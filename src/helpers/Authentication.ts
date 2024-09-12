@@ -4,9 +4,10 @@ import { JwtService } from '@nestjs/jwt'
 
 import { LLANA_AUTH_TABLE } from '../app.constants'
 import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
-import { DatabaseFindOneOptions, DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from '../types/database.types'
+import { DatabaseFindOneOptions, DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
 import { FindManyResponseObject } from '../types/response.types'
 import { Env } from '../utils/Env'
+import { findDotNotation } from '../utils/Find'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
@@ -201,7 +202,7 @@ export class Authentication {
 
 					const options: DatabaseFindOneOptions = {
 						schema,
-						fields: [`${api_key_config.name}.${identity_column}`, api_key_config.column],
+						fields: [`${api_key_config.name}.${identity_column}`],
 						where: [
 							{
 								column: api_key_config.column,
@@ -212,7 +213,10 @@ export class Authentication {
 						relations: [],
 					}
 
-					const { valid, message, fields, relations } = await this.schema.validateFields(schema, api_key_config.column)
+					const { valid, message, fields, relations } = await this.schema.validateFields(
+						schema,
+						api_key_config.column,
+					)
 					if (!valid) {
 						auth_passed = {
 							valid: false,
@@ -239,22 +243,17 @@ export class Authentication {
 						})
 					}
 
-					let column
-
-					if (api_key_config.column.includes('.')) {
-						const items = api_key_config.column.split('.')
-						column = items[items.length - 1]
-					} else {
-						column = api_key_config.column
-					}
-
 					const result = await this.query.perform(QueryPerform.FIND, options)
 
 					//key does not match - return unauthorized immediately
-					if (!result || !result[column] || result[column] !== req_api_key) {
+					if (
+						!result ||
+						(!result[api_key_config.column] && findDotNotation(result, api_key_config.column)) !==
+							req_api_key
+					) {
 						this.logger.debug(`[Authentication][auth] API key not found`, {
 							key: req_api_key,
-							column,
+							column: api_key_config.column,
 							result,
 						})
 						return { valid: false, message: 'Unauthorized' }

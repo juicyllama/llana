@@ -84,10 +84,15 @@ export class GetController {
 		const table_name = UrlToTable(req.originalUrl, 1)
 		const id = req.params.id
 
-		let schema: DatabaseSchema
+		const options: DatabaseFindOneOptions = {
+			schema: null,
+			fields: [],
+			where: [],
+			relations: [],
+		}
 
 		try {
-			schema = await this.schema.getSchema(table_name)
+			options.schema = await this.schema.getSchema(table_name)
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
@@ -95,13 +100,6 @@ export class GetController {
 		const auth = await this.authentication.auth(req)
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
-		}
-
-		const options: DatabaseFindOneOptions = {
-			schema,
-			fields: [],
-			where: [],
-			relations: [],
 		}
 
 		//perform role check
@@ -116,7 +114,7 @@ export class GetController {
 				permission = permission as AuthTablePermissionSuccessResponse
 
 				if (permission.restriction.column.includes('.')) {
-					options.relations.concat(await this.schema.convertDeepWhere(permission.restriction, schema))
+					options.relations.concat(await this.schema.convertDeepWhere(permission.restriction, options.schema))
 				} else {
 					options.where.push(permission.restriction)
 				}
@@ -124,19 +122,22 @@ export class GetController {
 		}
 
 		//validate :id field
-		const primary_key = this.schema.getPrimaryKey(schema)
+		const primary_key = this.schema.getPrimaryKey(options.schema)
 
 		if (!primary_key) {
 			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
-		const validateKey = await this.schema.validateData(schema, { [primary_key]: id })
+		const validateKey = await this.schema.validateData(options.schema, { [primary_key]: id })
 		if (!validateKey.valid) {
 			return res.status(400).send(this.response.text(validateKey.message))
 		}
 
 		if (req.query.fields) {
-			const { valid, message, fields, relations } = await this.schema.validateFields(schema, req.query.fields)
+			const { valid, message, fields, relations } = await this.schema.validateFields(
+				options.schema,
+				req.query.fields,
+			)
 			if (!valid) {
 				return res.status(400).send(this.response.text(message))
 			}
@@ -156,7 +157,7 @@ export class GetController {
 
 		if (req.query.relations) {
 			const { valid, message, relations } = await this.schema.validateRelations(
-				schema,
+				options.schema,
 				req.query.relations,
 				options.relations,
 			)
@@ -201,10 +202,16 @@ export class GetController {
 	async list(@Req() req, @Res() res): Promise<FindManyResponseObject> {
 		const table_name = UrlToTable(req.originalUrl, 1)
 
-		let schema: DatabaseSchema
+		const options: DatabaseFindManyOptions = {
+			schema: null,
+			fields: [],
+			where: [],
+			relations: [],
+			sort: [],
+		}
 
 		try {
-			schema = await this.schema.getSchema(table_name)
+			options.schema = await this.schema.getSchema(table_name)
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
@@ -212,14 +219,6 @@ export class GetController {
 		const auth = await this.authentication.auth(req)
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
-		}
-
-		const options: DatabaseFindManyOptions = {
-			schema,
-			fields: [],
-			where: [],
-			relations: [],
-			sort: [],
 		}
 
 		//perform role check
@@ -234,7 +233,7 @@ export class GetController {
 				permission = permission as AuthTablePermissionSuccessResponse
 
 				if (permission.restriction.column.includes('.')) {
-					options.relations.concat(await this.schema.convertDeepWhere(permission.restriction, schema))
+					options.relations.concat(await this.schema.convertDeepWhere(permission.restriction, options.schema))
 				} else {
 					options.where.push(permission.restriction)
 				}
@@ -246,7 +245,10 @@ export class GetController {
 		options.offset = offset
 
 		if (req.query.fields) {
-			const { valid, message, fields, relations } = await this.schema.validateFields(schema, req.query.fields)
+			const { valid, message, fields, relations } = await this.schema.validateFields(
+				options.schema,
+				req.query.fields,
+			)
 			if (!valid) {
 				return res.status(400).send(this.response.text(message))
 			}
@@ -266,7 +268,7 @@ export class GetController {
 
 		if (req.query.relations) {
 			const { valid, message, relations } = await this.schema.validateRelations(
-				schema,
+				options.schema,
 				req.query.relations,
 				options.relations,
 			)
@@ -283,7 +285,7 @@ export class GetController {
 			}
 		}
 
-		const validateWhere = await this.schema.validateWhereParams(schema, req.query)
+		const validateWhere = await this.schema.validateWhereParams(options.schema, req.query)
 		if (!validateWhere.valid) {
 			return res.status(400).send(this.response.text(validateWhere.message))
 		}
@@ -294,7 +296,7 @@ export class GetController {
 
 		let validateSort
 		if (req.query.sort) {
-			validateSort = this.schema.validateSort(schema, req.query.sort)
+			validateSort = this.schema.validateSort(options.schema, req.query.sort)
 			if (!validateSort.valid) {
 				return res.status(400).send(this.response.text(validateSort.message))
 			}

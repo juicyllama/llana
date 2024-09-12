@@ -59,9 +59,9 @@ export declare enum ChartsPeriod {
 }
 
 export enum DatabaseJoinType {
-	INNER = 'INNER',
-	LEFT = 'LEFT',
-	RIGHT = 'RIGHT',
+	INNER = 'INNER JOIN',
+	LEFT = 'LEFT JOIN',
+	RIGHT = 'RIGHT JOIN',
 }
 
 export enum DatabaseJoinStage {
@@ -137,6 +137,7 @@ export interface DatabaseRelations {
 	join: DatabaseJoin
 	columns?: string[]
 	where?: DatabaseWhere
+	schema: DatabaseSchema
 }
 
 export interface DatabaseFindOneOptions extends DatabaeseFindOptions {}

@@ -51,22 +51,25 @@ export class Query {
 			switch (action) {
 				case QueryPerform.CREATE:
 					result = await this.createOne(options as DatabaseCreateOneOptions)
-					return this.schema.pipeResponse(options.schema, result)
+					return this.schema.pipeResponse(options, result)
 				case QueryPerform.FIND:
 					result = await this.findOne(options as DatabaseFindOneOptions)
 					if (!result) {
 						return {}
 					}
-					return this.schema.pipeResponse(options.schema, result)
+					return this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
 				case QueryPerform.FIND_MANY:
 					result = await this.findMany(options as DatabaseFindManyOptions)
 					for (let i = 0; i < result.data.length; i++) {
-						result.data[i] = await this.schema.pipeResponse(options.schema, result.data[i])
+						result.data[i] = await this.schema.pipeResponse(
+							options as DatabaseFindOneOptions,
+							result.data[i],
+						)
 					}
 					return result
 				case QueryPerform.UPDATE:
 					result = await this.updateOne(options as DatabaseUpdateOneOptions)
-					return this.schema.pipeResponse(options.schema, result)
+					return this.schema.pipeResponse(options, result)
 				case QueryPerform.DELETE:
 					return await this.deleteOne(options as DatabaseDeleteOneOptions)
 				case QueryPerform.UNIQUE:

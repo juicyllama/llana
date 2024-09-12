@@ -7,20 +7,20 @@ import { AppModule } from '../app.module'
 import { CUSTOMER } from '../testing/customer.testing.service'
 import { DatabaseSchema, QueryPerform } from '../types/database.types'
 import { CustomRole, DefaultRole, RolePermission } from '../types/roles.types'
-import { Logger } from './Logger'
+//import { Logger } from './Logger'
 import { Query } from './Query'
-import { Roles } from './Roles'
+//import { Roles } from './Roles'
 import { Schema } from './Schema'
 
 describe('Roles', () => {
 	let app: INestApplication
-	let service: Roles
-	let logger: Logger
+	//let service: Roles
+	//let logger: Logger
 	let query: Query
 	let schema: Schema
 
 	let llanaRolesTableSchema: DatabaseSchema
-	let customerTableSchema: DatabaseSchema
+	//let customerTableSchema: DatabaseSchema
 	let role_record: DefaultRole | CustomRole
 
 	beforeEach(async () => {
@@ -32,13 +32,13 @@ describe('Roles', () => {
 		await app.listen(3050)
 		await app.init()
 
-		service = app.get<Roles>(Roles)
+		//service = app.get<Roles>(Roles)
 		schema = app.get<Schema>(Schema)
-		logger = app.get<Logger>(Logger)
+		//logger = app.get<Logger>(Logger)
 		query = app.get<Query>(Query)
 
 		llanaRolesTableSchema = await schema.getSchema(LLANA_ROLES_TABLE)
-		customerTableSchema = await schema.getSchema('Customer')
+		//customerTableSchema = await schema.getSchema('Customer')
 
 		const home = await request(app.getHttpServer()).get('/').expect(200)
 
