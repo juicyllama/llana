@@ -25,18 +25,19 @@ export class DeleteController {
 
 	@Delete('*/:id')
 	async deleteById(@Req() req, @Res() res): Promise<DeleteResponseObject> {
+		const x_request_id = req.headers['x-request-id'] as string
 		const table_name = UrlToTable(req.originalUrl, 1)
 		const id = req.params.id
 
 		let schema: DatabaseSchema
 
 		try {
-			schema = await this.schema.getSchema(table_name)
+			schema = await this.schema.getSchema({ table: table_name, x_request_id })
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth(req)
+		const auth = await this.authentication.auth({ req, x_request_id })
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
@@ -46,7 +47,12 @@ export class DeleteController {
 		const role_where = []
 
 		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.DELETE)
+			const permission = await this.roles.tablePermission({
+				identifier: auth.user_identifier,
+				table: table_name,
+				access: RolePermission.DELETE,
+				x_request_id,
+			})
 
 			if (!permission.valid) {
 				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
@@ -83,10 +89,14 @@ export class DeleteController {
 
 		//Check record exists
 
-		const record = await this.query.perform(QueryPerform.FIND, {
-			schema,
-			where,
-		})
+		const record = await this.query.perform(
+			QueryPerform.FIND,
+			{
+				schema,
+				where,
+			},
+			x_request_id,
+		)
 
 		if (!record) {
 			return res.status(400).send(this.response.text(`Record with id ${id} not found`))
@@ -103,11 +113,15 @@ export class DeleteController {
 
 		try {
 			return res.status(200).send(
-				await this.query.perform(QueryPerform.DELETE, {
-					id: id,
-					schema,
-					softDelete,
-				}),
+				await this.query.perform(
+					QueryPerform.DELETE,
+					{
+						id: id,
+						schema,
+						softDelete,
+					},
+					x_request_id,
+				),
 			)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))

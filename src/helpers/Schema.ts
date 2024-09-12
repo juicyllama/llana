@@ -37,23 +37,33 @@ export class Schema {
 	 * Get Table Schema
 	 */
 
-	async getSchema(table_name: string): Promise<DatabaseSchema> {
-		if (!table_name) {
+	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
+		if (!options.table) {
 			throw new Error('Table name not provided')
 		}
 
 		try {
+			let result: DatabaseSchema
+
 			switch (this.configService.get<string>('database.type')) {
 				case DatabaseType.MYSQL:
-					return await this.mysql.getSchema(table_name)
+					result = await this.mysql.getSchema({ table: options.table, x_request_id: options.x_request_id })
+					break
 				default:
 					this.logger.error(
-						`[Query][GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+						`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Query][GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`,
 					)
 			}
+
+			return {
+				...result,
+				_x_request_id: options.x_request_id,
+			}
 		} catch (e) {
-			this.logger.error(`[Query][GetSchema] ${e.message}`)
-			throw new Error(`Error processing schema for ${table_name}`)
+			this.logger.error(
+				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Query][GetSchema] ${e.message}`,
+			)
+			throw new Error(`Error processing schema for ${options.table}`)
 		}
 	}
 
@@ -125,7 +135,11 @@ export class Schema {
 	 *
 	 */
 
-	async pipeResponse(options: DatabaseFindOneOptions, data: { [key: string]: any }): Promise<object> {
+	async pipeResponse(
+		options: DatabaseFindOneOptions,
+		data: { [key: string]: any },
+		x_request_id?: string,
+	): Promise<object> {
 		const nestedObject = {}
 
 		Object.keys(data).forEach(key => {
@@ -152,7 +166,9 @@ export class Schema {
 					const errors = await validate(instance)
 
 					if (errors.length > 0) {
-						this.logger.error(`[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`)
+						this.logger.error(
+							`${x_request_id ? '[' + x_request_id + ']' : ''}[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`,
+						)
 						this.logger.error({
 							data,
 							instance,
@@ -174,7 +190,9 @@ export class Schema {
 			const errors = await validate(instance)
 
 			if (errors.length > 0) {
-				this.logger.error(`[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`)
+				this.logger.error(
+					`${x_request_id ? '[' + x_request_id + ']' : ''}[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`,
+				)
 				this.logger.error({
 					data,
 					instance,
@@ -221,25 +239,34 @@ export class Schema {
 		}
 	}
 
-	async validateFields(schema: DatabaseSchema, fields: string): Promise<ValidateFieldsResponse> {
+	async validateFields(options: {
+		schema: DatabaseSchema
+		fields: string
+		x_request_id?: string
+	}): Promise<ValidateFieldsResponse> {
 		try {
 			const validated: string[] = []
 			let relations: DatabaseRelations[] = []
 
-			for (const field of fields.split(',')) {
+			for (const field of options.fields.split(',')) {
 				if (field === '') {
 					continue
 				}
 
 				if (field.includes('.')) {
-					relations = await this.convertDeepField(field, schema, relations)
+					relations = await this.convertDeepField({
+						field,
+						schema: options.schema,
+						relations,
+						x_request_id: options.x_request_id,
+					})
 				} else {
-					if (this.validateField(schema, field)) {
+					if (this.validateField(options.schema, field)) {
 						validated.push(field)
 					} else {
 						return {
 							valid: false,
-							message: `Field ${field} not found in table schema for ${schema.table}`,
+							message: `Field ${field} not found in table schema for ${options.schema.table}`,
 						}
 					}
 				}
@@ -251,10 +278,12 @@ export class Schema {
 				relations,
 			}
 		} catch (e) {
-			this.logger.debug(`[validateFields] ${e.message}`)
+			this.logger.debug(
+				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[validateFields] ${e.message}`,
+			)
 			return {
 				valid: false,
-				message: `Error parsing fields ${fields}`,
+				message: `Error parsing fields ${options.fields}`,
 			}
 		}
 	}
@@ -267,42 +296,50 @@ export class Schema {
 	 * Validate relations by ensuring that the relation exists in the schema
 	 */
 
-	async validateRelations(
-		schema: DatabaseSchema,
-		relation_query: string,
-		existing_relations: DatabaseRelations[],
-	): Promise<validateRelationsResponse> {
+	async validateRelations(options: {
+		schema: DatabaseSchema
+		relation_query: string
+		existing_relations: DatabaseRelations[]
+		x_request_id?: string
+	}): Promise<validateRelationsResponse> {
 		try {
-			const relations = relation_query.split(',')
+			const relations = options.relation_query.split(',')
 
 			for (const relation of relations) {
 				if (relation.includes('.')) {
-					const relations = await this.convertDeepRelation(relation, schema)
+					const relations = await this.convertDeepRelation({
+						relation,
+						schema: options.schema,
+						x_request_id: options.x_request_id,
+					})
 
 					for (const rel of relations) {
-						if (existing_relations.find(relation => relation.table === rel.table)) {
+						if (options.existing_relations.find(relation => relation.table === rel.table)) {
 							continue
 						}
-						existing_relations.push(rel)
+						options.existing_relations.push(rel)
 					}
 				} else {
-					if (!schema.relations.find(col => col.table === relation)) {
+					if (!options.schema.relations.find(col => col.table === relation)) {
 						return {
 							valid: false,
-							message: `Relation ${relation} not found in table schema for ${schema.table} `,
+							message: `Relation ${relation} not found in table schema for ${options.schema.table} `,
 						}
 					}
 
-					if (existing_relations.find(rel => rel.table === relation)) {
+					if (options.existing_relations.find(rel => rel.table === relation)) {
 						continue
 					}
 
-					const relation_schema = await this.getSchema(relation)
+					const relation_schema = await this.getSchema({
+						table: relation,
+						x_request_id: options.x_request_id,
+					})
 
-					existing_relations.push({
+					options.existing_relations.push({
 						table: relation,
 						join: {
-							...schema.relations.find(col => col.table === relation),
+							...options.schema.relations.find(col => col.table === relation),
 							type: DatabaseJoinType.INNER,
 						},
 						columns: relation_schema.columns.map(col => col.field),
@@ -313,13 +350,15 @@ export class Schema {
 
 			return {
 				valid: true,
-				relations: existing_relations,
+				relations: options.existing_relations,
 			}
 		} catch (e) {
-			this.logger.debug(`[validateRelations] ${e.message}`)
+			this.logger.debug(
+				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[validateRelations] ${e.message}`,
+			)
 			return {
 				valid: false,
-				message: `Error parsing relations ${relation_query}`,
+				message: `Error parsing relations ${options.relation_query}`,
 			}
 		}
 	}
@@ -330,10 +369,10 @@ export class Schema {
 	 * Example: ?id[equals]=1&name=John&age[gte]=21
 	 */
 
-	async validateWhereParams(schema: DatabaseSchema, params: any): Promise<validateWhereResponse> {
+	async validateWhereParams(options: { schema: DatabaseSchema; params: any }): Promise<validateWhereResponse> {
 		const where: DatabaseWhere[] = []
 
-		for (const param in params) {
+		for (const param in options.params) {
 			if (NON_FIELD_PARAMS.includes(param)) continue
 
 			const column = param
@@ -341,19 +380,19 @@ export class Schema {
 			let operator: WhereOperator
 			let value: any
 
-			switch (typeof params[param]) {
+			switch (typeof options.params[param]) {
 				case 'string':
 					operator = WhereOperator.equals
-					value = params[param]
+					value = options.params[param]
 					break
 				case 'object':
-					const operators = Object.keys(params[param]) as WhereOperator[]
+					const operators = Object.keys(options.params[param]) as WhereOperator[]
 					operator = operators[0]
 
 					if (!operator) {
 						operator = WhereOperator.equals
 					}
-					value = params[param][operator]
+					value = options.params[param][operator]
 					operator = WhereOperator[operator]
 					break
 
@@ -368,7 +407,7 @@ export class Schema {
 				continue
 			}
 
-			if (!schema.columns.find(col => col.field === column)) {
+			if (!options.schema.columns.find(col => col.field === column)) {
 				return {
 					valid: false,
 					message: `Column ${column} not found in schema`,
@@ -382,7 +421,7 @@ export class Schema {
 				}
 			}
 
-			const validation = await this.validateData(schema, { [column]: value })
+			const validation = await this.validateData(options.schema, { [column]: value })
 
 			if (!validation.valid) {
 				return validation
@@ -409,8 +448,8 @@ export class Schema {
 	 * Example: ?sort=name.asc,id.desc,content.title.asc
 	 */
 
-	validateSort(schema: DatabaseSchema, sort: string): ValidateSortResponse {
-		const array = sort?.split(',')?.filter(sort => !sort.includes('.'))
+	validateSort(options: { schema: DatabaseSchema; sort: string }): ValidateSortResponse {
+		const array = options.sort?.split(',')?.filter(sort => !sort.includes('.'))
 
 		for (const item of array) {
 			const direction = item.lastIndexOf('.')
@@ -433,7 +472,7 @@ export class Schema {
 
 			const column = item.substring(0, direction)
 
-			if (!schema.columns.find(col => col.field === column)) {
+			if (!options.schema.columns.find(col => col.field === column)) {
 				return {
 					valid: false,
 					message: `Column ${column} not found in schema`,
@@ -443,7 +482,7 @@ export class Schema {
 
 		return {
 			valid: true,
-			sort: this.createSortArray(sort),
+			sort: this.createSortArray(options.sort),
 		}
 	}
 
@@ -451,34 +490,39 @@ export class Schema {
 	 * Convert where into where and relations
 	 */
 
-	async convertDeepWhere(where: DatabaseWhere, schema: DatabaseSchema): Promise<DatabaseRelations[]> {
+	async convertDeepWhere(options: {
+		where: DatabaseWhere
+		schema: DatabaseSchema
+		x_request_id?: string
+	}): Promise<DatabaseRelations[]> {
 		const relations: DatabaseRelations[] = []
 
 		//deconstruct the column to create the relations of each table in the items object
-		let items = where.column.split('.')
+		let items = options.where.column.split('.')
 
 		for (let i = 0; i < items.length - 1; i++) {
-			
-			if (!schema.relations.find(col => col.table === items[i])) {
-				this.logger.error(`Relation ${items[i]} not found in schema for ${schema.table}`)
-				throw new Error(`Relation ${items[i]} not found in schema for ${schema.table}`)
+			if (!options.schema.relations.find(col => col.table === items[i])) {
+				this.logger.error(
+					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}Relation ${items[i]} not found in schema for ${options.schema.table}`,
+				)
+				throw new Error(`Relation ${items[i]} not found in schema for ${options.schema.table}`)
 			}
 
-			const relation_schema = await this.getSchema(items[i])
+			const relation_schema = await this.getSchema({ table: items[i], x_request_id: options.x_request_id })
 
 			const relation = {
 				table: items[i],
 				join: {
-					...schema.relations.find(col => col.table === items[i]),
+					...options.schema.relations.find(col => col.table === items[i]),
 					type: DatabaseJoinType.INNER,
 				},
-				where: i === items.length - 2 ? where : undefined,
+				where: i === items.length - 2 ? options.where : undefined,
 				schema: relation_schema,
 			}
 
 			relations.push(relation)
 
-			schema = relation_schema
+			options.schema = relation_schema
 		}
 
 		return relations
@@ -488,32 +532,35 @@ export class Schema {
 	 * Convert where into where and relations
 	 */
 
-	async convertDeepField(
-		field: string,
-		schema: DatabaseSchema,
-		relations: DatabaseRelations[],
-	): Promise<DatabaseRelations[]> {
+	async convertDeepField(options: {
+		field: string
+		schema: DatabaseSchema
+		relations: DatabaseRelations[]
+		x_request_id?: string
+	}): Promise<DatabaseRelations[]> {
 		//deconstruct the column to create the relations of each table in the items object
-		let items = field.split('.')
+		let items = options.field.split('.')
 
 		for (let i = 0; i < items.length - 1; i++) {
-			if (!schema.relations.find(col => col.table === items[i])) {
-				this.logger.error(`Relation ${items[i]} not found in schema for ${schema.table}`)
-				throw new Error(`Relation ${items[i]} not found in schema for ${schema.table}`)
+			if (!options.schema.relations.find(col => col.table === items[i])) {
+				this.logger.error(
+					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}Relation ${items[i]} not found in schema for ${options.schema.table}`,
+				)
+				throw new Error(`Relation ${items[i]} not found in schema for ${options.schema.table}`)
 			}
 
-			const relation_schema = await this.getSchema(items[i])
+			const relation_schema = await this.getSchema({ table: items[i], x_request_id: options.x_request_id })
 
-			if (relations.find(rel => rel.table === items[i])) {
-				const index = relations.findIndex(rel => rel.table === items[i])
+			if (options.relations.find(rel => rel.table === items[i])) {
+				const index = options.relations.findIndex(rel => rel.table === items[i])
 				if (i === items.length - 2) {
-					relations[index].columns.push(items[items.length - 1])
+					options.relations[index].columns.push(items[items.length - 1])
 				}
 			} else {
-				relations.push({
+				options.relations.push({
 					table: items[i],
 					join: {
-						...schema.relations.find(col => col.table === items[i]),
+						...options.schema.relations.find(col => col.table === items[i]),
 						type: DatabaseJoinType.INNER,
 					},
 					columns: i === items.length - 2 ? [items[items.length - 1]] : undefined,
@@ -521,41 +568,47 @@ export class Schema {
 				})
 			}
 
-			schema = relation_schema
+			options.schema = relation_schema
 		}
 
-		return relations
+		return options.relations
 	}
 
 	/**
 	 * Convert relation into relations
 	 */
 
-	async convertDeepRelation(relation: string, schema: DatabaseSchema): Promise<DatabaseRelations[]> {
+	async convertDeepRelation(options: {
+		relation: string
+		schema: DatabaseSchema
+		x_request_id?: string
+	}): Promise<DatabaseRelations[]> {
 		const relations: DatabaseRelations[] = []
 
 		//deconstruct the column to create the relations of each table in the items object
-		let items = relation.split('.')
+		let items = options.relation.split('.')
 
 		for (let i = 0; i < items.length - 1; i++) {
-			if (!schema.relations.find(col => col.table === items[i])) {
-				this.logger.error(`Relation ${items[i]} not found in schema for ${schema.table}`)
-				throw new Error(`Relation ${items[i]} not found in schema for ${schema.table}`)
+			if (!options.schema.relations.find(col => col.table === items[i])) {
+				this.logger.error(
+					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}Relation ${items[i]} not found in schema for ${options.schema.table}`,
+				)
+				throw new Error(`Relation ${items[i]} not found in schema for ${options.schema.table}`)
 			}
 
-			const relation_schema = await this.getSchema(items[i])
+			const relation_schema = await this.getSchema({ table: items[i], x_request_id: options.x_request_id })
 
 			relations.push({
 				table: items[i],
 				join: {
-					...schema.relations.find(col => col.table === items[i]),
+					...options.schema.relations.find(col => col.table === items[i]),
 					type: DatabaseJoinType.INNER,
 				},
 				columns: i === items.length - 1 ? [items[items.length]] : undefined,
 				schema: relation_schema,
 			})
 
-			schema = relation_schema
+			options.schema = relation_schema
 		}
 
 		return relations

@@ -18,16 +18,18 @@ export class AppBootup implements OnApplicationBootstrap {
 	) {}
 
 	async onApplicationBootstrap() {
+		const x_request_id = 'bootup'
+
 		try {
 			const table = this.configService.get<string>('AUTH_USER_TABLE_NAME') ?? 'User'
-			await this.schema.getSchema(table)
+			await this.schema.getSchema({ table: table, x_request_id })
 		} catch (e) {
 			this.logger.error(`Database Connection Error - ${e.message}`)
 			throw new Error('Database Connection Error')
 		}
 
 		try {
-			await this.schema.getSchema(LLANA_AUTH_TABLE)
+			await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id })
 		} catch (e) {
 			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist - ${e.message}`)
 
@@ -87,11 +89,11 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
-			await this.query.createTable(schema)
+			await this.query.createTable(schema, x_request_id)
 		}
 
 		try {
-			await this.schema.getSchema(LLANA_ROLES_TABLE)
+			await this.schema.getSchema({ table: LLANA_ROLES_TABLE, x_request_id })
 		} catch (e) {
 			this.logger.log(`Creating ${LLANA_ROLES_TABLE} schema as it does not exist - ${e.message}`)
 
@@ -181,7 +183,7 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
-			await this.query.createTable(schema)
+			await this.query.createTable(schema, x_request_id)
 
 			const default_roles: DefaultRole[] = [
 				{
@@ -252,17 +254,25 @@ export class AppBootup implements OnApplicationBootstrap {
 			]
 
 			for (const default_role of default_roles) {
-				await this.query.perform(QueryPerform.CREATE, {
-					schema,
-					data: default_role,
-				})
+				await this.query.perform(
+					QueryPerform.CREATE,
+					{
+						schema,
+						data: default_role,
+					},
+					x_request_id,
+				)
 			}
 
 			for (const custom_role of custom_roles) {
-				await this.query.perform(QueryPerform.CREATE, {
-					schema,
-					data: custom_role,
-				})
+				await this.query.perform(
+					QueryPerform.CREATE,
+					{
+						schema,
+						data: custom_role,
+					},
+					x_request_id,
+				)
 			}
 		}
 	}

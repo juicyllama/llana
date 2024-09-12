@@ -20,7 +20,7 @@ export class LoginService {
 		private readonly schema: Schema,
 	) {}
 
-	async signIn(username: string, pass: string): Promise<{ access_token: string; id: any }> {
+	async signIn(username: string, pass: string, x_request_id?: string): Promise<{ access_token: string; id: any }> {
 		if (!username) {
 			throw new BadRequestException('Username is required')
 		}
@@ -40,7 +40,7 @@ export class LoginService {
 
 		let schema: DatabaseSchema
 		try {
-			schema = await this.schema.getSchema(jwtAuthConfig.table.name)
+			schema = await this.schema.getSchema({ table: jwtAuthConfig.table.name, x_request_id })
 		} catch (e) {
 			this.logger.error(e)
 			throw new UnauthorizedException()
@@ -61,10 +61,14 @@ export class LoginService {
 			})
 		}
 
-		const user = await this.query.perform(QueryPerform.FIND, {
-			schema,
-			where,
-		})
+		const user = await this.query.perform(
+			QueryPerform.FIND,
+			{
+				schema,
+				where,
+			},
+			x_request_id,
+		)
 
 		if (!user) {
 			throw new UnauthorizedException()

@@ -23,6 +23,7 @@ export class PutController {
 
 	@Put('*/:id')
 	async updateById(@Req() req, @Res() res): Promise<FindOneResponseObject> {
+		const x_request_id = req.headers['x-request-id'] as string
 		const table_name = UrlToTable(req.originalUrl, 1)
 		const id = req.params.id
 		const body = req.body
@@ -30,12 +31,12 @@ export class PutController {
 		let schema: DatabaseSchema
 
 		try {
-			schema = await this.schema.getSchema(table_name)
+			schema = await this.schema.getSchema({ table: table_name, x_request_id })
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth(req)
+		const auth = await this.authentication.auth({ req, x_request_id })
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
@@ -45,7 +46,12 @@ export class PutController {
 		const role_where = []
 
 		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.WRITE)
+			const permission = await this.roles.tablePermission({
+				identifier: auth.user_identifier,
+				table: table_name,
+				access: RolePermission.WRITE,
+				x_request_id,
+			})
 
 			if (!permission.valid) {
 				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
@@ -75,11 +81,15 @@ export class PutController {
 		}
 
 		//validate uniqueness
-		const uniqueValidation = (await this.query.perform(QueryPerform.UNIQUE, {
-			schema,
-			data: body,
-			id: id,
-		})) as IsUniqueResponse
+		const uniqueValidation = (await this.query.perform(
+			QueryPerform.UNIQUE,
+			{
+				schema,
+				data: body,
+				id: id,
+			},
+			x_request_id,
+		)) as IsUniqueResponse
 		if (!uniqueValidation.valid) {
 			return res.status(400).send(this.response.text(uniqueValidation.message))
 		}
@@ -98,10 +108,14 @@ export class PutController {
 
 		//Check record exists
 
-		const record = await this.query.perform(QueryPerform.FIND, {
-			schema,
-			where,
-		})
+		const record = await this.query.perform(
+			QueryPerform.FIND,
+			{
+				schema,
+				where,
+			},
+			x_request_id,
+		)
 
 		if (!record) {
 			return res.status(400).send(this.response.text(`Record with id ${id} not found`))
@@ -109,11 +123,15 @@ export class PutController {
 
 		try {
 			return res.status(200).send(
-				await this.query.perform(QueryPerform.UPDATE, {
-					id: id,
-					schema,
-					data: validate.instance,
-				}),
+				await this.query.perform(
+					QueryPerform.UPDATE,
+					{
+						id: id,
+						schema,
+						data: validate.instance,
+					},
+					x_request_id,
+				),
 			)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))

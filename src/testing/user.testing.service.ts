@@ -19,14 +19,18 @@ export class UserTestingService {
 	) {}
 
 	async createUser(user: any): Promise<any> {
-		const userTableSchema = await this.schema.getSchema('User')
+		const userTableSchema = await this.schema.getSchema({ table: 'User', x_request_id: 'testing' })
 
-		return (await this.query.perform(QueryPerform.CREATE, {
-			schema: userTableSchema,
-			data: {
-				...USER,
-				...user,
+		return (await this.query.perform(
+			QueryPerform.CREATE,
+			{
+				schema: userTableSchema,
+				data: {
+					...USER,
+					...user,
+				},
 			},
-		})) as FindOneResponseObject
+			'testing',
+		)) as FindOneResponseObject
 	}
 }

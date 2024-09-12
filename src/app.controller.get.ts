@@ -52,24 +52,31 @@ export class GetController {
 
 	@Get('*/schema')
 	async schama(@Req() req, @Res() res): Promise<DatabaseSchema> {
+		const x_request_id = req.headers['x-request-id'] as string
+
 		const table_name = UrlToTable(req.originalUrl, 1)
 
 		let schema: DatabaseSchema
 
 		try {
-			schema = await this.schema.getSchema(table_name)
+			schema = await this.schema.getSchema({ table: table_name, x_request_id })
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth(req)
+		const auth = await this.authentication.auth({ req, x_request_id })
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
 		//perform role check
 		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
+			const permission = await this.roles.tablePermission({
+				identifier: auth.user_identifier,
+				table: table_name,
+				access: RolePermission.READ,
+				x_request_id,
+			})
 
 			if (!permission.valid) {
 				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
@@ -81,6 +88,7 @@ export class GetController {
 
 	@Get('*/:id')
 	async getById(@Req() req, @Res() res): Promise<FindOneResponseObject> {
+		const x_request_id = req.headers['x-request-id'] as string
 		const table_name = UrlToTable(req.originalUrl, 1)
 		const id = req.params.id
 		let primary_key
@@ -93,12 +101,12 @@ export class GetController {
 		}
 
 		try {
-			options.schema = await this.schema.getSchema(table_name)
+			options.schema = await this.schema.getSchema({ table: table_name, x_request_id })
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth(req)
+		const auth = await this.authentication.auth({ req, x_request_id })
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
@@ -106,7 +114,12 @@ export class GetController {
 		try {
 			//perform role check
 			if (auth.user_identifier) {
-				let permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
+				let permission = await this.roles.tablePermission({
+					identifier: auth.user_identifier,
+					table: table_name,
+					access: RolePermission.READ,
+					x_request_id,
+				})
 
 				if (!permission.valid) {
 					return res
@@ -119,7 +132,11 @@ export class GetController {
 
 					if (permission.restriction.column.includes('.')) {
 						options.relations.concat(
-							await this.schema.convertDeepWhere(permission.restriction, options.schema),
+							await this.schema.convertDeepWhere({
+								where: permission.restriction,
+								schema: options.schema,
+								x_request_id,
+							}),
 						)
 					} else {
 						options.where.push(permission.restriction)
@@ -140,10 +157,11 @@ export class GetController {
 			}
 
 			if (req.query.fields) {
-				const { valid, message, fields, relations } = await this.schema.validateFields(
-					options.schema,
-					req.query.fields,
-				)
+				const { valid, message, fields, relations } = await this.schema.validateFields({
+					schema: options.schema,
+					fields: req.query.fields,
+					x_request_id,
+				})
 				if (!valid) {
 					return res.status(400).send(this.response.text(message))
 				}
@@ -162,11 +180,12 @@ export class GetController {
 			}
 
 			if (req.query.relations) {
-				const { valid, message, relations } = await this.schema.validateRelations(
-					options.schema,
-					req.query.relations,
-					options.relations,
-				)
+				const { valid, message, relations } = await this.schema.validateRelations({
+					schema: options.schema,
+					relation_query: req.query.relations,
+					existing_relations: options.relations,
+					x_request_id,
+				})
 				if (!valid) {
 					return res.status(400).send(this.response.text(message))
 				}
@@ -197,7 +216,7 @@ export class GetController {
 		}
 
 		try {
-			const result = await this.query.perform(QueryPerform.FIND, options)
+			const result = await this.query.perform(QueryPerform.FIND, options, x_request_id)
 
 			if (!result) {
 				return res.status(204).send(this.response.text(`No record found for id ${id}`))
@@ -213,6 +232,7 @@ export class GetController {
 
 	@Get('*/')
 	async list(@Req() req, @Res() res): Promise<FindManyResponseObject> {
+		const x_request_id = req.headers['x-request-id'] as string
 		const table_name = UrlToTable(req.originalUrl, 1)
 
 		const options: DatabaseFindManyOptions = {
@@ -224,12 +244,12 @@ export class GetController {
 		}
 
 		try {
-			options.schema = await this.schema.getSchema(table_name)
+			options.schema = await this.schema.getSchema({ table: table_name, x_request_id })
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth(req)
+		const auth = await this.authentication.auth({ req, x_request_id })
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
@@ -237,7 +257,12 @@ export class GetController {
 		try {
 			//perform role check
 			if (auth.user_identifier) {
-				let permission = await this.roles.tablePermission(auth.user_identifier, table_name, RolePermission.READ)
+				let permission = await this.roles.tablePermission({
+					identifier: auth.user_identifier,
+					table: table_name,
+					access: RolePermission.READ,
+					x_request_id,
+				})
 
 				if (!permission.valid) {
 					return res
@@ -250,7 +275,11 @@ export class GetController {
 				if (permission.valid && permission.restriction) {
 					if (permission.restriction.column.includes('.')) {
 						options.relations = options.relations.concat(
-							await this.schema.convertDeepWhere(permission.restriction, options.schema),
+							await this.schema.convertDeepWhere({
+								where: permission.restriction,
+								schema: options.schema,
+								x_request_id,
+							}),
 						)
 					} else {
 						options.where.push(permission.restriction)
@@ -263,10 +292,11 @@ export class GetController {
 			options.offset = offset
 
 			if (req.query.fields) {
-				const { valid, message, fields, relations } = await this.schema.validateFields(
-					options.schema,
-					req.query.fields,
-				)
+				const { valid, message, fields, relations } = await this.schema.validateFields({
+					schema: options.schema,
+					fields: req.query.fields,
+					x_request_id,
+				})
 				if (!valid) {
 					return res.status(400).send(this.response.text(message))
 				}
@@ -285,11 +315,12 @@ export class GetController {
 			}
 
 			if (req.query.relations) {
-				const { valid, message, relations } = await this.schema.validateRelations(
-					options.schema,
-					req.query.relations,
-					options.relations,
-				)
+				const { valid, message, relations } = await this.schema.validateRelations({
+					schema: options.schema,
+					relation_query: req.query.relations,
+					existing_relations: options.relations,
+					x_request_id,
+				})
 				if (!valid) {
 					return res.status(400).send(this.response.text(message))
 				}
@@ -303,7 +334,7 @@ export class GetController {
 				}
 			}
 
-			const validateWhere = await this.schema.validateWhereParams(options.schema, req.query)
+			const validateWhere = await this.schema.validateWhereParams({ schema: options.schema, params: req.query })
 			if (!validateWhere.valid) {
 				return res.status(400).send(this.response.text(validateWhere.message))
 			}
@@ -314,7 +345,7 @@ export class GetController {
 
 			let validateSort
 			if (req.query.sort) {
-				validateSort = this.schema.validateSort(options.schema, req.query.sort)
+				validateSort = this.schema.validateSort({ schema: options.schema, sort: req.query.sort })
 				if (!validateSort.valid) {
 					return res.status(400).send(this.response.text(validateSort.message))
 				}
@@ -333,7 +364,7 @@ export class GetController {
 		}
 
 		try {
-			return res.status(200).send(await this.query.perform(QueryPerform.FIND_MANY, options))
+			return res.status(200).send(await this.query.perform(QueryPerform.FIND_MANY, options, x_request_id))
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}

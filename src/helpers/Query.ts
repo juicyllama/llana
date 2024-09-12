@@ -44,9 +44,12 @@ export class Query {
 			| DatabaseUpdateOneOptions
 			| DatabaseDeleteOneOptions
 			| DatabaseUniqueCheckOptions,
+		x_request_id?: string,
 	): Promise<FindOneResponseObject | FindManyResponseObject | IsUniqueResponse | DeleteResponseObject> {
 		const table_name = options.schema.table
-		this.logger.debug(`[Query][${action}][${table_name}]`, options)
+		this.logger.debug(
+			`${x_request_id ? '[' + x_request_id + ']' : ''}[Query][${action.toUpperCase()}][${table_name}] Performing action: ${JSON.stringify(options)}`,
+		)
 
 		try {
 			let result
@@ -55,18 +58,18 @@ export class Query {
 				case QueryPerform.CREATE:
 					const createOptions = options as DatabaseCreateOneOptions
 					createOptions.data = await this.identityOperationCheck(createOptions)
-					result = await this.createOne(createOptions)
+					result = await this.createOne(createOptions, x_request_id)
 					return this.schema.pipeResponse(options, result)
 				case QueryPerform.FIND:
 					const findOptions = options as DatabaseFindOneOptions
-					result = await this.findOne(findOptions)
+					result = await this.findOne(findOptions, x_request_id)
 					if (!result) {
 						return null
 					}
 					return this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
 				case QueryPerform.FIND_MANY:
 					const findManyOptions = options as DatabaseFindManyOptions
-					result = await this.findMany(findManyOptions)
+					result = await this.findMany(findManyOptions, x_request_id)
 					for (let i = 0; i < result.data.length; i++) {
 						result.data[i] = await this.schema.pipeResponse(findManyOptions, result.data[i])
 					}
@@ -74,18 +77,22 @@ export class Query {
 				case QueryPerform.UPDATE:
 					const updateOptions = options as DatabaseUpdateOneOptions
 					updateOptions.data = await this.identityOperationCheck(updateOptions)
-					result = await this.updateOne(updateOptions)
+					result = await this.updateOne(updateOptions, x_request_id)
 					return this.schema.pipeResponse(options, result)
 				case QueryPerform.DELETE:
-					return await this.deleteOne(options as DatabaseDeleteOneOptions)
+					return await this.deleteOne(options as DatabaseDeleteOneOptions, x_request_id)
 				case QueryPerform.UNIQUE:
-					return await this.isUnique(options as DatabaseUniqueCheckOptions)
+					return await this.isUnique(options as DatabaseUniqueCheckOptions, x_request_id)
 				default:
-					this.logger.error(`[Query] Action ${action} not supported`)
+					this.logger.error(
+						`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Action ${action} not supported`,
+					)
 					throw new Error(`Action ${action} not supported`)
 			}
 		} catch (e) {
-			this.logger.error(`[Query][${action}][${table_name}] ${e.message}`)
+			this.logger.error(
+				`${x_request_id ? '[' + x_request_id + ']' : ''}[Query][${action.toUpperCase()}][${table_name}] ${e.message}`,
+			)
 
 			let pluralAction
 
@@ -123,13 +130,13 @@ export class Query {
 	 * * Used as part of the setup process
 	 */
 
-	async createTable(schema: DatabaseSchema): Promise<boolean> {
+	async createTable(schema: DatabaseSchema, x_request_id: string): Promise<boolean> {
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
-				return await this.mysql.createTable(schema)
+				return await this.mysql.createTable(schema, x_request_id)
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -139,15 +146,23 @@ export class Query {
 	 * Insert a record
 	 */
 
-	private async createOne(options: DatabaseCreateOneOptions): Promise<FindOneResponseObject> {
+	private async createOne(options: DatabaseCreateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
+		let result: FindOneResponseObject
+
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
-				return await this.mysql.createOne(options)
+				result = await this.mysql.createOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+
+		return {
+			...result,
+			_x_request_id: x_request_id,
 		}
 	}
 
@@ -155,15 +170,27 @@ export class Query {
 	 * Find single record
 	 */
 
-	private async findOne(options: DatabaseFindOneOptions): Promise<FindOneResponseObject> {
+	private async findOne(options: DatabaseFindOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
+		let result: FindOneResponseObject
+
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
-				return await this.mysql.findOne(options)
+				result = await this.mysql.findOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+
+		if (!result) {
+			return null
+		}
+
+		return {
+			...result,
+			_x_request_id: x_request_id,
 		}
 	}
 
@@ -171,15 +198,23 @@ export class Query {
 	 * Find multiple records
 	 */
 
-	private async findMany(options: DatabaseFindManyOptions): Promise<FindManyResponseObject> {
+	private async findMany(options: DatabaseFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
+		let result: FindManyResponseObject
+
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
-				return await this.mysql.findMany(options)
+				result = await this.mysql.findMany(options, x_request_id)
+				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+
+		return {
+			...result,
+			_x_request_id: x_request_id,
 		}
 	}
 
@@ -187,15 +222,23 @@ export class Query {
 	 * Update a record
 	 */
 
-	private async updateOne(options: DatabaseUpdateOneOptions): Promise<FindOneResponseObject> {
+	private async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
+		let result: FindOneResponseObject
+
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
-				return await this.mysql.updateOne(options)
+				result = await this.mysql.updateOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+
+		return {
+			...result,
+			_x_request_id: x_request_id,
 		}
 	}
 
@@ -203,15 +246,23 @@ export class Query {
 	 * Delete a record
 	 */
 
-	private async deleteOne(options: DatabaseDeleteOneOptions): Promise<DeleteResponseObject> {
+	private async deleteOne(options: DatabaseDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
+		let result: DeleteResponseObject
+
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
-				return await this.mysql.deleteOne(options)
+				result = await this.mysql.deleteOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+
+		return {
+			...result,
+			_x_request_id: x_request_id,
 		}
 	}
 
@@ -219,15 +270,23 @@ export class Query {
 	 * Check uniqueness of record
 	 */
 
-	private async isUnique(options: DatabaseUniqueCheckOptions): Promise<IsUniqueResponse> {
+	private async isUnique(options: DatabaseUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
+		let result: IsUniqueResponse
+
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
-				return await this.mysql.uniqueCheck(options)
+				result = await this.mysql.uniqueCheck(options, x_request_id)
+				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+
+		return {
+			...result,
+			_x_request_id: x_request_id,
 		}
 	}
 
@@ -235,7 +294,7 @@ export class Query {
 	 * Truncate a table - used for testing only, not for production
 	 */
 
-	async truncate(table_name: string): Promise<void> {
+	async truncate(table_name: string, x_request_id: string): Promise<void> {
 		if (Env.IsProd()) {
 			throw new Error('Truncate not allowed in production')
 		}
@@ -245,7 +304,7 @@ export class Query {
 				return await this.mysql.truncate(table_name)
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
