@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Cache } from 'cache-manager'
 
-import { LLANA_AUTH_TABLE } from '../app.constants'
+import { CACHE_DEFAULT_IDENTITY_DATA_TTL, LLANA_AUTH_TABLE } from '../app.constants'
 import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
 import { DatabaseFindOneOptions, DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
 import { Env } from '../utils/Env'
@@ -15,6 +17,7 @@ import { FindManyResponseObject } from '../dtos/response.dto'
 @Injectable()
 export class Authentication {
 	constructor(
+		@Inject(CACHE_MANAGER) private cacheManager: Cache,
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
 		private readonly query: Query,
@@ -57,20 +60,26 @@ export class Authentication {
 			//Is the restriction required on the current route?
 			let check_required = true
 
-			const rules = (await this.query.perform(
-				QueryPerform.FIND_MANY,
-				{
-					schema: auth_schema,
-					where: [
-						{
-							column: 'auth',
-							operator: WhereOperator.equals,
-							value: auth.type,
-						},
-					],
-				},
-				options.x_request_id,
-			)) as FindManyResponseObject
+			let rules = await this.cacheManager.get<FindManyResponseObject>(`auth:rules:${auth.type}`)
+
+			if(!rules?.data){
+				rules = (await this.query.perform(
+					QueryPerform.FIND_MANY,
+					{
+						schema: auth_schema,
+						where: [
+							{
+								column: 'auth',
+								operator: WhereOperator.equals,
+								value: auth.type,
+							},
+						],
+					},
+					options.x_request_id,
+				)) as FindManyResponseObject
+
+				await this.cacheManager.set(`auth:rules:${auth.type}`, rules, this.configService.get('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_IDENTITY_DATA_TTL)
+			}
 
 			const excludes = rules.data.filter(rule => rule.exclude)
 			const includes = rules.data.filter(rule => rule.exclude)
@@ -100,8 +109,7 @@ export class Authentication {
 				schema = await this.schema.getSchema({ table: auth.table.name, x_request_id: options.x_request_id })
 			} catch (e) {
 				this.logger.error(
-					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] Table ${auth.table.name} not found`,
-					{ e },
+					`[Authentication][auth] Table ${auth.table.name} not found - ${e.message}`, options.x_request_id
 				)
 				return { valid: false, message: `No Schema Found For Table ${auth.table.name}` }
 			}
@@ -187,7 +195,7 @@ export class Authentication {
 
 					if (!api_key_config || !api_key_config.name) {
 						this.logger.error(
-							`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] System configuration error: API Key lookup table not found`,
+							`[Authentication][auth] System configuration error: API Key lookup table not found`, options.x_request_id
 						)
 						auth_passed = {
 							valid: false,
@@ -198,7 +206,7 @@ export class Authentication {
 
 					if (!api_key_config.column) {
 						this.logger.error(
-							`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] System configuration error: API Key lookup column not found`,
+							`[Authentication][auth] System configuration error: API Key lookup column not found`, options.x_request_id
 						)
 						auth_passed = {
 							valid: false,
@@ -207,84 +215,88 @@ export class Authentication {
 						continue
 					}
 
-					const db_options: DatabaseFindOneOptions = {
-						schema,
-						fields: [identity_column],
-						where: [
-							{
-								column: api_key_config.column,
-								operator: WhereOperator.equals,
-								value: req_api_key,
-							},
-						],
-						relations: [],
-					}
+					let auth_result = await this.cacheManager.get(`auth:${auth.type}:${req_api_key}`)
 
-					const { valid, message, fields, relations } = await this.schema.validateFields({
-						schema,
-						fields: [api_key_config.column],
-						x_request_id: options.x_request_id,
-					})
-					if (!valid) {
-						auth_passed = {
-							valid: false,
-							message,
+					if (!auth_result || !auth_result[identity_column]) {
+
+						const db_options: DatabaseFindOneOptions = {
+							schema,
+							fields: [identity_column],
+							where: [
+								{
+									column: api_key_config.column,
+									operator: WhereOperator.equals,
+									value: req_api_key,
+								},
+							],
+							relations: [],
 						}
-					}
 
-					for (const field of fields) {
-						if (!db_options.fields.includes(field)) {
-							db_options.fields.push(field)
-						}
-					}
-
-					for (const relation of relations) {
-						if (!db_options.relations.find(r => r.table === relation.table)) {
-							db_options.relations.push(relation)
-						}
-					}
-
-					if (this.configService.get('database.deletes.soft')) {
-						db_options.where.push({
-							column: this.configService.get('database.deletes.soft'),
-							operator: WhereOperator.null,
+						const { valid, message, fields, relations } = await this.schema.validateFields({
+							schema,
+							fields: [api_key_config.column],
+							x_request_id: options.x_request_id,
 						})
+						if (!valid) {
+							auth_passed = {
+								valid: false,
+								message,
+							}
+						}
+
+						for (const field of fields) {
+							if (!db_options.fields.includes(field)) {
+								db_options.fields.push(field)
+							}
+						}
+
+						for (const relation of relations) {
+							if (!db_options.relations.find(r => r.table === relation.table)) {
+								db_options.relations.push(relation)
+							}
+						}
+
+						if (this.configService.get('database.deletes.soft')) {
+							db_options.where.push({
+								column: this.configService.get('database.deletes.soft'),
+								operator: WhereOperator.null,
+							})
+						}
+
+					
+						auth_result = await this.query.perform(QueryPerform.FIND, db_options, options.x_request_id)
+						await this.cacheManager.set(`auth:${auth.type}:${req_api_key}`, auth_result, this.configService.get('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_IDENTITY_DATA_TTL)
 					}
 
-					const result = await this.query.perform(QueryPerform.FIND, db_options, options.x_request_id)
-
-					if (!result) {
+					if (!auth_result) {
 						this.logger.debug(
-							`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] API key not found`,
-							{
+							`[Authentication][auth] API key not found - ${JSON.stringify({
 								key: req_api_key,
 								column: api_key_config.column,
-								result,
-							},
+								auth_result,
+							})}`, options.x_request_id,
 						)
 						return { valid: false, message: 'Unauthorized' }
 					}
 
 					//key does not match - return unauthorized immediately
 					if (
-						!result[api_key_config.column] &&
-						findDotNotation(result, api_key_config.column) !== req_api_key
+						!auth_result[api_key_config.column] &&
+						findDotNotation(auth_result, api_key_config.column) !== req_api_key
 					) {
 						this.logger.debug(
-							`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] API key not found`,
-							{
+							`[Authentication][auth] API key not found ${JSON.stringify({
 								key: req_api_key,
 								column: api_key_config.column,
-								result,
-							},
+								auth_result,
+							})}`, options.x_request_id
 						)
 						return { valid: false, message: 'Unauthorized' }
 					}
 
-					if (!result[identity_column]) {
+					if (!auth_result[identity_column]) {
 						this.logger.error(
-							`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] Identity column ${identity_column} not found in result`,
-							{ result },
+							`[Authentication][auth] Identity column ${identity_column} not found in result - ${JSON.stringify(auth_result)}`, options.x_request_id
 						)
 						return {
 							valid: false,
@@ -293,12 +305,12 @@ export class Authentication {
 					}
 
 					this.logger.debug(
-						`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Authentication][auth] User #${result[identity_column]} identified successfully`,
+						`[Authentication][auth] User #${auth_result[identity_column]} identified successfully`, options.x_request_id
 					)
 
 					auth_passed = {
 						valid: true,
-						user_identifier: result[identity_column],
+						user_identifier: auth_result[identity_column],
 					}
 
 					break

@@ -46,13 +46,13 @@ export class MySQL {
 		return await mysql.createConnection(this.configService.get('database.host'))
 	}
 
-	async performQuery(options: { sql: string; values?: any[]; x_request_id: string }): Promise<any> {
+	async performQuery(options: { sql: string; values?: any[]; x_request_id?: string }): Promise<any> {
 		const connection = await this.createConnection()
 
 		try {
 			let results
 			this.logger.debug(
-				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[MySQL][Query] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`,
+				`[MySQL] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`, options.x_request_id
 			)
 
 			if (!options.values || !options.values.length) {
@@ -61,13 +61,13 @@ export class MySQL {
 				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
 			this.logger.debug(
-				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[MySQL][Query] Results: ${JSON.stringify(results)}`,
+				`[MySQL] Results: ${JSON.stringify(results)}`, options.x_request_id
 			)
 			connection.end()
 			return results
 		} catch (e) {
 			this.logger.warn(
-				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[MySQL][Query] Error executing mysql database query`,
+				`[MySQL] Error executing mysql database query`, options.x_request_id
 			)
 			this.logger.warn({
 				sql: {
@@ -348,7 +348,7 @@ export class MySQL {
 	 * Create table from schema object
 	 */
 
-	async createTable(schema: DatabaseSchema, x_request_id: string): Promise<boolean> {
+	async createTable(schema: DatabaseSchema): Promise<boolean> {
 		try {
 			const columns = schema.columns.map(column => {
 				let column_string = `\`${column.field}\` ${this.fieldMapperReverse(column.type)}`
@@ -386,7 +386,7 @@ export class MySQL {
 
 			const command = `CREATE TABLE ${schema.table} (${columns.join(', ')})`
 
-			await this.performQuery({ sql: command, x_request_id })
+			await this.performQuery({ sql: command })
 
 			return true
 		} catch (e) {

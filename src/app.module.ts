@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
+import { CacheModule } from '@nestjs/cache-manager';
 
 import { DeleteController } from './app.controller.delete'
 import { GetController } from './app.controller.get'
@@ -30,6 +31,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 			load: [auth, database, hosts, jwt, roles],
 		}),
 		JwtModule.register(jwt()),
+		CacheModule.register(),
 	],
 	controllers: [DeleteController, GetController, PostController, PutController],
 	providers: [

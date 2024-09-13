@@ -7,6 +7,7 @@ import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import { Logger } from './helpers/Logger'
 import { ValidationPipe } from '@nestjs/common'
+import { APP_BOOT_CONTEXT } from './app.constants'
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule)
@@ -34,6 +35,6 @@ async function bootstrap() {
 
 	let url = await app.getUrl()
 	url = url.replace('[::1]', 'localhost')
-	logger.log(`Application is running on: ${url}`)
+	logger.log(`Application is running on: ${url}`, APP_BOOT_CONTEXT)
 }
 bootstrap()

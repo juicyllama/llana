@@ -52,7 +52,7 @@ export class GetController {
 	}
 
 	@Get('*/schema')
-	async schama(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DatabaseSchema> {
+	async getSchema(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DatabaseSchema> {
 		const x_request_id = headers['x-request-id']
 
 		const table_name = UrlToTable(req.originalUrl, 1)
