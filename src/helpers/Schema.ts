@@ -505,6 +505,7 @@ export class Schema {
 				this.logger.error(
 					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}Relation ${items[i]} not found in schema for ${options.schema.table}`,
 				)
+				this.logger.error(options)
 				throw new Error(`Relation ${items[i]} not found in schema for ${options.schema.table}`)
 			}
 
@@ -546,6 +547,7 @@ export class Schema {
 				this.logger.error(
 					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}Relation ${items[i]} not found in schema for ${options.schema.table}`,
 				)
+				this.logger.error(options)
 				throw new Error(`Relation ${items[i]} not found in schema for ${options.schema.table}`)
 			}
 
@@ -593,6 +595,7 @@ export class Schema {
 				this.logger.error(
 					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}Relation ${items[i]} not found in schema for ${options.schema.table}`,
 				)
+				this.logger.error(options)
 				throw new Error(`Relation ${items[i]} not found in schema for ${options.schema.table}`)
 			}
 

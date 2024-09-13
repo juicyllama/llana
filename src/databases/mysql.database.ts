@@ -460,14 +460,29 @@ export class MySQL {
 
 		for (const r in options.relations) {
 			if (options.relations[r].where) {
-				command += `AND ${options.relations[r].where.column} ${options.relations[r].where.operator} ? `
+
+				const items = options.relations[r].where.column.split('.')
+
+				switch(items.length) {
+					case 1:
+						command += `AND \`${options.relations[r].table}\`.\`${options.relations[r].where.column}\` ${options.relations[r].where.operator} ? `
+						break
+					case 2:
+						command += `AND \`${items[0]}\`.\`${items[1]}\` ${options.relations[r].where.operator} ? `
+						break
+					default:
+						command += `AND \`${items[items.length-2]}\`.\`${items[items.length-1]}\` ${options.relations[r].where.operator} ? `
+						break
+				
+				}
+
 				if (options.relations[r].where.value) {
 					values.push(options.relations[r].where.value)
 				}
 			}
 		}
 
-		return [command, values]
+		return [command.trim(), values]
 	}
 
 	private fieldMapper(type: MySQLColumnType): DatabaseColumnType {
