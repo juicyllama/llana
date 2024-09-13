@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/database.types'
-import { FindOneResponseObject } from '../types/response.types'
+import { FindOneResponseObject } from '../dtos/response.dto'
 
 export const CUSTOMER = {
 	companyName: faker.company.name(),

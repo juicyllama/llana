@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing'
 
 import { AppModule } from '../app.module'
 import { DatabaseRelations, DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
-import { FindManyResponseObject, FindOneResponseObject } from '../types/response.types'
+import { FindManyResponseObject, FindOneResponseObject } from '../dtos/response.dto'
 import { Logger, logLevel } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'

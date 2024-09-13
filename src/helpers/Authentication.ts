@@ -5,12 +5,12 @@ import { JwtService } from '@nestjs/jwt'
 import { LLANA_AUTH_TABLE } from '../app.constants'
 import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
 import { DatabaseFindOneOptions, DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
-import { FindManyResponseObject } from '../types/response.types'
 import { Env } from '../utils/Env'
 import { findDotNotation } from '../utils/Find'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
+import { FindManyResponseObject } from '../dtos/response.dto'
 
 @Injectable()
 export class Authentication {
@@ -222,7 +222,7 @@ export class Authentication {
 
 					const { valid, message, fields, relations } = await this.schema.validateFields({
 						schema,
-						fields: api_key_config.column,
+						fields: [api_key_config.column],
 						x_request_id: options.x_request_id,
 					})
 					if (!valid) {

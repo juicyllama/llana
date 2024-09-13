@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-
-import { FindQueryObject } from '../types/response.types'
+import { FindManyQueryParams } from '../dtos/requests.dto';
 
 @Injectable()
 export class Pagination {
@@ -11,7 +10,7 @@ export class Pagination {
 	 * Takes the query parameters, configs (for defualts) and returns the limit and offset
 	 */
 
-	get(query: FindQueryObject): { limit: number; offset: number } {
+	get(query: FindManyQueryParams): { limit: number; offset: number } {
 		let limit = Number(this.configService.get<number>('database.defaults.limit'))
 		let offset = 0
 

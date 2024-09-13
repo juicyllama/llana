@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res } from '@nestjs/common'
+import { Controller, Get, Req, Res, Headers, Param, Query as QueryParams } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { version } from '../package.json'
@@ -17,8 +17,9 @@ import {
 	QueryPerform,
 	WhereOperator,
 } from './types/database.types'
-import { FindManyResponseObject, FindOneResponseObject } from './types/response.types'
 import { RolePermission } from './types/roles.types'
+import { FindManyQueryParams, FindOneQueryParams, HeaderParams } from './dtos/requests.dto'
+import { FindManyResponseObject, FindOneResponseObject } from './dtos/response.dto'
 
 @Controller()
 export class GetController {
@@ -51,8 +52,8 @@ export class GetController {
 	}
 
 	@Get('*/schema')
-	async schama(@Req() req, @Res() res): Promise<DatabaseSchema> {
-		const x_request_id = req.headers['x-request-id'] as string
+	async schama(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DatabaseSchema> {
+		const x_request_id = headers['x-request-id']
 
 		const table_name = UrlToTable(req.originalUrl, 1)
 
@@ -87,10 +88,9 @@ export class GetController {
 	}
 
 	@Get('*/:id')
-	async getById(@Req() req, @Res() res): Promise<FindOneResponseObject> {
-		const x_request_id = req.headers['x-request-id'] as string
+	async getById(@Req() req, @Res() res, @Headers() headers: HeaderParams, @Param('id') id: string, @QueryParams() queryParams: FindOneQueryParams ): Promise<FindOneResponseObject> {
+		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
-		const id = req.params.id
 		let primary_key
 
 		const options: DatabaseFindOneOptions = {
@@ -156,10 +156,10 @@ export class GetController {
 				return res.status(400).send(this.response.text(validateKey.message))
 			}
 
-			if (req.query.fields) {
+			if (queryParams.fields?.length) {
 				const { valid, message, fields, relations } = await this.schema.validateFields({
 					schema: options.schema,
-					fields: req.query.fields,
+					fields: queryParams.fields,
 					x_request_id,
 				})
 				if (!valid) {
@@ -179,10 +179,10 @@ export class GetController {
 				}
 			}
 
-			if (req.query.relations) {
+			if (queryParams.relations?.length) {
 				const { valid, message, relations } = await this.schema.validateRelations({
 					schema: options.schema,
-					relation_query: req.query.relations,
+					relation_query: queryParams.relations,
 					existing_relations: options.relations,
 					x_request_id,
 				})
@@ -231,8 +231,8 @@ export class GetController {
 	//TODO: can we drop the slash from the end of the url?
 
 	@Get('*/')
-	async list(@Req() req, @Res() res): Promise<FindManyResponseObject> {
-		const x_request_id = req.headers['x-request-id'] as string
+	async list(@Req() req, @Res() res, @Headers() headers: HeaderParams, @QueryParams() queryParams: FindManyQueryParams ): Promise<FindManyResponseObject> {
+		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
 
 		const options: DatabaseFindManyOptions = {
@@ -287,14 +287,14 @@ export class GetController {
 				}
 			}
 
-			const { limit, offset } = this.pagination.get(req.query)
+			const { limit, offset } = this.pagination.get(queryParams)
 			options.limit = limit
 			options.offset = offset
 
-			if (req.query.fields) {
+			if (queryParams.fields?.length) {
 				const { valid, message, fields, relations } = await this.schema.validateFields({
 					schema: options.schema,
-					fields: req.query.fields,
+					fields: queryParams.fields,
 					x_request_id,
 				})
 				if (!valid) {
@@ -314,10 +314,10 @@ export class GetController {
 				}
 			}
 
-			if (req.query.relations) {
+			if (queryParams.relations?.length) {
 				const { valid, message, relations } = await this.schema.validateRelations({
 					schema: options.schema,
-					relation_query: req.query.relations,
+					relation_query: queryParams.relations,
 					existing_relations: options.relations,
 					x_request_id,
 				})
@@ -334,7 +334,7 @@ export class GetController {
 				}
 			}
 
-			const validateWhere = await this.schema.validateWhereParams({ schema: options.schema, params: req.query })
+			const validateWhere = await this.schema.validateWhereParams({ schema: options.schema, params: queryParams })
 			if (!validateWhere.valid) {
 				return res.status(400).send(this.response.text(validateWhere.message))
 			}
@@ -344,8 +344,8 @@ export class GetController {
 			}
 
 			let validateSort
-			if (req.query.sort) {
-				validateSort = this.schema.validateSort({ schema: options.schema, sort: req.query.sort })
+			if (queryParams.sort) {
+				validateSort = this.schema.validateSort({ schema: options.schema, sort: queryParams.sort })
 				if (!validateSort.valid) {
 					return res.status(400).send(this.response.text(validateSort.message))
 				}

@@ -26,7 +26,7 @@ import {
 	FindManyResponseObject,
 	FindOneResponseObject,
 	IsUniqueResponse,
-} from '../types/response.types'
+} from '../dtos/response.dto'
 
 @Injectable()
 export class MySQL {

@@ -19,7 +19,7 @@ import {
 	FindManyResponseObject,
 	FindOneResponseObject,
 	IsUniqueResponse,
-} from '../types/response.types'
+} from '../dtos/response.dto'
 import { Env } from '../utils/Env'
 import { Encryption } from './Encryption'
 import { Logger } from './Logger'

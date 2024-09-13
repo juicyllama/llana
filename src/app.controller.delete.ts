@@ -1,4 +1,4 @@
-import { Controller, Delete, Req, Res } from '@nestjs/common'
+import { Controller, Delete, Req, Res, Headers, Param } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { Authentication } from './helpers/Authentication'
@@ -9,8 +9,9 @@ import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import { DatabaseConfig, DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from './types/database.types'
-import { DeleteResponseObject } from './types/response.types'
 import { RolePermission } from './types/roles.types'
+import { HeaderParams } from './dtos/requests.dto'
+import { DeleteResponseObject } from './dtos/response.dto'
 
 @Controller()
 export class DeleteController {
@@ -24,10 +25,9 @@ export class DeleteController {
 	) {}
 
 	@Delete('*/:id')
-	async deleteById(@Req() req, @Res() res): Promise<DeleteResponseObject> {
-		const x_request_id = req.headers['x-request-id'] as string
+	async deleteById(@Req() req, @Res() res, @Headers() headers: HeaderParams, @Param('id') id: string): Promise<DeleteResponseObject> {
+		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
-		const id = req.params.id
 
 		let schema: DatabaseSchema
 

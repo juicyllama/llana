@@ -241,14 +241,14 @@ export class Schema {
 
 	async validateFields(options: {
 		schema: DatabaseSchema
-		fields: string
+		fields: string[]
 		x_request_id?: string
 	}): Promise<ValidateFieldsResponse> {
 		try {
 			const validated: string[] = []
 			let relations: DatabaseRelations[] = []
 
-			for (const field of options.fields.split(',')) {
+			for (const field of options.fields) {
 				if (field === '') {
 					continue
 				}
@@ -298,12 +298,12 @@ export class Schema {
 
 	async validateRelations(options: {
 		schema: DatabaseSchema
-		relation_query: string
+		relation_query: string[]
 		existing_relations: DatabaseRelations[]
 		x_request_id?: string
 	}): Promise<validateRelationsResponse> {
 		try {
-			const relations = options.relation_query.split(',')
+			const relations = options.relation_query
 
 			for (const relation of relations) {
 				if (relation.includes('.')) {
@@ -448,8 +448,8 @@ export class Schema {
 	 * Example: ?sort=name.asc,id.desc,content.title.asc
 	 */
 
-	validateSort(options: { schema: DatabaseSchema; sort: string }): ValidateSortResponse {
-		const array = options.sort?.split(',')?.filter(sort => !sort.includes('.'))
+	validateSort(options: { schema: DatabaseSchema; sort: string[] }): ValidateSortResponse {
+		const array = options.sort?.filter(sort => !sort.includes('.'))
 
 		for (const item of array) {
 			const direction = item.lastIndexOf('.')
@@ -618,13 +618,12 @@ export class Schema {
 	 * Takes the sort query parameter and returns the sort object
 	 */
 
-	createSortArray(sort: string): SortCondition[] {
+	createSortArray(sort: string[]): SortCondition[] {
 		if (!sort) return []
 
-		const array = sort.split(',')
 		const sortArray = []
 
-		for (const item of array) {
+		for (const item of sort) {
 			const direction = item.lastIndexOf('.')
 			const column = item.substring(0, direction)
 			const operator = item.substring(direction + 1)

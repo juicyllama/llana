@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, Res } from '@nestjs/common'
+import { Body, Controller, Post, Req, Res, Headers } from '@nestjs/common'
 
 import { LoginService } from './app.service.login'
 import { Authentication } from './helpers/Authentication'
@@ -9,8 +9,9 @@ import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { AuthTablePermissionFailResponse } from './types/auth.types'
 import { DatabaseCreateOneOptions, QueryPerform } from './types/database.types'
-import { FindOneResponseObject, IsUniqueResponse } from './types/response.types'
+import { FindOneResponseObject, IsUniqueResponse } from './dtos/response.dto'
 import { RolePermission } from './types/roles.types'
+import { HeaderParams } from './dtos/requests.dto'
 
 @Controller()
 export class PostController {
@@ -24,8 +25,8 @@ export class PostController {
 	) {}
 
 	@Post('/login')
-	signIn(@Req() req, @Body() signInDto: Record<string, any>) {
-		const x_request_id = req.headers['x-request-id'] as string
+	signIn(@Req() req, @Body() signInDto: Record<string, any>, @Headers() headers: HeaderParams) {
+		const x_request_id = headers['x-request-id']
 		return this.loginService.signIn(signInDto.username, signInDto.password, x_request_id)
 	}
 
@@ -34,8 +35,8 @@ export class PostController {
 	 */
 
 	@Post('*/')
-	async createOne(@Req() req, @Res() res): Promise<FindOneResponseObject> {
-		const x_request_id = req.headers['x-request-id'] as string
+	async createOne(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<FindOneResponseObject> {
+		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
 		const body = req.body
 

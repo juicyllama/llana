@@ -6,6 +6,7 @@ import { NestFactory } from '@nestjs/core'
 // import * as basicAuth from 'express-basic-auth'
 import { AppModule } from './app.module'
 import { Logger } from './helpers/Logger'
+import { ValidationPipe } from '@nestjs/common'
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule)
@@ -20,6 +21,13 @@ async function bootstrap() {
 	// )
 
 	await app.listen(process.env.PORT ?? 3000)
+
+	app.useGlobalPipes(
+		new ValidationPipe({
+		  transform: true,
+		}),
+	  );
+	  
 
 	const logger = new Logger()
 	logger.status()

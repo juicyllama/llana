@@ -10,7 +10,7 @@
 
 ## Database REST API in minuites
 
-Llana is a no-code API wrapper that exposes a REST API for any database within minuites. Stop wasting time building endpoints, just connect your database and start playing. Open source, free to use, and no vendor lock-in.
+Llana is a no-code API wrapper that exposes a REST API for any database within minutes. Stop wasting time building endpoints, just connect your database and start playing. Open source, free to use, and no vendor lock-in.
 
 ## Documentation
 
@@ -19,7 +19,7 @@ Visit [JuicyLlama](https://juicyllama.com) > [Tools](https://juicyllama.com/tool
 
 ## Databases
 
-We are working to support all major databases, if you would like to contribute to the open source project and help integrate your faviourt database, checkout our [contribiution guidelines](https://juicyllama.com/developers/contributing).
+We are working to support all major databases, if you would like to contribute to the open source project and help integrate your preferred database flavor, checkout our [contribution guidelines](https://juicyllama.com/developers/contributing).
 
 [ExpressJs Database Integration Guide](https://expressjs.com/en/guide/database-integration.html)
 
