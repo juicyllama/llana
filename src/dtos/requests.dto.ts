@@ -1,4 +1,3 @@
-import { Transform } from 'class-transformer'
 import { IsNumber, IsOptional, IsString } from 'class-validator'
 
 export class HeaderParams {
@@ -17,13 +16,11 @@ export class HeaderParams {
 export class FindQueryParams {
 	@IsOptional()
 	@IsString()
-	@Transform(({ value }) => value.toString().split(','))
-	fields?: string[]
+	fields?: string
 
 	@IsOptional()
 	@IsString()
-	@Transform(({ value }) => value.toString().split(','))
-	relations?: string[]
+	relations?: string
 }
 
 export class FindOneQueryParams extends FindQueryParams {}
@@ -43,8 +40,7 @@ export class FindManyQueryParams extends FindQueryParams {
 
 	@IsOptional()
 	@IsString()
-	@Transform(({ value }) => value.toString().split(','))
-	sort?: string[];
+	sort?: string;
 
 	//Filter params
 	[key: string]: any

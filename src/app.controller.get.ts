@@ -1,8 +1,8 @@
-import { Controller, Get, Headers, Param, Query as QueryParams, Req, Res } from '@nestjs/common'
+import { Controller, Get, Headers, Param, ParseArrayPipe, Query as QueryParams, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { version } from '../package.json'
-import { FindManyQueryParams, FindOneQueryParams, HeaderParams } from './dtos/requests.dto'
+import { FindManyQueryParams, HeaderParams } from './dtos/requests.dto'
 import { FindManyResponseObject, FindOneResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
@@ -93,7 +93,10 @@ export class GetController {
 		@Res() res,
 		@Headers() headers: HeaderParams,
 		@Param('id') id: string,
-		@QueryParams() queryParams: FindOneQueryParams,
+		@QueryParams('fields', new ParseArrayPipe({ items: String, separator: ',', optional: true }))
+		queryFields?: string[],
+		@QueryParams('relations', new ParseArrayPipe({ items: String, separator: ',', optional: true }))
+		queryRelations?: string[],
 	): Promise<FindOneResponseObject> {
 		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
@@ -162,10 +165,10 @@ export class GetController {
 				return res.status(400).send(this.response.text(validateKey.message))
 			}
 
-			if (queryParams.fields?.length) {
+			if (queryFields?.length) {
 				const { valid, message, fields, relations } = await this.schema.validateFields({
 					schema: options.schema,
-					fields: queryParams.fields,
+					fields: queryFields,
 					x_request_id,
 				})
 				if (!valid) {
@@ -185,10 +188,10 @@ export class GetController {
 				}
 			}
 
-			if (queryParams.relations?.length) {
+			if (queryRelations?.length) {
 				const { valid, message, relations } = await this.schema.validateRelations({
 					schema: options.schema,
-					relation_query: queryParams.relations,
+					relation_query: queryRelations,
 					existing_relations: options.relations,
 					x_request_id,
 				})
@@ -234,17 +237,23 @@ export class GetController {
 		}
 	}
 
-	//TODO: can we drop the slash from the end of the url?
-
 	@Get('*/')
 	async list(
 		@Req() req,
 		@Res() res,
 		@Headers() headers: HeaderParams,
 		@QueryParams() queryParams: FindManyQueryParams,
+		@QueryParams('fields', new ParseArrayPipe({ items: String, separator: ',', optional: true }))
+		queryFields?: string[],
+		@QueryParams('relations', new ParseArrayPipe({ items: String, separator: ',', optional: true }))
+		queryRelations?: string[],
+		@QueryParams('sort', new ParseArrayPipe({ items: String, separator: ',', optional: true }))
+		querySort?: string[],
 	): Promise<FindManyResponseObject> {
 		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
+
+		console.log('/* GET', queryParams)
 
 		const options: DatabaseFindManyOptions = {
 			schema: null,
@@ -302,10 +311,10 @@ export class GetController {
 			options.limit = limit
 			options.offset = offset
 
-			if (queryParams.fields?.length) {
+			if (queryFields?.length) {
 				const { valid, message, fields, relations } = await this.schema.validateFields({
 					schema: options.schema,
-					fields: queryParams.fields,
+					fields: queryFields,
 					x_request_id,
 				})
 				if (!valid) {
@@ -325,10 +334,10 @@ export class GetController {
 				}
 			}
 
-			if (queryParams.relations?.length) {
+			if (queryRelations?.length) {
 				const { valid, message, relations } = await this.schema.validateRelations({
 					schema: options.schema,
-					relation_query: queryParams.relations,
+					relation_query: queryRelations,
 					existing_relations: options.relations,
 					x_request_id,
 				})
@@ -355,8 +364,8 @@ export class GetController {
 			}
 
 			let validateSort
-			if (queryParams.sort) {
-				validateSort = this.schema.validateSort({ schema: options.schema, sort: queryParams.sort })
+			if (querySort?.length) {
+				validateSort = this.schema.validateSort({ schema: options.schema, sort: querySort })
 				if (!validateSort.valid) {
 					return res.status(400).send(this.response.text(validateSort.message))
 				}
