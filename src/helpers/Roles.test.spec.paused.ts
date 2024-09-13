@@ -37,7 +37,7 @@ describe('Roles', () => {
 		//logger = app.get<Logger>(Logger)
 		query = app.get<Query>(Query)
 
-		llanaRolesTableSchema = await schema.getSchema({table: LLANA_ROLES_TABLE})
+		llanaRolesTableSchema = await schema.getSchema({ table: LLANA_ROLES_TABLE })
 		//customerTableSchema = await schema.getSchema('Customer')
 
 		const home = await request(app.getHttpServer()).get('/').expect(200)

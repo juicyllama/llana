@@ -1,5 +1,7 @@
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { Cache } from 'cache-manager'
 
 import { APP_BOOT_CONTEXT, LLANA_AUTH_TABLE, LLANA_ROLES_TABLE } from './app.constants'
 import { Logger } from './helpers/Logger'
@@ -7,8 +9,6 @@ import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
 import { DatabaseColumnType, DatabaseSchema, QueryPerform } from './types/database.types'
 import { CustomRole, DefaultRole, RolePermission } from './types/roles.types'
-import { CACHE_MANAGER } from '@nestjs/cache-manager'
-import { Cache } from 'cache-manager'
 
 @Injectable()
 export class AppBootup implements OnApplicationBootstrap {
@@ -21,11 +21,10 @@ export class AppBootup implements OnApplicationBootstrap {
 	) {}
 
 	async onApplicationBootstrap() {
-		
 		this.logger.log('Bootstrapping Application', APP_BOOT_CONTEXT)
 
 		this.logger.log('Resetting Cache', APP_BOOT_CONTEXT)
-		await this.cacheManager.reset();
+		await this.cacheManager.reset()
 
 		try {
 			const table = this.configService.get<string>('AUTH_USER_TABLE_NAME') ?? 'User'
@@ -105,7 +104,10 @@ export class AppBootup implements OnApplicationBootstrap {
 		try {
 			await this.schema.getSchema({ table: LLANA_ROLES_TABLE, x_request_id: APP_BOOT_CONTEXT })
 		} catch (e) {
-			this.logger.log(`Creating ${LLANA_ROLES_TABLE} schema as it does not exist - ${e.message}`, APP_BOOT_CONTEXT)
+			this.logger.log(
+				`Creating ${LLANA_ROLES_TABLE} schema as it does not exist - ${e.message}`,
+				APP_BOOT_CONTEXT,
+			)
 
 			/**
 			 * Create the _llana_role schema
@@ -269,7 +271,8 @@ export class AppBootup implements OnApplicationBootstrap {
 					{
 						schema,
 						data: default_role,
-					}, APP_BOOT_CONTEXT
+					},
+					APP_BOOT_CONTEXT,
 				)
 			}
 
@@ -279,7 +282,8 @@ export class AppBootup implements OnApplicationBootstrap {
 					{
 						schema,
 						data: custom_role,
-					}, APP_BOOT_CONTEXT
+					},
+					APP_BOOT_CONTEXT,
 				)
 			}
 		}

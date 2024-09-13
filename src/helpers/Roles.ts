@@ -1,16 +1,16 @@
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { Cache } from 'cache-manager'
 
 import { CACHE_DEFAULT_IDENTITY_DATA_TTL, LLANA_ROLES_TABLE } from '../app.constants'
+import { FindManyResponseObject } from '../dtos/response.dto'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from '../types/auth.types'
 import { QueryPerform, WhereOperator } from '../types/database.types'
-import { FindManyResponseObject } from '../dtos/response.dto'
 import { RolePermission, RolesConfig } from '../types/roles.types'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
-import { CACHE_MANAGER } from '@nestjs/cache-manager'
-import { Cache } from 'cache-manager'
 
 @Injectable()
 export class Roles {
@@ -41,9 +41,11 @@ export class Roles {
 			}
 		}
 
-		let permission_result = await this.cacheManager.get<AuthTablePermissionSuccessResponse | AuthTablePermissionFailResponse>(`roles:${options.identifier}:${options.table}:${options.access}`)
-		
-		if(permission_result?.valid) {
+		let permission_result = await this.cacheManager.get<
+			AuthTablePermissionSuccessResponse | AuthTablePermissionFailResponse
+		>(`roles:${options.identifier}:${options.table}:${options.access}`)
+
+		if (permission_result?.valid) {
 			return permission_result
 		}
 
@@ -54,7 +56,11 @@ export class Roles {
 				valid: false,
 				message: 'Table not found',
 			}
-			await this.cacheManager.set(`roles:${options.identifier}:${options.table}:${options.access}`, permission_result, CACHE_DEFAULT_IDENTITY_DATA_TTL)
+			await this.cacheManager.set(
+				`roles:${options.identifier}:${options.table}:${options.access}`,
+				permission_result,
+				CACHE_DEFAULT_IDENTITY_DATA_TTL,
+			)
 			return permission_result
 		}
 
@@ -67,7 +73,11 @@ export class Roles {
 				valid: false,
 				message: e.message,
 			}
-			await this.cacheManager.set(`roles:${options.identifier}:${options.table}:${options.access}`, permission_result, CACHE_DEFAULT_IDENTITY_DATA_TTL)
+			await this.cacheManager.set(
+				`roles:${options.identifier}:${options.table}:${options.access}`,
+				permission_result,
+				CACHE_DEFAULT_IDENTITY_DATA_TTL,
+			)
 			return permission_result
 		}
 
@@ -76,7 +86,11 @@ export class Roles {
 				valid: false,
 				message: 'Role not found',
 			}
-			await this.cacheManager.set(`roles:${options.identifier}:${options.table}:${options.access}`, permission_result, CACHE_DEFAULT_IDENTITY_DATA_TTL)
+			await this.cacheManager.set(
+				`roles:${options.identifier}:${options.table}:${options.access}`,
+				permission_result,
+				CACHE_DEFAULT_IDENTITY_DATA_TTL,
+			)
 			return permission_result
 		}
 
@@ -117,7 +131,11 @@ export class Roles {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 					}
-					await this.cacheManager.set(`roles:${options.identifier}:${options.table}:${options.access}`, permission_result, CACHE_DEFAULT_IDENTITY_DATA_TTL)
+					await this.cacheManager.set(
+						`roles:${options.identifier}:${options.table}:${options.access}`,
+						permission_result,
+						CACHE_DEFAULT_IDENTITY_DATA_TTL,
+					)
 					return permission_result
 				}
 
@@ -130,7 +148,11 @@ export class Roles {
 							value: options.identifier,
 						},
 					}
-					await this.cacheManager.set(`roles:${options.identifier}:${options.table}:${options.access}`, permission_result, CACHE_DEFAULT_IDENTITY_DATA_TTL)
+					await this.cacheManager.set(
+						`roles:${options.identifier}:${options.table}:${options.access}`,
+						permission_result,
+						CACHE_DEFAULT_IDENTITY_DATA_TTL,
+					)
 					return permission_result
 				}
 			}
@@ -162,7 +184,11 @@ export class Roles {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 					}
-					await this.cacheManager.set(`roles:${options.identifier}:${options.table}:${options.access}`, permission_result, CACHE_DEFAULT_IDENTITY_DATA_TTL)
+					await this.cacheManager.set(
+						`roles:${options.identifier}:${options.table}:${options.access}`,
+						permission_result,
+						CACHE_DEFAULT_IDENTITY_DATA_TTL,
+					)
 					return permission_result
 				}
 			}
@@ -172,7 +198,11 @@ export class Roles {
 			valid: false,
 			message: `Table Action ${options.access} - Permission Denied For Role ${role}`,
 		}
-		await this.cacheManager.set(`roles:${options.identifier}:${options.table}:${options.access}`, permission_result, CACHE_DEFAULT_IDENTITY_DATA_TTL)
+		await this.cacheManager.set(
+			`roles:${options.identifier}:${options.table}:${options.access}`,
+			permission_result,
+			CACHE_DEFAULT_IDENTITY_DATA_TTL,
+		)
 		return permission_result
 	}
 

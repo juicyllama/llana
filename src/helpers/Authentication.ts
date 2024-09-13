@@ -1,10 +1,11 @@
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
-import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
 
 import { CACHE_DEFAULT_IDENTITY_DATA_TTL, LLANA_AUTH_TABLE } from '../app.constants'
+import { FindManyResponseObject } from '../dtos/response.dto'
 import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
 import { DatabaseFindOneOptions, DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
 import { Env } from '../utils/Env'
@@ -12,7 +13,6 @@ import { findDotNotation } from '../utils/Find'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
-import { FindManyResponseObject } from '../dtos/response.dto'
 
 @Injectable()
 export class Authentication {
@@ -62,7 +62,7 @@ export class Authentication {
 
 			let rules = await this.cacheManager.get<FindManyResponseObject>(`auth:rules:${auth.type}`)
 
-			if(!rules?.data){
+			if (!rules?.data) {
 				rules = (await this.query.perform(
 					QueryPerform.FIND_MANY,
 					{
@@ -78,7 +78,11 @@ export class Authentication {
 					options.x_request_id,
 				)) as FindManyResponseObject
 
-				await this.cacheManager.set(`auth:rules:${auth.type}`, rules, this.configService.get('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_IDENTITY_DATA_TTL)
+				await this.cacheManager.set(
+					`auth:rules:${auth.type}`,
+					rules,
+					this.configService.get('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_IDENTITY_DATA_TTL,
+				)
 			}
 
 			const excludes = rules.data.filter(rule => rule.exclude)
@@ -109,7 +113,8 @@ export class Authentication {
 				schema = await this.schema.getSchema({ table: auth.table.name, x_request_id: options.x_request_id })
 			} catch (e) {
 				this.logger.error(
-					`[Authentication][auth] Table ${auth.table.name} not found - ${e.message}`, options.x_request_id
+					`[Authentication][auth] Table ${auth.table.name} not found - ${e.message}`,
+					options.x_request_id,
 				)
 				return { valid: false, message: `No Schema Found For Table ${auth.table.name}` }
 			}
@@ -195,7 +200,8 @@ export class Authentication {
 
 					if (!api_key_config || !api_key_config.name) {
 						this.logger.error(
-							`[Authentication][auth] System configuration error: API Key lookup table not found`, options.x_request_id
+							`[Authentication][auth] System configuration error: API Key lookup table not found`,
+							options.x_request_id,
 						)
 						auth_passed = {
 							valid: false,
@@ -206,7 +212,8 @@ export class Authentication {
 
 					if (!api_key_config.column) {
 						this.logger.error(
-							`[Authentication][auth] System configuration error: API Key lookup column not found`, options.x_request_id
+							`[Authentication][auth] System configuration error: API Key lookup column not found`,
+							options.x_request_id,
 						)
 						auth_passed = {
 							valid: false,
@@ -218,7 +225,6 @@ export class Authentication {
 					let auth_result = await this.cacheManager.get(`auth:${auth.type}:${req_api_key}`)
 
 					if (!auth_result || !auth_result[identity_column]) {
-
 						const db_options: DatabaseFindOneOptions = {
 							schema,
 							fields: [identity_column],
@@ -263,9 +269,12 @@ export class Authentication {
 							})
 						}
 
-					
 						auth_result = await this.query.perform(QueryPerform.FIND, db_options, options.x_request_id)
-						await this.cacheManager.set(`auth:${auth.type}:${req_api_key}`, auth_result, this.configService.get('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_IDENTITY_DATA_TTL)
+						await this.cacheManager.set(
+							`auth:${auth.type}:${req_api_key}`,
+							auth_result,
+							this.configService.get('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_IDENTITY_DATA_TTL,
+						)
 					}
 
 					if (!auth_result) {
@@ -274,7 +283,8 @@ export class Authentication {
 								key: req_api_key,
 								column: api_key_config.column,
 								auth_result,
-							})}`, options.x_request_id,
+							})}`,
+							options.x_request_id,
 						)
 						return { valid: false, message: 'Unauthorized' }
 					}
@@ -289,14 +299,16 @@ export class Authentication {
 								key: req_api_key,
 								column: api_key_config.column,
 								auth_result,
-							})}`, options.x_request_id
+							})}`,
+							options.x_request_id,
 						)
 						return { valid: false, message: 'Unauthorized' }
 					}
 
 					if (!auth_result[identity_column]) {
 						this.logger.error(
-							`[Authentication][auth] Identity column ${identity_column} not found in result - ${JSON.stringify(auth_result)}`, options.x_request_id
+							`[Authentication][auth] Identity column ${identity_column} not found in result - ${JSON.stringify(auth_result)}`,
+							options.x_request_id,
 						)
 						return {
 							valid: false,
@@ -305,7 +317,8 @@ export class Authentication {
 					}
 
 					this.logger.debug(
-						`[Authentication][auth] User #${auth_result[identity_column]} identified successfully`, options.x_request_id
+						`[Authentication][auth] User #${auth_result[identity_column]} identified successfully`,
+						options.x_request_id,
 					)
 
 					auth_passed = {

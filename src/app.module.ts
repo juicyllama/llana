@@ -1,7 +1,7 @@
+import { CacheModule } from '@nestjs/cache-manager'
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
-import { CacheModule } from '@nestjs/cache-manager';
 
 import { DeleteController } from './app.controller.delete'
 import { GetController } from './app.controller.get'

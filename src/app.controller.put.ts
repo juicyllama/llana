@@ -1,5 +1,7 @@
-import { Controller, Put, Req, Res, Headers, Param } from '@nestjs/common'
+import { Controller, Headers, Param, Put, Req, Res } from '@nestjs/common'
 
+import { HeaderParams } from './dtos/requests.dto'
+import { FindOneResponseObject, IsUniqueResponse } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
@@ -9,8 +11,6 @@ import { Schema } from './helpers/Schema'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import { DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from './types/database.types'
 import { RolePermission } from './types/roles.types'
-import { HeaderParams } from './dtos/requests.dto'
-import { FindOneResponseObject, IsUniqueResponse } from './dtos/response.dto'
 
 @Controller()
 export class PutController {
@@ -23,7 +23,12 @@ export class PutController {
 	) {}
 
 	@Put('*/:id')
-	async updateById(@Req() req, @Res() res, @Headers() headers: HeaderParams, @Param('id') id: string): Promise<FindOneResponseObject> {
+	async updateById(
+		@Req() req,
+		@Res() res,
+		@Headers() headers: HeaderParams,
+		@Param('id') id: string,
+	): Promise<FindOneResponseObject> {
 		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
 		const body = req.body

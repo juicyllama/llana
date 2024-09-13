@@ -1,8 +1,8 @@
 import { ConsoleLogger, Injectable, LogLevel } from '@nestjs/common'
 
+import { APP_BOOT_CONTEXT } from '../app.constants'
 import { Env } from '../utils/Env'
 import { Environment } from '../utils/Env.types'
-import { APP_BOOT_CONTEXT } from '../app.constants'
 
 @Injectable()
 export class Logger extends ConsoleLogger {

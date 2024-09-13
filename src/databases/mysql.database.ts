@@ -4,6 +4,12 @@ import * as mysql from 'mysql2/promise'
 import { Connection } from 'mysql2/promise'
 import { SortCondition } from 'src/types/schema.types'
 
+import {
+	DeleteResponseObject,
+	FindManyResponseObject,
+	FindOneResponseObject,
+	IsUniqueResponse,
+} from '../dtos/response.dto'
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
 import {
@@ -21,12 +27,6 @@ import {
 	WhereOperator,
 } from '../types/database.types'
 import { MySQLColumnType } from '../types/databases/mysql.types'
-import {
-	DeleteResponseObject,
-	FindManyResponseObject,
-	FindOneResponseObject,
-	IsUniqueResponse,
-} from '../dtos/response.dto'
 
 @Injectable()
 export class MySQL {
@@ -52,7 +52,8 @@ export class MySQL {
 		try {
 			let results
 			this.logger.debug(
-				`[MySQL] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`, options.x_request_id
+				`[MySQL] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`,
+				options.x_request_id,
 			)
 
 			if (!options.values || !options.values.length) {
@@ -60,15 +61,11 @@ export class MySQL {
 			} else {
 				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
-			this.logger.debug(
-				`[MySQL] Results: ${JSON.stringify(results)}`, options.x_request_id
-			)
+			this.logger.debug(`[MySQL] Results: ${JSON.stringify(results)}`, options.x_request_id)
 			connection.end()
 			return results
 		} catch (e) {
-			this.logger.warn(
-				`[MySQL] Error executing mysql database query`, options.x_request_id
-			)
+			this.logger.warn(`[MySQL] Error executing mysql database query`, options.x_request_id)
 			this.logger.warn({
 				sql: {
 					sql: options.sql,
@@ -460,10 +457,9 @@ export class MySQL {
 
 		for (const r in options.relations) {
 			if (options.relations[r].where) {
-
 				const items = options.relations[r].where.column.split('.')
 
-				switch(items.length) {
+				switch (items.length) {
 					case 1:
 						command += `AND \`${options.relations[r].table}\`.\`${options.relations[r].where.column}\` ${options.relations[r].where.operator} ? `
 						break
@@ -471,9 +467,8 @@ export class MySQL {
 						command += `AND \`${items[0]}\`.\`${items[1]}\` ${options.relations[r].where.operator} ? `
 						break
 					default:
-						command += `AND \`${items[items.length-2]}\`.\`${items[items.length-1]}\` ${options.relations[r].where.operator} ? `
+						command += `AND \`${items[items.length - 2]}\`.\`${items[items.length - 1]}\` ${options.relations[r].where.operator} ? `
 						break
-				
 				}
 
 				if (options.relations[r].where.value) {
