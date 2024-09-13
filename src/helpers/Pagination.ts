@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { FindManyQueryParams } from '../dtos/requests.dto';
+
+import { FindManyQueryParams } from '../dtos/requests.dto'
 
 @Injectable()
 export class Pagination {

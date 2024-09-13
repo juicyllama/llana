@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { Cache } from 'cache-manager'
 
-import { LLANA_ROLES_TABLE } from '../app.constants'
+import { CACHE_DEFAULT_IDENTITY_DATA_TTL, LLANA_ROLES_TABLE } from '../app.constants'
+import { FindManyResponseObject } from '../dtos/response.dto'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from '../types/auth.types'
 import { QueryPerform, WhereOperator } from '../types/database.types'
-import { FindManyResponseObject } from '../dtos/response.dto'
 import { RolePermission, RolesConfig } from '../types/roles.types'
 import { Logger } from './Logger'
 import { Query } from './Query'
@@ -13,6 +15,7 @@ import { Schema } from './Schema'
 @Injectable()
 export class Roles {
 	constructor(
+		@Inject(CACHE_MANAGER) private cacheManager: Cache,
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
 		private readonly query: Query,
@@ -38,13 +41,27 @@ export class Roles {
 			}
 		}
 
+		let permission_result = await this.cacheManager.get<
+			AuthTablePermissionSuccessResponse | AuthTablePermissionFailResponse
+		>(`roles:${options.identifier}:${options.table}:${options.access}`)
+
+		if (permission_result?.valid) {
+			return permission_result
+		}
+
 		const schema = await this.schema.getSchema({ table: options.table, x_request_id: options.x_request_id })
 
 		if (!schema) {
-			return <AuthTablePermissionFailResponse>{
+			permission_result = <AuthTablePermissionFailResponse>{
 				valid: false,
 				message: 'Table not found',
 			}
+			await this.cacheManager.set(
+				`roles:${options.identifier}:${options.table}:${options.access}`,
+				permission_result,
+				CACHE_DEFAULT_IDENTITY_DATA_TTL,
+			)
+			return permission_result
 		}
 
 		let role
@@ -52,17 +69,29 @@ export class Roles {
 		try {
 			role = await this.getRole(options.identifier, options.x_request_id)
 		} catch (e) {
-			return <AuthTablePermissionFailResponse>{
+			permission_result = <AuthTablePermissionFailResponse>{
 				valid: false,
 				message: e.message,
 			}
+			await this.cacheManager.set(
+				`roles:${options.identifier}:${options.table}:${options.access}`,
+				permission_result,
+				CACHE_DEFAULT_IDENTITY_DATA_TTL,
+			)
+			return permission_result
 		}
 
 		if (!role) {
-			return <AuthTablePermissionFailResponse>{
+			permission_result = <AuthTablePermissionFailResponse>{
 				valid: false,
 				message: 'Role not found',
 			}
+			await this.cacheManager.set(
+				`roles:${options.identifier}:${options.table}:${options.access}`,
+				permission_result,
+				CACHE_DEFAULT_IDENTITY_DATA_TTL,
+			)
+			return permission_result
 		}
 
 		const permission_schema = await this.schema.getSchema({
@@ -99,13 +128,19 @@ export class Roles {
 		if (custom_permissions.data?.length) {
 			for (const permission of custom_permissions.data) {
 				if (this.rolePass(options.access, permission.records)) {
-					return {
+					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 					}
+					await this.cacheManager.set(
+						`roles:${options.identifier}:${options.table}:${options.access}`,
+						permission_result,
+						CACHE_DEFAULT_IDENTITY_DATA_TTL,
+					)
+					return permission_result
 				}
 
 				if (this.rolePass(options.access, permission.own_records)) {
-					return {
+					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 						restriction: {
 							column: permission.identity_column ?? schema.primary_key,
@@ -113,6 +148,12 @@ export class Roles {
 							value: options.identifier,
 						},
 					}
+					await this.cacheManager.set(
+						`roles:${options.identifier}:${options.table}:${options.access}`,
+						permission_result,
+						CACHE_DEFAULT_IDENTITY_DATA_TTL,
+					)
+					return permission_result
 				}
 			}
 		}
@@ -140,17 +181,29 @@ export class Roles {
 		if (default_permissions.data?.length) {
 			for (const permission of default_permissions.data) {
 				if (this.rolePass(options.access, permission.records)) {
-					return {
+					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 					}
+					await this.cacheManager.set(
+						`roles:${options.identifier}:${options.table}:${options.access}`,
+						permission_result,
+						CACHE_DEFAULT_IDENTITY_DATA_TTL,
+					)
+					return permission_result
 				}
 			}
 		}
 
-		return <AuthTablePermissionFailResponse>{
+		permission_result = <AuthTablePermissionFailResponse>{
 			valid: false,
 			message: `Table Action ${options.access} - Permission Denied For Role ${role}`,
 		}
+		await this.cacheManager.set(
+			`roles:${options.identifier}:${options.table}:${options.access}`,
+			permission_result,
+			CACHE_DEFAULT_IDENTITY_DATA_TTL,
+		)
+		return permission_result
 	}
 
 	/**

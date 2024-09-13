@@ -1,7 +1,9 @@
-import { Controller, Get, Req, Res, Headers, Param, Query as QueryParams } from '@nestjs/common'
+import { Controller, Get, Headers, Param, Query as QueryParams, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { version } from '../package.json'
+import { FindManyQueryParams, FindOneQueryParams, HeaderParams } from './dtos/requests.dto'
+import { FindManyResponseObject, FindOneResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Pagination } from './helpers/Pagination'
@@ -18,8 +20,6 @@ import {
 	WhereOperator,
 } from './types/database.types'
 import { RolePermission } from './types/roles.types'
-import { FindManyQueryParams, FindOneQueryParams, HeaderParams } from './dtos/requests.dto'
-import { FindManyResponseObject, FindOneResponseObject } from './dtos/response.dto'
 
 @Controller()
 export class GetController {
@@ -52,7 +52,7 @@ export class GetController {
 	}
 
 	@Get('*/schema')
-	async schama(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DatabaseSchema> {
+	async getSchema(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DatabaseSchema> {
 		const x_request_id = headers['x-request-id']
 
 		const table_name = UrlToTable(req.originalUrl, 1)
@@ -88,7 +88,13 @@ export class GetController {
 	}
 
 	@Get('*/:id')
-	async getById(@Req() req, @Res() res, @Headers() headers: HeaderParams, @Param('id') id: string, @QueryParams() queryParams: FindOneQueryParams ): Promise<FindOneResponseObject> {
+	async getById(
+		@Req() req,
+		@Res() res,
+		@Headers() headers: HeaderParams,
+		@Param('id') id: string,
+		@QueryParams() queryParams: FindOneQueryParams,
+	): Promise<FindOneResponseObject> {
 		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
 		let primary_key
@@ -231,7 +237,12 @@ export class GetController {
 	//TODO: can we drop the slash from the end of the url?
 
 	@Get('*/')
-	async list(@Req() req, @Res() res, @Headers() headers: HeaderParams, @QueryParams() queryParams: FindManyQueryParams ): Promise<FindManyResponseObject> {
+	async list(
+		@Req() req,
+		@Res() res,
+		@Headers() headers: HeaderParams,
+		@QueryParams() queryParams: FindManyQueryParams,
+	): Promise<FindManyResponseObject> {
 		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
 

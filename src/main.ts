@@ -1,12 +1,13 @@
 import 'dotenv/config'
 import 'reflect-metadata'
 
+import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 
+import { APP_BOOT_CONTEXT } from './app.constants'
 // import * as basicAuth from 'express-basic-auth'
 import { AppModule } from './app.module'
 import { Logger } from './helpers/Logger'
-import { ValidationPipe } from '@nestjs/common'
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule)
@@ -24,16 +25,15 @@ async function bootstrap() {
 
 	app.useGlobalPipes(
 		new ValidationPipe({
-		  transform: true,
+			transform: true,
 		}),
-	  );
-	  
+	)
 
 	const logger = new Logger()
 	logger.status()
 
 	let url = await app.getUrl()
 	url = url.replace('[::1]', 'localhost')
-	logger.log(`Application is running on: ${url}`)
+	logger.log(`Application is running on: ${url}`, APP_BOOT_CONTEXT)
 }
 bootstrap()

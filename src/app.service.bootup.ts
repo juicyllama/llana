@@ -1,7 +1,9 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { Cache } from 'cache-manager'
 
-import { LLANA_AUTH_TABLE, LLANA_ROLES_TABLE } from './app.constants'
+import { APP_BOOT_CONTEXT, LLANA_AUTH_TABLE, LLANA_ROLES_TABLE } from './app.constants'
 import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
@@ -12,26 +14,33 @@ import { CustomRole, DefaultRole, RolePermission } from './types/roles.types'
 export class AppBootup implements OnApplicationBootstrap {
 	constructor(
 		private readonly configService: ConfigService,
+		@Inject(CACHE_MANAGER) private cacheManager: Cache,
 		private readonly logger: Logger,
 		private readonly query: Query,
 		private readonly schema: Schema,
 	) {}
 
 	async onApplicationBootstrap() {
-		const x_request_id = 'bootup'
+		this.logger.log('Bootstrapping Application', APP_BOOT_CONTEXT)
+
+		this.logger.log('Resetting Cache', APP_BOOT_CONTEXT)
+		await this.cacheManager.reset()
 
 		try {
 			const table = this.configService.get<string>('AUTH_USER_TABLE_NAME') ?? 'User'
-			await this.schema.getSchema({ table: table, x_request_id })
+			await this.schema.getSchema({ table: table, x_request_id: APP_BOOT_CONTEXT })
+			this.logger.log('Database Connection Successful', APP_BOOT_CONTEXT)
 		} catch (e) {
-			this.logger.error(`Database Connection Error - ${e.message}`)
+			this.logger.error(`Database Connection Error - ${e.message}`, APP_BOOT_CONTEXT)
 			throw new Error('Database Connection Error')
 		}
 
+		this.logger.log('Checking for _llana_auth and _llana_roles tables', APP_BOOT_CONTEXT)
+
 		try {
-			await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id })
+			await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: APP_BOOT_CONTEXT })
 		} catch (e) {
-			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist - ${e.message}`)
+			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist - ${e.message}`, APP_BOOT_CONTEXT)
 
 			/**
 			 * Create the _llana_auth schema
@@ -89,13 +98,16 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
-			await this.query.createTable(schema, x_request_id)
+			await this.query.createTable(schema)
 		}
 
 		try {
-			await this.schema.getSchema({ table: LLANA_ROLES_TABLE, x_request_id })
+			await this.schema.getSchema({ table: LLANA_ROLES_TABLE, x_request_id: APP_BOOT_CONTEXT })
 		} catch (e) {
-			this.logger.log(`Creating ${LLANA_ROLES_TABLE} schema as it does not exist - ${e.message}`)
+			this.logger.log(
+				`Creating ${LLANA_ROLES_TABLE} schema as it does not exist - ${e.message}`,
+				APP_BOOT_CONTEXT,
+			)
 
 			/**
 			 * Create the _llana_role schema
@@ -183,7 +195,7 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
-			await this.query.createTable(schema, x_request_id)
+			await this.query.createTable(schema)
 
 			const default_roles: DefaultRole[] = [
 				{
@@ -260,7 +272,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						schema,
 						data: default_role,
 					},
-					x_request_id,
+					APP_BOOT_CONTEXT,
 				)
 			}
 
@@ -271,7 +283,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						schema,
 						data: custom_role,
 					},
-					x_request_id,
+					APP_BOOT_CONTEXT,
 				)
 			}
 		}

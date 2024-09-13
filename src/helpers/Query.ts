@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { MySQL } from '../databases/mysql.database'
+import {
+	DeleteResponseObject,
+	FindManyResponseObject,
+	FindOneResponseObject,
+	IsUniqueResponse,
+} from '../dtos/response.dto'
 import { AuthType } from '../types/auth.types'
 import {
 	DatabaseCreateOneOptions,
@@ -14,12 +20,6 @@ import {
 	DatabaseUpdateOneOptions,
 	QueryPerform,
 } from '../types/database.types'
-import {
-	DeleteResponseObject,
-	FindManyResponseObject,
-	FindOneResponseObject,
-	IsUniqueResponse,
-} from '../dtos/response.dto'
 import { Env } from '../utils/Env'
 import { Encryption } from './Encryption'
 import { Logger } from './Logger'
@@ -48,7 +48,8 @@ export class Query {
 	): Promise<FindOneResponseObject | FindManyResponseObject | IsUniqueResponse | DeleteResponseObject> {
 		const table_name = options.schema.table
 		this.logger.debug(
-			`${x_request_id ? '[' + x_request_id + ']' : ''}[Query][${action.toUpperCase()}][${table_name}] Performing action: ${JSON.stringify(options)}`,
+			`[Query][${action.toUpperCase()}][${table_name}] Performing action: ${JSON.stringify(options)}`,
+			x_request_id,
 		)
 
 		try {
@@ -84,15 +85,11 @@ export class Query {
 				case QueryPerform.UNIQUE:
 					return await this.isUnique(options as DatabaseUniqueCheckOptions, x_request_id)
 				default:
-					this.logger.error(
-						`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Action ${action} not supported`,
-					)
+					this.logger.error(`[Query] Action ${action} not supported`, x_request_id)
 					throw new Error(`Action ${action} not supported`)
 			}
 		} catch (e) {
-			this.logger.error(
-				`${x_request_id ? '[' + x_request_id + ']' : ''}[Query][${action.toUpperCase()}][${table_name}] ${e.message}`,
-			)
+			this.logger.error(`[Query][${action.toUpperCase()}][${table_name}] ${e.message}`, x_request_id)
 
 			let pluralAction
 
@@ -130,14 +127,12 @@ export class Query {
 	 * * Used as part of the setup process
 	 */
 
-	async createTable(schema: DatabaseSchema, x_request_id: string): Promise<boolean> {
+	async createTable(schema: DatabaseSchema): Promise<boolean> {
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
-				return await this.mysql.createTable(schema, x_request_id)
+				return await this.mysql.createTable(schema)
 			default:
-				this.logger.error(
-					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
-				)
+				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
 	}
@@ -155,14 +150,15 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					x_request_id,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
 
 		return {
 			...result,
-			_x_request_id: x_request_id,
+			x_request_id,
 		}
 	}
 
@@ -179,7 +175,8 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					x_request_id,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -207,7 +204,8 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					x_request_id,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -231,7 +229,8 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+					x_request_id,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -255,7 +254,8 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+					x_request_id,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -279,7 +279,8 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
+					x_request_id,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -304,7 +305,8 @@ export class Query {
 				return await this.mysql.truncate(table_name)
 			default:
 				this.logger.error(
-					`${x_request_id ? '[' + x_request_id + ']' : ''}[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					x_request_id,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}

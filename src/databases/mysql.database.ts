@@ -4,6 +4,12 @@ import * as mysql from 'mysql2/promise'
 import { Connection } from 'mysql2/promise'
 import { SortCondition } from 'src/types/schema.types'
 
+import {
+	DeleteResponseObject,
+	FindManyResponseObject,
+	FindOneResponseObject,
+	IsUniqueResponse,
+} from '../dtos/response.dto'
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
 import {
@@ -21,12 +27,6 @@ import {
 	WhereOperator,
 } from '../types/database.types'
 import { MySQLColumnType } from '../types/databases/mysql.types'
-import {
-	DeleteResponseObject,
-	FindManyResponseObject,
-	FindOneResponseObject,
-	IsUniqueResponse,
-} from '../dtos/response.dto'
 
 @Injectable()
 export class MySQL {
@@ -46,13 +46,14 @@ export class MySQL {
 		return await mysql.createConnection(this.configService.get('database.host'))
 	}
 
-	async performQuery(options: { sql: string; values?: any[]; x_request_id: string }): Promise<any> {
+	async performQuery(options: { sql: string; values?: any[]; x_request_id?: string }): Promise<any> {
 		const connection = await this.createConnection()
 
 		try {
 			let results
 			this.logger.debug(
-				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[MySQL][Query] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`,
+				`[MySQL] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`,
+				options.x_request_id,
 			)
 
 			if (!options.values || !options.values.length) {
@@ -60,15 +61,11 @@ export class MySQL {
 			} else {
 				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
-			this.logger.debug(
-				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[MySQL][Query] Results: ${JSON.stringify(results)}`,
-			)
+			this.logger.debug(`[MySQL] Results: ${JSON.stringify(results)}`, options.x_request_id)
 			connection.end()
 			return results
 		} catch (e) {
-			this.logger.warn(
-				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[MySQL][Query] Error executing mysql database query`,
-			)
+			this.logger.warn(`[MySQL] Error executing mysql database query`, options.x_request_id)
 			this.logger.warn({
 				sql: {
 					sql: options.sql,
@@ -348,7 +345,7 @@ export class MySQL {
 	 * Create table from schema object
 	 */
 
-	async createTable(schema: DatabaseSchema, x_request_id: string): Promise<boolean> {
+	async createTable(schema: DatabaseSchema): Promise<boolean> {
 		try {
 			const columns = schema.columns.map(column => {
 				let column_string = `\`${column.field}\` ${this.fieldMapperReverse(column.type)}`
@@ -386,7 +383,7 @@ export class MySQL {
 
 			const command = `CREATE TABLE ${schema.table} (${columns.join(', ')})`
 
-			await this.performQuery({ sql: command, x_request_id })
+			await this.performQuery({ sql: command })
 
 			return true
 		} catch (e) {
@@ -460,10 +457,9 @@ export class MySQL {
 
 		for (const r in options.relations) {
 			if (options.relations[r].where) {
-
 				const items = options.relations[r].where.column.split('.')
 
-				switch(items.length) {
+				switch (items.length) {
 					case 1:
 						command += `AND \`${options.relations[r].table}\`.\`${options.relations[r].where.column}\` ${options.relations[r].where.operator} ? `
 						break
@@ -471,9 +467,8 @@ export class MySQL {
 						command += `AND \`${items[0]}\`.\`${items[1]}\` ${options.relations[r].where.operator} ? `
 						break
 					default:
-						command += `AND \`${items[items.length-2]}\`.\`${items[items.length-1]}\` ${options.relations[r].where.operator} ? `
+						command += `AND \`${items[items.length - 2]}\`.\`${items[items.length - 1]}\` ${options.relations[r].where.operator} ? `
 						break
-				
 				}
 
 				if (options.relations[r].where.value) {

@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { Cache } from 'cache-manager'
 import { plainToInstance } from 'class-transformer'
 import { IsBoolean, IsDateString, IsJSON, IsNumber, IsOptional, IsString, validate } from 'class-validator'
 import { isObject } from 'lodash'
 
-import { NON_FIELD_PARAMS } from '../app.constants'
+import { CACHE_DEFAULT_TABLE_SCHEMA_TTL, NON_FIELD_PARAMS } from '../app.constants'
 import { MySQL } from '../databases/mysql.database'
 import {
 	DatabaseColumnType,
@@ -28,6 +30,7 @@ import { Logger } from './Logger'
 @Injectable()
 export class Schema {
 	constructor(
+		@Inject(CACHE_MANAGER) private cacheManager: Cache,
 		private readonly logger: Logger,
 		private readonly configService: ConfigService,
 		private readonly mysql: MySQL,
@@ -42,27 +45,41 @@ export class Schema {
 			throw new Error('Table name not provided')
 		}
 
-		try {
-			let result: DatabaseSchema
+		//check cache for schema
+		let result: DatabaseSchema = await this.cacheManager.get(`schema:${options.table}`)
 
+		if (result?.table) {
+			this.logger.debug(`[GetSchema] Cache hit for ${options.table}`, options.x_request_id)
+			return {
+				...result,
+				_x_request_id: options.x_request_id,
+			}
+		}
+
+		try {
 			switch (this.configService.get<string>('database.type')) {
 				case DatabaseType.MYSQL:
 					result = await this.mysql.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
 				default:
 					this.logger.error(
-						`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Query][GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+						`[GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+						options.x_request_id,
 					)
 			}
+
+			await this.cacheManager.set(
+				`schema:${options.table}`,
+				result,
+				this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL,
+			)
 
 			return {
 				...result,
 				_x_request_id: options.x_request_id,
 			}
 		} catch (e) {
-			this.logger.error(
-				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[Query][GetSchema] ${e.message}`,
-			)
+			this.logger.error(`[GetSchema] ${e.message}`, options.x_request_id)
 			throw new Error(`Error processing schema for ${options.table}`)
 		}
 	}
@@ -167,7 +184,8 @@ export class Schema {
 
 					if (errors.length > 0) {
 						this.logger.error(
-							`${x_request_id ? '[' + x_request_id + ']' : ''}[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`,
+							`[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`,
+							x_request_id,
 						)
 						this.logger.error({
 							data,
@@ -190,9 +208,7 @@ export class Schema {
 			const errors = await validate(instance)
 
 			if (errors.length > 0) {
-				this.logger.error(
-					`${x_request_id ? '[' + x_request_id + ']' : ''}[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`,
-				)
+				this.logger.error(`[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`, x_request_id)
 				this.logger.error({
 					data,
 					instance,
@@ -278,9 +294,7 @@ export class Schema {
 				relations,
 			}
 		} catch (e) {
-			this.logger.debug(
-				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[validateFields] ${e.message}`,
-			)
+			this.logger.debug(`[validateFields] ${e.message}`, options.x_request_id)
 			return {
 				valid: false,
 				message: `Error parsing fields ${options.fields}`,
@@ -353,9 +367,7 @@ export class Schema {
 				relations: options.existing_relations,
 			}
 		} catch (e) {
-			this.logger.debug(
-				`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[validateRelations] ${e.message}`,
-			)
+			this.logger.debug(`[validateRelations] ${e.message}`, options.x_request_id)
 			return {
 				valid: false,
 				message: `Error parsing relations ${options.relation_query}`,
@@ -503,7 +515,8 @@ export class Schema {
 		for (let i = 0; i < items.length - 1; i++) {
 			if (!options.schema.relations.find(col => col.table === items[i])) {
 				this.logger.error(
-					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}Relation ${items[i]} not found in schema for ${options.schema.table}`,
+					`Relation ${items[i]} not found in schema for ${options.schema.table}`,
+					options.x_request_id,
 				)
 				this.logger.error(options)
 				throw new Error(`Relation ${items[i]} not found in schema for ${options.schema.table}`)
@@ -545,7 +558,8 @@ export class Schema {
 		for (let i = 0; i < items.length - 1; i++) {
 			if (!options.schema.relations.find(col => col.table === items[i])) {
 				this.logger.error(
-					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}Relation ${items[i]} not found in schema for ${options.schema.table}`,
+					`Relation ${items[i]} not found in schema for ${options.schema.table}`,
+					options.x_request_id,
 				)
 				this.logger.error(options)
 				throw new Error(`Relation ${items[i]} not found in schema for ${options.schema.table}`)
@@ -593,7 +607,8 @@ export class Schema {
 		for (let i = 0; i < items.length - 1; i++) {
 			if (!options.schema.relations.find(col => col.table === items[i])) {
 				this.logger.error(
-					`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}Relation ${items[i]} not found in schema for ${options.schema.table}`,
+					`Relation ${items[i]} not found in schema for ${options.schema.table}`,
+					options.x_request_id,
 				)
 				this.logger.error(options)
 				throw new Error(`Relation ${items[i]} not found in schema for ${options.schema.table}`)

@@ -1,5 +1,6 @@
 import { ConsoleLogger, Injectable, LogLevel } from '@nestjs/common'
 
+import { APP_BOOT_CONTEXT } from '../app.constants'
 import { Env } from '../utils/Env'
 import { Environment } from '../utils/Env.types'
 
@@ -40,13 +41,13 @@ export class Logger extends ConsoleLogger {
 	}
 
 	status(): void {
-		this.log(`--------- Logging Status ---------`)
-		this.error(`This is an error`)
-		this.warn(`This is a warning`)
-		this.log(`This is a log`)
-		this.debug(`This is a debug`)
-		this.verbose(`This is a verbose`)
-		this.log(`------- Logging Status End -------`)
+		this.log(`--------- Logging Status ---------`, APP_BOOT_CONTEXT)
+		this.error(`This is an error`, APP_BOOT_CONTEXT)
+		this.warn(`This is a warning`, APP_BOOT_CONTEXT)
+		this.log(`This is a log`, APP_BOOT_CONTEXT)
+		this.debug(`This is a debug`, APP_BOOT_CONTEXT)
+		this.verbose(`This is a verbose`, APP_BOOT_CONTEXT)
+		this.log(`------- Logging Status End -------`, APP_BOOT_CONTEXT)
 	}
 
 	table(data: any): void {

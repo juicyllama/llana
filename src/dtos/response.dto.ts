@@ -1,80 +1,77 @@
-import { IsArray, IsBoolean, IsNumber, IsObject, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsNumber, IsObject, IsOptional, IsString } from 'class-validator'
 
-export class PaginationPage {   
+export class PaginationPage {
+	@IsString()
+	current: string
 
-    @IsString()
-    current: string
+	@IsOptional()
+	@IsString()
+	prev?: string
 
-    @IsOptional()
-    @IsString()
-    prev?: string
+	@IsOptional()
+	@IsString()
+	next?: string
 
-    @IsOptional()
-    @IsString()
-    next?: string
+	@IsOptional()
+	@IsString()
+	first?: string
 
-    @IsOptional()
-    @IsString()
-    first?: string
-
-    @IsOptional()
-    @IsString()
-    last?: string
+	@IsOptional()
+	@IsString()
+	last?: string
 }
 
 export class Pagination {
+	@IsObject()
+	page: PaginationPage
 
-    @IsObject()
-    page: PaginationPage
-
-    @IsNumber()
-    total: number
+	@IsNumber()
+	total: number
 }
 
-export class FindOneResponseObject { [key: string]: any }
+export class FindOneResponseObject {
+	[key: string]: any
+}
 
 export class FindManyResponseObject {
-
-    @IsNumber()
+	@IsNumber()
 	offset: number
 
-    @IsNumber()
+	@IsNumber()
 	limit: number
 
-    @IsNumber()
+	@IsNumber()
 	total: number
 
-    @IsObject()
+	@IsObject()
 	pagination: Pagination
 
-    @IsArray()
+	@IsArray()
 	data: FindOneResponseObject[]
 
-    @IsOptional()
-    @IsString()
+	@IsOptional()
+	@IsString()
 	_x_request_id?: string
 }
 
-export class IsUniqueResponse { 
-    
-    @IsBoolean()
-    valid: boolean; 
-    
-    @IsOptional()
-    @IsString()
-    message?: string;
+export class IsUniqueResponse {
+	@IsBoolean()
+	valid: boolean
 
-    @IsOptional()
-    @IsString()
-    _x_request_id?: string 
+	@IsOptional()
+	@IsString()
+	message?: string
+
+	@IsOptional()
+	@IsString()
+	_x_request_id?: string
 }
 
 export class DeleteResponseObject {
-
-    @IsNumber()
+	@IsNumber()
 	deleted: number
 
-    @IsOptional()
-    @IsString()
+	@IsOptional()
+	@IsString()
 	_x_request_id?: string
 }

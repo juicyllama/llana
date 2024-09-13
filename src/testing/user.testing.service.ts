@@ -1,10 +1,10 @@
 import { faker } from '@faker-js/faker'
 import { Injectable } from '@nestjs/common'
 
+import { FindOneResponseObject } from '../dtos/response.dto'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/database.types'
-import { FindOneResponseObject } from '../dtos/response.dto'
 
 export const USER = {
 	email: faker.internet.email(),
