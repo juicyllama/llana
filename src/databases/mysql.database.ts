@@ -581,8 +581,6 @@ export class MySQL {
 	}
 
 	private formatOutput(options: DatabaseFindOneOptions, data: { [key: string]: any }): object {
-		//TODO: this will only work for one level deep, need to refactor to work with multiple levels
-
 		for (const key in data) {
 			if (key.includes('.')) {
 				const [table, field] = key.split('.')
@@ -617,6 +615,6 @@ export class MySQL {
 	}
 
 	async truncate(table: string): Promise<void> {
-		return await this.performQuery({ sql: 'TRUNCATE TABLE ' + table, x_request_id: '' })
+		return await this.performQuery({ sql: 'TRUNCATE TABLE ' + table })
 	}
 }

@@ -144,7 +144,7 @@ export class Query {
 	private async createOne(options: DatabaseCreateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		let result: FindOneResponseObject
 
-		switch (this.configService.get<string>('database.type')) {
+		switch (this.configService.get<DatabaseType>('database.type')) {
 			case DatabaseType.MYSQL:
 				result = await this.mysql.createOne(options, x_request_id)
 				break
