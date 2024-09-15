@@ -4,10 +4,11 @@ import { ConfigService } from '@nestjs/config'
 import { Cache } from 'cache-manager'
 import { plainToInstance } from 'class-transformer'
 import { IsBoolean, IsDateString, IsJSON, IsNumber, IsOptional, IsString, validate } from 'class-validator'
-import { isObject } from 'lodash'
+import { isDate, isObject } from 'lodash'
 
 import { CACHE_DEFAULT_TABLE_SCHEMA_TTL, NON_FIELD_PARAMS } from '../app.constants'
 import { MySQL } from '../databases/mysql.database'
+import { Postgres } from '../databases/postgres.database'
 import {
 	DatabaseColumnType,
 	DatabaseFindOneOptions,
@@ -34,6 +35,7 @@ export class Schema {
 		private readonly logger: Logger,
 		private readonly configService: ConfigService,
 		private readonly mysql: MySQL,
+		private readonly postgres: Postgres,
 	) {}
 
 	/**
@@ -61,11 +63,18 @@ export class Schema {
 				case DatabaseType.MYSQL:
 					result = await this.mysql.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
+				case DatabaseType.POSTGRES:
+					result = await this.postgres.getSchema({ table: options.table, x_request_id: options.x_request_id })
+					break
 				default:
 					this.logger.error(
 						`[GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`,
 						options.x_request_id,
 					)
+			}
+
+			if (!result?.table) {
+				throw new Error(`Schema not found for ${options.table}`)
 			}
 
 			await this.cacheManager.set(
@@ -175,7 +184,7 @@ export class Schema {
 
 		const keys = Object.keys(nestedObject)
 		for (const key of keys) {
-			if (isObject(nestedObject[key])) {
+			if (isObject(nestedObject[key]) && !isDate(nestedObject[key])) {
 				const relation = options.relations.find(col => col.table === key)
 				const DynamicClass = this.schemaToClass(relation.schema, nestedObject[key])
 				const instance: object = plainToInstance(DynamicClass, nestedObject[key])

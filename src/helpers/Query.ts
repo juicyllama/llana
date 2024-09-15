@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { MySQL } from '../databases/mysql.database'
+import { Postgres } from '../databases/postgres.database'
 import {
 	DeleteResponseObject,
 	FindManyResponseObject,
@@ -33,6 +34,7 @@ export class Query {
 		private readonly logger: Logger,
 		private readonly schema: Schema,
 		private readonly mysql: MySQL,
+		private readonly postgres: Postgres,
 	) {}
 
 	async perform(
@@ -131,6 +133,8 @@ export class Query {
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
 				return await this.mysql.createTable(schema)
+			case DatabaseType.POSTGRES:
+				return await this.postgres.createTable(schema)
 			default:
 				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
@@ -147,6 +151,9 @@ export class Query {
 		switch (this.configService.get<DatabaseType>('database.type')) {
 			case DatabaseType.MYSQL:
 				result = await this.mysql.createOne(options, x_request_id)
+				break
+			case DatabaseType.POSTGRES:
+				result = await this.postgres.createOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -172,6 +179,9 @@ export class Query {
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
 				result = await this.mysql.findOne(options, x_request_id)
+				break
+			case DatabaseType.POSTGRES:
+				result = await this.postgres.findOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -202,6 +212,9 @@ export class Query {
 			case DatabaseType.MYSQL:
 				result = await this.mysql.findMany(options, x_request_id)
 				break
+			case DatabaseType.POSTGRES:
+				result = await this.postgres.findMany(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
@@ -226,6 +239,9 @@ export class Query {
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
 				result = await this.mysql.updateOne(options, x_request_id)
+				break
+			case DatabaseType.POSTGRES:
+				result = await this.postgres.updateOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -252,6 +268,9 @@ export class Query {
 			case DatabaseType.MYSQL:
 				result = await this.mysql.deleteOne(options, x_request_id)
 				break
+			case DatabaseType.POSTGRES:
+				result = await this.postgres.deleteOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
@@ -276,6 +295,9 @@ export class Query {
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
 				result = await this.mysql.uniqueCheck(options, x_request_id)
+				break
+			case DatabaseType.POSTGRES:
+				result = await this.postgres.uniqueCheck(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -303,6 +325,8 @@ export class Query {
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
 				return await this.mysql.truncate(table_name)
+			case DatabaseType.POSTGRES:
+				return await this.postgres.truncate(table_name)
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,

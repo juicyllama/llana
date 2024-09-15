@@ -49,6 +49,8 @@ export function UrlToTable(uri: string, dropSlashes?: number): string {
 export function getDatabaseType(uri: string): DatabaseType {
 	if (uri.includes('mysql')) {
 		return DatabaseType.MYSQL
+	} else if (uri.includes('postgresql')) {
+		return DatabaseType.POSTGRES
 	} else {
 		throw new Error('Database type not supported')
 	}

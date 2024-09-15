@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import * as mysql from 'mysql2/promise'
-import { Connection } from 'mysql2/promise'
+import * as pg from 'pg'
 
 import {
 	DeleteResponseObject,
@@ -25,25 +24,30 @@ import {
 	DatabaseUpdateOneOptions,
 	WhereOperator,
 } from '../types/database.types'
-import { MySQLColumnType } from '../types/databases/mysql.types'
+import { PostgreSQLColumnType } from '../types/databases/postgres.types'
 import { SortCondition } from '../types/schema.types'
 
-const DATABASE_TYPE = 'MySQL'
+const DATABASE_TYPE = 'Postgres'
 
 @Injectable()
-export class MySQL {
+export class Postgres {
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
 		private readonly pagination: Pagination,
 	) {}
 
-	async createConnection(): Promise<Connection> {
+	async createConnection(): Promise<pg.Client> {
 		try {
-			if (!mysql) {
+			const { Client } = pg
+
+			if (!Client) {
 				throw new Error(`${DATABASE_TYPE} library is not initialized`)
 			}
-			return await mysql.createConnection(this.configService.get('database.host'))
+
+			const client = new Client(this.configService.get('database.host'))
+			await client.connect()
+			return client
 		} catch (e) {
 			this.logger.error(`[${DATABASE_TYPE}] Error creating database connection - ${e.message}`)
 			throw new Error('Error creating database connection')
@@ -55,15 +59,23 @@ export class MySQL {
 
 		try {
 			let results
+
+			//if last character is not a semicolon, add it
+			if (options.sql.slice(-1) !== ';') {
+				options.sql += ';'
+			}
+
 			this.logger.debug(
 				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`,
 				options.x_request_id,
 			)
 
 			if (!options.values || !options.values.length) {
-				;[results] = await connection.query<any[]>(options.sql)
+				const res = await connection.query(options.sql)
+				results = res.rows
 			} else {
-				;[results] = await connection.query<any[]>(options.sql, options.values)
+				const res = await connection.query(options.sql, options.values)
+				results = res.rows
 			}
 			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)}`, options.x_request_id)
 			connection.end()
@@ -91,8 +103,39 @@ export class MySQL {
 	 */
 
 	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
+		let sql = `SELECT column_name AS "Field", data_type AS "Type", is_nullable AS "Null", column_default AS "Default", 
+			CASE 
+				WHEN column_name = ANY (SELECT kcu.column_name 
+							  FROM information_schema.key_column_usage AS kcu 
+							  JOIN information_schema.table_constraints AS tc 
+							  ON kcu.constraint_name = tc.constraint_name 
+							  WHERE kcu.table_name = '${options.table}' AND tc.constraint_type = 'PRIMARY KEY') 
+				THEN 'PRI' 
+				ELSE '' 
+			END AS "Key",
+			CASE 
+				WHEN column_name = ANY (SELECT kcu.column_name 
+							  FROM information_schema.key_column_usage AS kcu 
+							  JOIN information_schema.table_constraints AS tc 
+							  ON kcu.constraint_name = tc.constraint_name 
+							  WHERE kcu.table_name = '${options.table}' AND tc.constraint_type = 'UNIQUE') 
+				THEN 'UNI' 
+				ELSE '' 
+			END AS "Key_Unique",
+			CASE 
+				WHEN column_name = ANY (SELECT kcu.column_name 
+							  FROM information_schema.key_column_usage AS kcu 
+							  JOIN information_schema.table_constraints AS tc 
+							  ON kcu.constraint_name = tc.constraint_name 
+							  WHERE kcu.table_name = '${options.table}' AND tc.constraint_type = 'FOREIGN KEY') 
+				THEN 'MUL' 
+				ELSE '' 
+			END AS "Key_Multiple", 
+		'extra' AS "Extra" 
+		FROM information_schema.columns WHERE table_name = '${options.table}'`
+
 		const columns_result = await this.performQuery({
-			sql: `DESCRIBE ${options.table}`,
+			sql: sql,
 			x_request_id: options.x_request_id,
 		})
 
@@ -114,13 +157,21 @@ export class MySQL {
 			}
 		})
 
-		const relations_query = `SELECT TABLE_NAME as 'table', COLUMN_NAME as 'column', REFERENCED_TABLE_NAME as 'org_table', REFERENCED_COLUMN_NAME as 'org_column' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_NAME = '${options.table}';`
+		const relations_query = `SELECT tc.table_name AS "table", kcu.column_name AS "column", ccu.table_name AS "org_table", ccu.column_name AS "org_column"
+			FROM information_schema.table_constraints AS tc
+			JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name
+			JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
+			WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = '${options.table}';`
 		const relations_result = await this.performQuery({ sql: relations_query, x_request_id: options.x_request_id })
 		const relations = relations_result
 			.filter((row: DatabaseSchemaRelation) => row.table !== null)
 			.map((row: DatabaseSchemaRelation) => row)
 
-		const relation_back_query = `SELECT REFERENCED_TABLE_NAME as 'table', REFERENCED_COLUMN_NAME as 'column', TABLE_NAME as 'org_table', COLUMN_NAME as 'org_column' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = '${options.table}' AND REFERENCED_TABLE_NAME IS NOT NULL;`
+		const relation_back_query = `SELECT ccu.table_name AS "table", ccu.column_name AS "column", tc.table_name AS "org_table", kcu.column_name AS "org_column"
+			FROM information_schema.table_constraints AS tc
+			JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name
+			JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
+			WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = '${options.table}';`
 		const relation_back_result = await this.performQuery({
 			sql: relation_back_query,
 			x_request_id: options.x_request_id,
@@ -147,30 +198,18 @@ export class MySQL {
 		const table_name = options.schema.table
 		const values: any[] = []
 
-		options = this.pipeObjectToMySQL(options) as DatabaseCreateOneOptions
+		options = this.pipeObjectToPostgres(options) as DatabaseCreateOneOptions
 
 		const columns = Object.keys(options.data)
 		const dataValues = Object.values(options.data)
 
 		values.push(...dataValues)
 
-		const command = `INSERT INTO ${table_name} (\`${columns.join('`, `')}\`) VALUES ( ?${values.map(() => ``).join(', ?')} )`
+		const placeholders = values.map((_, index) => `$${index + 1}`).join(', ')
+		const command = `INSERT INTO "${table_name}" (${columns.map(column => `"${column}"`).join(', ')}) VALUES (${placeholders}) RETURNING *`
 
 		const result = await this.performQuery({ sql: command, values, x_request_id })
-
-		return await this.findOne(
-			{
-				schema: options.schema,
-				where: [
-					{
-						column: options.schema.primary_key,
-						operator: WhereOperator.equals,
-						value: result.insertId,
-					},
-				],
-			},
-			x_request_id,
-		)
+		return this.formatOutput(options, result[0])
 	}
 
 	/**
@@ -181,13 +220,13 @@ export class MySQL {
 		let [command, values] = this.find(options)
 		command += ` LIMIT 1`
 
-		const results = await this.performQuery({ sql: command, values, x_request_id })
+		const result = await this.performQuery({ sql: command, values, x_request_id })
 
-		if (!results[0]) {
+		if (!result[0]) {
 			return
 		}
 
-		return this.formatOutput(options, results[0])
+		return this.formatOutput(options, result[0])
 	}
 
 	/**
@@ -258,33 +297,25 @@ export class MySQL {
 
 	async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
+		let index = 1
 
 		const values = [...Object.values(options.data), options.id.toString()]
-		let command = `UPDATE ${table_name} SET `
+		let command = `UPDATE "${table_name}" SET `
 
-		options = this.pipeObjectToMySQL(options) as DatabaseUpdateOneOptions
+		options = this.pipeObjectToPostgres(options) as DatabaseUpdateOneOptions
 
-		command += `${Object.keys(options.data)
-			.map(key => `${key} = ?`)
-			.join(', ')} `
+		for (const column in options.data) {
+			command += `"${column}" = $${index}, `
+			index++
+		}
 
-		command += `WHERE ${options.schema.primary_key} = ?`
+		command = command.slice(0, -2)
 
-		await this.performQuery({ sql: command, values, x_request_id })
+		command += ` WHERE "${options.schema.primary_key}" = $${index}`
+		command += ` RETURNING *`
 
-		return await this.findOne(
-			{
-				schema: options.schema,
-				where: [
-					{
-						column: options.schema.primary_key,
-						operator: WhereOperator.equals,
-						value: options.id,
-					},
-				],
-			},
-			x_request_id,
-		)
+		const result = await this.performQuery({ sql: command, values, x_request_id })
+		return this.formatOutput(options, result[0])
 	}
 
 	/**
@@ -304,31 +335,29 @@ export class MySQL {
 				x_request_id,
 			)
 
-			if (result) {
-				return {
-					deleted: 1,
-				}
+			return {
+				deleted: result ? 1 : 0,
 			}
-		}
+		} else {
+			const table_name = options.schema.table
 
-		const table_name = options.schema.table
+			const values = [options.id]
+			let command = `DELETE FROM "${table_name}" `
 
-		const values = [options.id]
-		let command = `DELETE FROM ${table_name} `
+			command += `WHERE "${options.schema.primary_key}" = $1 RETURNING *`
 
-		command += `WHERE ${options.schema.primary_key} = ?`
+			const result = await this.performQuery({ sql: command, values, x_request_id })
 
-		const result = await this.performQuery({ sql: command, values, x_request_id })
-
-		return {
-			deleted: result.affectedRows,
+			return {
+				deleted: result[0] ? 1 : 0,
+			}
 		}
 	}
 
 	async uniqueCheck(options: DatabaseUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		for (const column of options.schema.columns) {
 			if (column.unique_key) {
-				const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE ${column.field} = ?`
+				const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE ${column.field} = $1`
 				const result = await this.performQuery({
 					sql: command,
 					values: [options.data[column.field]],
@@ -355,41 +384,54 @@ export class MySQL {
 
 	async createTable(schema: DatabaseSchema): Promise<boolean> {
 		try {
-			const columns = schema.columns.map(column => {
-				let column_string = `\`${column.field}\` ${this.fieldMapperReverse(column.type)}`
+			let command = `CREATE TABLE "${schema.table}" (`
 
-				if (column.type === DatabaseColumnType.STRING) {
-					column_string += `(${column.extra?.length ?? 255})`
-				}
+			for (const column of schema.columns) {
+				command += ` "${column.field}" `
 
-				if (column.type === DatabaseColumnType.ENUM) {
-					column_string += `(${column.enums?.map(e => `'${e}'`).join(', ')})`
+				switch (column.type) {
+					case DatabaseColumnType.STRING:
+						command += `${this.fieldMapperReverse(column.type)}(${column.extra?.length ?? 255})`
+						break
+
+					case DatabaseColumnType.ENUM:
+						await this.performQuery({ sql: `DROP TYPE IF EXISTS ${schema.table}_${column.field}_enum` })
+						await this.performQuery({
+							sql: `CREATE TYPE ${schema.table}_${column.field}_enum AS ENUM (${column.enums.map(e => `'${e}'`).join(', ')})`,
+						})
+						command += `${schema.table}_${column.field}_enum`
+						break
+
+					default:
+						command += `${this.fieldMapperReverse(column.type)}`
 				}
 
 				if (column.required) {
-					column_string += ' NOT NULL'
+					command += ' NOT NULL'
 				}
 
 				if (column.unique_key) {
-					column_string += ' UNIQUE'
+					command += ' UNIQUE'
 				}
 
 				if (column.primary_key) {
-					column_string += ' PRIMARY KEY'
+					command += ' PRIMARY KEY'
 				}
 
 				if (column.default) {
-					column_string += ` DEFAULT ${column.default}`
+					command += ` DEFAULT ${column.default}`
 				}
 
 				if (column.auto_increment) {
-					column_string += ' AUTO_INCREMENT'
+					command += ' GENERATED ALWAYS AS IDENTITY'
 				}
 
-				return column_string
-			})
+				command += `,`
+			}
 
-			const command = `CREATE TABLE ${schema.table} (${columns.join(', ')})`
+			//remove last comma
+			command = command.slice(0, -1)
+			command += `)`
 
 			await this.performQuery({ sql: command })
 
@@ -400,12 +442,10 @@ export class MySQL {
 		}
 	}
 
-	private find(
-		options: DatabaseFindOneOptions | DatabaseFindManyOptions,
-		count: boolean = false,
-	): [string, string[]] {
+	private find(options: DatabaseFindOneOptions | DatabaseFindManyOptions, count: boolean = false): [string, any[]] {
 		const table_name = options.schema.table
 		let values: any[] = []
+		let index = 1
 
 		let command
 
@@ -416,29 +456,29 @@ export class MySQL {
 
 			if (options.fields?.length) {
 				for (const f in options.fields) {
-					command += ` \`${options.schema.table}\`.\`${options.fields[f]}\` as \`${options.fields[f]}\`,`
+					command += ` "${options.schema.table}"."${options.fields[f]}" as "${options.fields[f]}",`
 				}
 				command = command.slice(0, -1)
 			} else {
-				command += ` \`${options.schema.table}\`.* `
+				command += ` "${options.schema.table}".* `
 			}
 
 			if (options.relations?.length) {
 				for (const r in options.relations) {
 					if (options.relations[r].columns?.length) {
 						for (const c in options.relations[r].columns) {
-							command += `, \`${options.relations[r].table}\`.\`${options.relations[r].columns[c]}\` as \`${options.relations[r].table}.${options.relations[r].columns[c]}\` `
+							command += `, "${options.relations[r].table}"."${options.relations[r].columns[c]}" as "${options.relations[r].table}.${options.relations[r].columns[c]}" `
 						}
 					}
 				}
 			}
 		}
 
-		command += ` FROM ${table_name} `
+		command += ` FROM "${table_name}" `
 
 		if (options.relations?.length) {
 			for (const relation of options.relations) {
-				command += `${relation.join.type ?? 'INNER JOIN'} ${relation.join.table} ON ${relation.join.org_table}.${relation.join.org_column} = ${relation.join.table}.${relation.join.column} `
+				command += `${relation.join.type ?? 'INNER JOIN'} "${relation.join.table}" ON "${relation.join.org_table}"."${relation.join.org_column}" = "${relation.join.table}"."${relation.join.column}" `
 			}
 		}
 
@@ -451,7 +491,21 @@ export class MySQL {
 				}
 			}
 
-			command += `${options.where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}  `).join(' AND ')} `
+			for (const w of options.where) {
+				if (w.column.includes('.')) {
+					const items = w.column.split('.')
+					command += `"${items[0]}"."${items[1]}"`
+				} else {
+					command += `"${table_name}"."${w.column}"`
+				}
+
+				command += ` ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '$' + index : ''}  AND `
+
+				index++
+			}
+
+			command = command.slice(0, -4)
+
 			const where_values = options.where.map(w => w.value)
 			if (where_values.length) {
 				for (const w in where_values) {
@@ -469,93 +523,79 @@ export class MySQL {
 
 				switch (items.length) {
 					case 1:
-						command += `AND \`${options.relations[r].table}\`.\`${options.relations[r].where.column}\` ${options.relations[r].where.operator} ? `
+						command += `AND "${options.relations[r].table}"."${options.relations[r].where.column}" ${options.relations[r].where.operator} $${index} `
 						break
 					case 2:
-						command += `AND \`${items[0]}\`.\`${items[1]}\` ${options.relations[r].where.operator} ? `
+						command += `AND "${items[0]}"."${items[1]}" ${options.relations[r].where.operator} $${index} `
 						break
 					default:
-						command += `AND \`${items[items.length - 2]}\`.\`${items[items.length - 1]}\` ${options.relations[r].where.operator} ? `
+						command += `AND "${items[items.length - 2]}"."${items[items.length - 1]}" ${options.relations[r].where.operator} $${index} `
 						break
 				}
 
 				if (options.relations[r].where.value) {
 					values.push(options.relations[r].where.value)
 				}
+
+				index++
 			}
 		}
 
 		return [command.trim(), values]
 	}
 
-	private fieldMapper(type: MySQLColumnType): DatabaseColumnType {
+	private fieldMapper(type: PostgreSQLColumnType): DatabaseColumnType {
 		if (type.includes('enum')) {
 			return DatabaseColumnType.ENUM
 		}
 
 		switch (type) {
-			case MySQLColumnType.INT:
-			case MySQLColumnType.TINYINT:
-			case MySQLColumnType.SMALLINT:
-			case MySQLColumnType.MEDIUMINT:
-			case MySQLColumnType.BIGINT:
-			case MySQLColumnType.FLOAT:
-			case MySQLColumnType.DOUBLE:
-			case MySQLColumnType.DECIMAL:
-			case MySQLColumnType.NUMERIC:
-			case MySQLColumnType.REAL:
-			case MySQLColumnType.TIMESTAMP:
-			case MySQLColumnType.YEAR:
+			case PostgreSQLColumnType.INT:
+			case PostgreSQLColumnType.DOUBLE:
+			case PostgreSQLColumnType.NUMERIC:
+			case PostgreSQLColumnType.REAL:
+			case PostgreSQLColumnType.TIMESTAMP:
+			case PostgreSQLColumnType.YEAR:
 				return DatabaseColumnType.NUMBER
-			case MySQLColumnType.CHAR:
-			case MySQLColumnType.VARCHAR:
-			case MySQLColumnType.TEXT:
-			case MySQLColumnType.TINYTEXT:
-			case MySQLColumnType.MEDIUMTEXT:
-			case MySQLColumnType.LONGTEXT:
-			case MySQLColumnType.ENUM:
+			case PostgreSQLColumnType.CHAR:
+			case PostgreSQLColumnType.VARCHAR:
+			case PostgreSQLColumnType.TEXT:
+			case PostgreSQLColumnType.ENUM:
 				return DatabaseColumnType.STRING
-			case MySQLColumnType.DATE:
-			case MySQLColumnType.DATETIME:
-			case MySQLColumnType.TIME:
+			case PostgreSQLColumnType.DATE:
+			case PostgreSQLColumnType.DATETIME:
+			case PostgreSQLColumnType.TIME:
 				return DatabaseColumnType.DATE
-			case MySQLColumnType.BOOL:
-			case MySQLColumnType.BOOLEAN:
+			case PostgreSQLColumnType.BOOLEAN:
 				return DatabaseColumnType.BOOLEAN
-			case MySQLColumnType.JSON:
+			case PostgreSQLColumnType.JSON:
 				return DatabaseColumnType.JSON
-			case MySQLColumnType.SET:
-			case MySQLColumnType.BLOB:
-			case MySQLColumnType.TINYBLOB:
-			case MySQLColumnType.MEDIUMBLOB:
-			case MySQLColumnType.LONGBLOB:
-			case MySQLColumnType.BINARY:
-			case MySQLColumnType.VARBINARY:
+			case PostgreSQLColumnType.BINARY:
 			default:
 				return DatabaseColumnType.UNKNOWN
 		}
 	}
 
-	private fieldMapperReverse(type: DatabaseColumnType): MySQLColumnType {
+	private fieldMapperReverse(type: DatabaseColumnType): PostgreSQLColumnType {
 		switch (type) {
 			case DatabaseColumnType.STRING:
-				return MySQLColumnType.VARCHAR
+				return PostgreSQLColumnType.VARCHAR
 			case DatabaseColumnType.NUMBER:
-				return MySQLColumnType.INT
+				return PostgreSQLColumnType.INT
 			case DatabaseColumnType.BOOLEAN:
-				return MySQLColumnType.BOOLEAN
+				return PostgreSQLColumnType.BOOLEAN
 			case DatabaseColumnType.DATE:
-				return MySQLColumnType.DATETIME
+				return PostgreSQLColumnType.DATETIME
 			case DatabaseColumnType.JSON:
-				return MySQLColumnType.JSON
+				return PostgreSQLColumnType.JSON
 			case DatabaseColumnType.ENUM:
-				return MySQLColumnType.ENUM
+				return PostgreSQLColumnType.ENUM
 			default:
-				return MySQLColumnType.VARCHAR
+				return PostgreSQLColumnType.VARCHAR
 		}
 	}
 
-	private pipeObjectToMySQL(
+	private pipeObjectToPostgres(
 		options: DatabaseCreateOneOptions | DatabaseUpdateOneOptions,
 	): DatabaseCreateOneOptions | DatabaseUpdateOneOptions {
 		for (const column of options.schema.columns) {
@@ -617,6 +657,8 @@ export class MySQL {
 				return value === 1
 			case DatabaseColumnType.DATE:
 				return new Date(value).toISOString()
+			case DatabaseColumnType.NUMBER:
+				return Number(value)
 			default:
 				return value
 		}
