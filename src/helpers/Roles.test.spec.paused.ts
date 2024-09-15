@@ -41,8 +41,6 @@ describe('Roles', () => {
 		//customerTableSchema = await schema.getSchema('Customer')
 
 		const home = await request(app.getHttpServer()).get('/').expect(200)
-
-		console.log(home.text)
 	})
 
 	describe('No roles', () => {
@@ -67,8 +65,6 @@ describe('Roles', () => {
 					records: RolePermission.NONE,
 				},
 			})) as DefaultRole
-
-			console.log(role_record)
 
 			expect(role_record).toBeDefined()
 			expect(role_record.id).toBeDefined()

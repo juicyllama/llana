@@ -9,6 +9,7 @@ import { QueryPerform } from '../types/database.types'
 export const USER = {
 	email: faker.internet.email(),
 	password: faker.internet.password(),
+	role: 'VIEWER',
 }
 
 @Injectable()

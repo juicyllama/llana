@@ -43,6 +43,7 @@ describe('Query > Delete', () => {
 					id: '999999',
 					schema: usersTableSchema,
 				})) as DeleteResponseObject
+
 				expect(results.deleted).toEqual(0)
 			} catch (e) {
 				logger.error(e)

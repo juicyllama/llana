@@ -15,6 +15,7 @@ import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
 import { MySQL } from './databases/mysql.database'
+import { Postgres } from './databases/postgres.database'
 import { Authentication } from './helpers/Authentication'
 import { Encryption } from './helpers/Encryption'
 import { Logger } from './helpers/Logger'
@@ -42,12 +43,25 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		LoginService,
 		MySQL,
 		Pagination,
+		Postgres,
 		Query,
 		Response,
 		Roles,
 		Schema,
 	],
-	exports: [Authentication, Encryption, Logger, LoginService, MySQL, Pagination, Query, Response, Roles, Schema],
+	exports: [
+		Authentication,
+		Encryption,
+		Logger,
+		LoginService,
+		MySQL,
+		Pagination,
+		Postgres,
+		Query,
+		Response,
+		Roles,
+		Schema,
+	],
 })
 export class AppModule implements NestModule {
 	configure(consumer: MiddlewareConsumer) {
