@@ -3,12 +3,13 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 
+import { AuthController } from './app.controller.auth'
 import { DeleteController } from './app.controller.delete'
 import { GetController } from './app.controller.get'
 import { PostController } from './app.controller.post'
 import { PutController } from './app.controller.put'
+import { LoginService } from './app.service.auth'
 import { AppBootup } from './app.service.bootup'
-import { LoginService } from './app.service.login'
 import auth from './config/auth.config'
 import database from './config/database.config'
 import hosts from './config/hosts.config'
@@ -34,7 +35,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		JwtModule.register(jwt()),
 		CacheModule.register(),
 	],
-	controllers: [DeleteController, GetController, PostController, PutController],
+	controllers: [AuthController, DeleteController, GetController, PostController, PutController],
 	providers: [
 		AppBootup,
 		Authentication,

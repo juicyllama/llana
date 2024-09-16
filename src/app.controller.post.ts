@@ -1,6 +1,5 @@
-import { Body, Controller, Headers, Post, Req, Res } from '@nestjs/common'
+import { Controller, Headers, Post, Req, Res } from '@nestjs/common'
 
-import { LoginService } from './app.service.login'
 import { HeaderParams } from './dtos/requests.dto'
 import { FindOneResponseObject, IsUniqueResponse } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
@@ -17,18 +16,11 @@ import { RolePermission } from './types/roles.types'
 export class PostController {
 	constructor(
 		private readonly authentication: Authentication,
-		private readonly loginService: LoginService,
 		private readonly query: Query,
 		private readonly schema: Schema,
 		private readonly response: Response,
 		private readonly roles: Roles,
 	) {}
-
-	@Post('/login')
-	signIn(@Req() req, @Body() signInDto: Record<string, any>, @Headers() headers: HeaderParams) {
-		const x_request_id = headers['x-request-id']
-		return this.loginService.signIn(signInDto.username, signInDto.password, x_request_id)
-	}
 
 	/**
 	 * Create new record

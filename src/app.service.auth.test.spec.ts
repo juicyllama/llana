@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 
 import { AppModule } from './app.module'
-import { LoginService } from './app.service.login'
+import { LoginService } from './app.service.auth'
 import { Logger } from './helpers/Logger'
 
 describe('Login Service', () => {
