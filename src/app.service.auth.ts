@@ -10,7 +10,7 @@ import { Auth, AuthJWT, AuthType } from './types/auth.types'
 import { DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from './types/database.types'
 
 @Injectable()
-export class LoginService {
+export class AuthService {
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly encryption: Encryption,
@@ -62,7 +62,7 @@ export class LoginService {
 		}
 
 		const user = await this.query.perform(
-			QueryPerform.FIND,
+			QueryPerform.FIND_ONE,
 			{
 				schema,
 				where,

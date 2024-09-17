@@ -28,9 +28,9 @@ export class GetController {
 		private readonly configService: ConfigService,
 		private readonly pagination: Pagination,
 		private readonly query: Query,
-		private readonly schema: Schema,
 		private readonly response: Response,
 		private readonly roles: Roles,
+		private readonly schema: Schema,
 	) {}
 
 	@Get('')
@@ -225,7 +225,7 @@ export class GetController {
 		}
 
 		try {
-			const result = await this.query.perform(QueryPerform.FIND, options, x_request_id)
+			const result = await this.query.perform(QueryPerform.FIND_ONE, options, x_request_id)
 
 			if (!result) {
 				return res.status(204).send(this.response.text(`No record found for id ${id}`))

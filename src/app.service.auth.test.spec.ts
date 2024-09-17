@@ -2,12 +2,12 @@ import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 
 import { AppModule } from './app.module'
-import { LoginService } from './app.service.auth'
+import { AuthService } from './app.service.auth'
 import { Logger } from './helpers/Logger'
 
 describe('Login Service', () => {
 	let app: INestApplication
-	let service: LoginService
+	let service: AuthService
 	let logger: Logger
 
 	beforeAll(async () => {
@@ -17,7 +17,7 @@ describe('Login Service', () => {
 
 		app = moduleRef.createNestApplication()
 
-		service = app.get<LoginService>(LoginService)
+		service = app.get<AuthService>(AuthService)
 		logger = app.get<Logger>(Logger)
 	})
 

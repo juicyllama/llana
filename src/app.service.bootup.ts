@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config'
 import { Cache } from 'cache-manager'
 
 import { APP_BOOT_CONTEXT, LLANA_AUTH_TABLE, LLANA_ROLES_TABLE } from './app.constants'
+import { Authentication } from './helpers/Authentication'
 import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
@@ -13,6 +14,7 @@ import { CustomRole, DefaultRole, RolePermission } from './types/roles.types'
 @Injectable()
 export class AppBootup implements OnApplicationBootstrap {
 	constructor(
+		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
 		@Inject(CACHE_MANAGER) private cacheManager: Cache,
 		private readonly logger: Logger,
@@ -27,7 +29,7 @@ export class AppBootup implements OnApplicationBootstrap {
 		await this.cacheManager.reset()
 
 		try {
-			const table = this.configService.get<string>('AUTH_USER_TABLE_NAME') ?? 'User'
+			const table = this.authentication.getIdentityTable()
 			await this.schema.getSchema({ table: table, x_request_id: APP_BOOT_CONTEXT })
 			this.logger.log('Database Connection Successful', APP_BOOT_CONTEXT)
 		} catch (e) {
@@ -218,21 +220,21 @@ export class AppBootup implements OnApplicationBootstrap {
 				{
 					custom: true,
 					role: 'ADMIN',
-					table: this.configService.get<string>('AUTH_USER_TABLE_NAME') ?? 'User',
+					table: this.authentication.getIdentityTable(),
 					records: RolePermission.DELETE,
 					own_records: RolePermission.DELETE,
 				},
 				{
 					custom: true,
 					role: 'EDITOR',
-					table: this.configService.get<string>('AUTH_USER_TABLE_NAME') ?? 'User',
+					table: this.authentication.getIdentityTable(),
 					records: RolePermission.NONE,
 					own_records: RolePermission.WRITE,
 				},
 				{
 					custom: true,
 					role: 'VIEWER',
-					table: this.configService.get<string>('AUTH_USER_TABLE_NAME') ?? 'User',
+					table: this.authentication.getIdentityTable(),
 					records: RolePermission.NONE,
 					own_records: RolePermission.WRITE,
 				},

@@ -224,7 +224,7 @@ export class Roles {
 		const user_id_column = config.location?.identifier_column ?? table_schema.primary_key
 
 		const role = await this.query.perform(
-			QueryPerform.FIND,
+			QueryPerform.FIND_ONE,
 			{
 				schema: table_schema,
 				fields: [config.location.column],

@@ -7,7 +7,7 @@ export enum DatabaseNaming {
 
 export enum QueryPerform {
 	CREATE = 'create',
-	FIND = 'find',
+	FIND_ONE = 'find',
 	FIND_MANY = 'findMany',
 	UPDATE = 'update',
 	DELETE = 'delete',

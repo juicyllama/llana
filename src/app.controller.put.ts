@@ -114,7 +114,7 @@ export class PutController {
 		//Check record exists
 
 		const record = await this.query.perform(
-			QueryPerform.FIND,
+			QueryPerform.FIND_ONE,
 			{
 				schema,
 				where,

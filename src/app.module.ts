@@ -8,7 +8,7 @@ import { DeleteController } from './app.controller.delete'
 import { GetController } from './app.controller.get'
 import { PostController } from './app.controller.post'
 import { PutController } from './app.controller.put'
-import { LoginService } from './app.service.auth'
+import { AuthService } from './app.service.auth'
 import { AppBootup } from './app.service.bootup'
 import auth from './config/auth.config'
 import database from './config/database.config'
@@ -41,7 +41,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Authentication,
 		Encryption,
 		Logger,
-		LoginService,
+		AuthService,
 		MySQL,
 		Pagination,
 		Postgres,
@@ -54,7 +54,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Authentication,
 		Encryption,
 		Logger,
-		LoginService,
+		AuthService,
 		MySQL,
 		Pagination,
 		Postgres,

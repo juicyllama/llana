@@ -269,7 +269,7 @@ export class Authentication {
 							})
 						}
 
-						auth_result = await this.query.perform(QueryPerform.FIND, db_options, options.x_request_id)
+						auth_result = await this.query.perform(QueryPerform.FIND_ONE, db_options, options.x_request_id)
 						await this.cacheManager.set(
 							`auth:${auth.type}:${req_api_key}`,
 							auth_result,
@@ -362,5 +362,18 @@ export class Authentication {
 		}
 
 		return auth_passed
+	}
+
+	getIdentityTable(): string {
+		return this.configService.get<string>('AUTH_USER_TABLE_NAME') ?? 'User'
+	}
+
+	async getIdentityColumn(x_request_id?: string): Promise<string> {
+		if (this.configService.get<string>('AUTH_USER_IDENTITY_COLUMN')) {
+			return this.configService.get<string>('AUTH_USER_IDENTITY_COLUMN')
+		} else {
+			const schema = await this.schema.getSchema({ table: this.getIdentityTable(), x_request_id })
+			return schema.primary_key
+		}
 	}
 }

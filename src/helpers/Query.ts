@@ -63,7 +63,7 @@ export class Query {
 					createOptions.data = await this.identityOperationCheck(createOptions)
 					result = await this.createOne(createOptions, x_request_id)
 					return this.schema.pipeResponse(options, result)
-				case QueryPerform.FIND:
+				case QueryPerform.FIND_ONE:
 					const findOptions = options as DatabaseFindOneOptions
 					result = await this.findOne(findOptions, x_request_id)
 					if (!result) {
@@ -99,7 +99,7 @@ export class Query {
 				case QueryPerform.CREATE:
 					pluralAction = 'creating record'
 					break
-				case QueryPerform.FIND:
+				case QueryPerform.FIND_ONE:
 					pluralAction = 'finding record'
 					break
 				case QueryPerform.FIND_MANY:

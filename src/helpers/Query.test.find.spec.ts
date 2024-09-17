@@ -50,7 +50,7 @@ describe('Query > Find', () => {
 	describe('findOne', () => {
 		it('Invalid Id', async () => {
 			try {
-				const results = await service.perform(QueryPerform.FIND, {
+				const results = await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
 					where: [{ column: 'id', operator: WhereOperator.equals, value: '9999' }],
 				})
@@ -63,7 +63,7 @@ describe('Query > Find', () => {
 
 		it('Valid Id', async () => {
 			try {
-				const results = (await service.perform(QueryPerform.FIND, {
+				const results = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
 					where: [{ column: 'id', operator: WhereOperator.equals, value: '1' }],
 				})) as FindOneResponseObject
@@ -80,7 +80,7 @@ describe('Query > Find', () => {
 
 		it('Passing Fields', async () => {
 			try {
-				const results = (await service.perform(QueryPerform.FIND, {
+				const results = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
 					where: [{ column: 'id', operator: WhereOperator.equals, value: '1' }],
 					fields: ['id', 'email'],
@@ -98,7 +98,7 @@ describe('Query > Find', () => {
 
 		it('Passing filters', async () => {
 			try {
-				const results = (await service.perform(QueryPerform.FIND, {
+				const results = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
 					where: [
 						{ column: 'id', operator: WhereOperator.equals, value: '1' },
@@ -119,7 +119,7 @@ describe('Query > Find', () => {
 
 		it('Validate Response Fields', async () => {
 			try {
-				const results = (await service.perform(QueryPerform.FIND, {
+				const results = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
 					where: [{ column: 'id', operator: WhereOperator.equals, value: '1' }],
 				})) as FindOneResponseObject

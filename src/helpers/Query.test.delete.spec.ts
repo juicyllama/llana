@@ -61,7 +61,7 @@ describe('Query > Delete', () => {
 				})) as DeleteResponseObject
 				expect(results.deleted).toEqual(1)
 
-				const deleted_record = (await service.perform(QueryPerform.FIND, {
+				const deleted_record = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
 					where: [
 						{ column: 'id', operator: WhereOperator.equals, value: user[usersTableSchema.primary_key] },
@@ -88,7 +88,7 @@ describe('Query > Delete', () => {
 				})) as DeleteResponseObject
 				expect(results.deleted).toEqual(1)
 
-				const deleted_record = (await service.perform(QueryPerform.FIND, {
+				const deleted_record = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
 					where: [
 						{ column: 'id', operator: WhereOperator.equals, value: user[usersTableSchema.primary_key] },
