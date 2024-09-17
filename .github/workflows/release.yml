@@ -64,6 +64,8 @@ jobs:
                 if: ${{ !contains(github.event.head_commit.message, '#skip-npm-publish') }}
                 run: npm publish --no-git-checks --access public
 
+            -   run: git pull --force #Ensure we have the latest package version before pushing to Docker
+
             -   name: Docker meta
                 id: meta
                 uses: docker/metadata-action@v5
