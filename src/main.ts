@@ -5,22 +5,12 @@ import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 
 import { APP_BOOT_CONTEXT } from './app.constants'
-// import * as basicAuth from 'express-basic-auth'
 import { AppModule } from './app.module'
 import { Logger } from './helpers/Logger'
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule)
-
-	// app.use(
-	// 	['/llana'],
-	// 	basicAuth({
-	// 		users: { [process.env.CONFIG_AUTH_USERNAME]: process.env.CONFIG_AUTH_PASSWORD },
-	// 		challenge: true,
-	// 		realm: process.env.CONFIG_AUTH_REALM,
-	// 	}),
-	// )
-
+	app.enableCors()
 	await app.listen(process.env.PORT ?? 3000)
 
 	app.useGlobalPipes(
