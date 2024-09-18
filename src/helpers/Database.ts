@@ -51,6 +51,8 @@ export function getDatabaseType(uri: string): DatabaseType {
 		return DatabaseType.MYSQL
 	} else if (uri.includes('postgresql')) {
 		return DatabaseType.POSTGRES
+	} else if (uri.includes('mongodb')) {
+		return DatabaseType.MONGODB
 	} else {
 		throw new Error('Database type not supported')
 	}

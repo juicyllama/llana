@@ -1,5 +1,11 @@
 import { SortCondition } from './schema.types'
 
+export enum DatabaseType {
+	MYSQL = 'mysql',
+	POSTGRES = 'postgres',
+	MONGODB = 'mongodb',
+}
+
 export enum DatabaseNaming {
 	snake_case = 'snake_case',
 	camelCase = 'camelCase',
@@ -75,20 +81,6 @@ export interface ChartResult {
 	time_interval: Date
 }
 
-export enum DatabaseType {
-	ORACLE = 'oracle',
-	MYSQL = 'mysql',
-	MSSQL = 'mssql',
-	POSTGRES = 'postgres',
-	MONGODB = 'mongodb',
-	REDIS = 'redis',
-	SNOWFLAKE = 'snowflake',
-	ELASTICSEARCH = 'elasticsearch',
-	SQLITE = 'sqlite',
-	CASSANDRA = 'cassandra',
-	MARIADB = 'mariadb',
-}
-
 export interface DatabaseSchema {
 	table: string
 	primary_key: string
@@ -100,7 +92,7 @@ export interface DatabaseSchema {
 export interface DatabaseWhere {
 	column: string
 	operator: WhereOperator
-	value?: string
+	value?: any
 }
 
 export interface DatabaseSchemaColumn {

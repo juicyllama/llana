@@ -21,6 +21,7 @@ import {
 	DatabaseSchema,
 	DatabaseSchemaColumn,
 	DatabaseSchemaRelation,
+	DatabaseType,
 	DatabaseUniqueCheckOptions,
 	DatabaseUpdateOneOptions,
 	WhereOperator,
@@ -28,7 +29,7 @@ import {
 import { MySQLColumnType } from '../types/databases/mysql.types'
 import { SortCondition } from '../types/schema.types'
 
-const DATABASE_TYPE = 'MySQL'
+const DATABASE_TYPE = DatabaseType.MYSQL
 
 @Injectable()
 export class MySQL {
@@ -47,6 +48,19 @@ export class MySQL {
 		} catch (e) {
 			this.logger.error(`[${DATABASE_TYPE}] Error creating database connection - ${e.message}`)
 			throw new Error('Error creating database connection')
+		}
+	}
+
+	async checkConnection(options: { x_request_id?: string }): Promise<boolean> {
+		try {
+			await this.createConnection()
+			return true
+		} catch (e) {
+			this.logger.error(
+				`[${DATABASE_TYPE}] Error checking database connection - ${e.message}`,
+				options.x_request_id,
+			)
+			return false
 		}
 	}
 
@@ -69,7 +83,7 @@ export class MySQL {
 			connection.end()
 			return results
 		} catch (e) {
-			this.logger.warn(`[${DATABASE_TYPE}] Error executing database query`, options.x_request_id)
+			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`, options.x_request_id)
 			this.logger.warn({
 				sql: {
 					sql: options.sql,

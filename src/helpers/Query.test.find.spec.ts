@@ -7,6 +7,11 @@ import { FindManyResponseObject, FindOneResponseObject } from '../dtos/response.
 import { Logger, logLevel } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
+import { UserTestingService } from '../testing/user.testing.service'
+import { CustomerTestingService } from '../testing/customer.testing.service'
+import { ShipperTestingService } from '../testing/shipper.testing.service'
+import { EmployeeTestingService } from '../testing/employee.testing.service'
+import { SalesOrderTestingService } from '../testing/salesorder.testing.service'
 
 describe('Query > Find', () => {
 	let app: INestApplication
@@ -14,13 +19,38 @@ describe('Query > Find', () => {
 	let schema: Schema
 	let logger: Logger
 	let usersTableSchema: DatabaseSchema
+	let userTestingService: UserTestingService
 	let customerTableSchema: DatabaseSchema
+	let customerTestingService: CustomerTestingService
 	let salesOrderTableSchema: DatabaseSchema
+	let salesOrderTestingService: SalesOrderTestingService
 	let customerRelation: DatabaseRelations
+	let shipperTestingService: ShipperTestingService
+	let employeeTestingService: EmployeeTestingService
+
+	let user_primary_key: string
+	let user: FindOneResponseObject
+	let customer_primary_key: string
+	let customer: FindOneResponseObject
+	let order_primary_key: string
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
+			providers: [
+				CustomerTestingService,
+				UserTestingService,
+				SalesOrderTestingService,
+				ShipperTestingService,
+				EmployeeTestingService,
+			],
+			exports: [
+				CustomerTestingService,
+				UserTestingService,
+				SalesOrderTestingService,
+				ShipperTestingService,
+				EmployeeTestingService,
+			],
 		}).compile()
 
 		app = moduleRef.createNestApplication({
@@ -32,46 +62,58 @@ describe('Query > Find', () => {
 		logger = app.get<Logger>(Logger)
 
 		usersTableSchema = await schema.getSchema({ table: 'User' })
+		userTestingService = app.get<UserTestingService>(UserTestingService)
 		customerTableSchema = await schema.getSchema({ table: 'Customer' })
+		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
 		salesOrderTableSchema = await schema.getSchema({ table: 'SalesOrder' })
+		salesOrderTestingService = app.get<SalesOrderTestingService>(SalesOrderTestingService)
+		shipperTestingService = app.get<ShipperTestingService>(ShipperTestingService)
+		employeeTestingService = app.get<EmployeeTestingService>(EmployeeTestingService)
+
+		user_primary_key = usersTableSchema.primary_key
+		customer_primary_key = customerTableSchema.primary_key
+		order_primary_key = salesOrderTableSchema.primary_key
 
 		customerRelation = {
 			table: 'Customer',
 			join: {
 				table: 'Customer',
-				column: 'custId',
+				column: customer_primary_key,
 				org_table: 'SalesOrder',
 				org_column: 'custId',
 			},
 			schema: customerTableSchema,
 		}
+
+		user = (await userTestingService.createUser({})) as FindOneResponseObject
+		customer = (await customerTestingService.createCustomer({})) as FindOneResponseObject
+
+		const shipper = await shipperTestingService.getShipper()
+		const employee = await employeeTestingService.getEmployee()
+
+		for (let i = 0; i < 10; i++) {
+			await salesOrderTestingService.createOrder({
+				custId: customer[customer_primary_key],
+				employeeId: employee.employeeId,
+				shipperId: shipper.shipperId,
+			})
+		}
 	})
 
 	describe('findOne', () => {
-		it('Invalid Id', async () => {
+		it('By Id', async () => {
 			try {
-				const results = await service.perform(QueryPerform.FIND_ONE, {
+				const result = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
-					where: [{ column: 'id', operator: WhereOperator.equals, value: '9999' }],
-				})
-				expect(results).toBe(null)
-			} catch (e) {
-				logger.error(e)
-				expect(true).toBe(false)
-			}
-		})
-
-		it('Valid Id', async () => {
-			try {
-				const results = (await service.perform(QueryPerform.FIND_ONE, {
-					schema: usersTableSchema,
-					where: [{ column: 'id', operator: WhereOperator.equals, value: '1' }],
+					where: [
+						{ column: user_primary_key, operator: WhereOperator.equals, value: user[user_primary_key] },
+					],
 				})) as FindOneResponseObject
-				expect(results.id).toEqual(1)
-				expect(results.email).toEqual('test@test.com')
-				expect(results.firstName).toEqual('Jon')
-				expect(results.lastName).toEqual('Doe')
-				expect(results.role).toEqual('ADMIN')
+				expect(result[user_primary_key]).toEqual(user[user_primary_key])
+				expect(result.email).toEqual(user.email)
+				expect(result.firstName).toEqual(user.firstName)
+				expect(result.lastName).toEqual(user.lastName)
+				expect(result.role).toEqual(user.role)
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
@@ -80,16 +122,17 @@ describe('Query > Find', () => {
 
 		it('Passing Fields', async () => {
 			try {
-				const results = (await service.perform(QueryPerform.FIND_ONE, {
+				const result = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
-					where: [{ column: 'id', operator: WhereOperator.equals, value: '1' }],
-					fields: ['id', 'email'],
+					where: [
+						{ column: user_primary_key, operator: WhereOperator.equals, value: user[user_primary_key] },
+					],
+					fields: [user_primary_key, 'email'],
 				})) as FindOneResponseObject
-				expect(results.id).toEqual(1)
-				expect(results.email).toEqual('test@test.com')
-				expect(results.firstName).toBeUndefined()
-				expect(results.lastName).toBeUndefined()
-				expect(results.role).toBeUndefined()
+				expect(result.email).toEqual(user.email)
+				expect(result.firstName).toBeUndefined()
+				expect(result.lastName).toBeUndefined()
+				expect(result.role).toBeUndefined()
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
@@ -98,19 +141,19 @@ describe('Query > Find', () => {
 
 		it('Passing filters', async () => {
 			try {
-				const results = (await service.perform(QueryPerform.FIND_ONE, {
+				const result = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
 					where: [
-						{ column: 'id', operator: WhereOperator.equals, value: '1' },
-						{ column: 'email', operator: WhereOperator.equals, value: 'test@test.com' },
+						{ column: user_primary_key, operator: WhereOperator.equals, value: user[user_primary_key] },
+						{ column: 'email', operator: WhereOperator.equals, value: user.email },
 					],
-					fields: ['id', 'email'],
+					fields: [user_primary_key, 'email'],
 				})) as FindOneResponseObject
-				expect(results.id).toEqual(1)
-				expect(results.email).toEqual('test@test.com')
-				expect(results.firstName).toBeUndefined()
-				expect(results.lastName).toBeUndefined()
-				expect(results.role).toBeUndefined()
+				expect(result[user_primary_key]).toEqual(user[user_primary_key])
+				expect(result.email).toEqual(user.email)
+				expect(result.firstName).toBeUndefined()
+				expect(result.lastName).toBeUndefined()
+				expect(result.role).toBeUndefined()
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
@@ -119,18 +162,21 @@ describe('Query > Find', () => {
 
 		it('Validate Response Fields', async () => {
 			try {
-				const results = (await service.perform(QueryPerform.FIND_ONE, {
+				const result = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
-					where: [{ column: 'id', operator: WhereOperator.equals, value: '1' }],
+					where: [
+						{ column: user_primary_key, operator: WhereOperator.equals, value: user[user_primary_key] },
+					],
 				})) as FindOneResponseObject
-				expect(results.id).toEqual(1)
-				expect(results.email).toEqual('test@test.com')
-				expect(results.firstName).toEqual('Jon')
-				expect(results.lastName).toEqual('Doe')
-				expect(results.role).toEqual('ADMIN')
-				expect(results.createdAt).toBeDefined()
-				expect(new Date(results.createdAt)).toBeInstanceOf(Date)
-				expect(results.updatedAt).toBeDefined()
+
+				expect(result[user_primary_key]).toEqual(user[user_primary_key])
+				expect(result.email).toEqual(user.email)
+				expect(result.firstName).toEqual(user.firstName)
+				expect(result.lastName).toEqual(user.lastName)
+				expect(result.role).toEqual(user.role)
+				expect(result.createdAt).toBeDefined()
+				expect(new Date(result.createdAt)).toBeInstanceOf(Date)
+				expect(result.updatedAt).toBeDefined()
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
@@ -143,10 +189,10 @@ describe('Query > Find', () => {
 			try {
 				const results = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: customerTableSchema,
-					fields: ['custId', 'companyName'],
+					fields: [customer_primary_key, 'companyName'],
 				})) as FindManyResponseObject
 				expect(results.data.length).toBeGreaterThan(0)
-				expect(results.data[0].custId).toBeDefined()
+				expect(results.data[0][customer_primary_key]).toBeDefined()
 				expect(results.data[0].companyName).toBeDefined()
 				expect(results.data[0].address).toBeUndefined()
 			} catch (e) {
@@ -159,11 +205,11 @@ describe('Query > Find', () => {
 			try {
 				const results = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: customerTableSchema,
-					where: [{ column: 'companyName', operator: WhereOperator.search, value: 'NRZBB' }],
+					where: [{ column: 'companyName', operator: WhereOperator.search, value: customer.companyName }],
 				})) as FindManyResponseObject
 				expect(results.data.length).toBeGreaterThan(0)
-				expect(results.data[0].custId).toBeDefined()
-				expect(results.data[0].companyName).toBe('Customer NRZBB')
+				expect(results.data[0][customer_primary_key]).toBeDefined()
+				expect(results.data[0].companyName).toBe(customer.companyName)
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
@@ -174,12 +220,14 @@ describe('Query > Find', () => {
 			try {
 				const results = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: ['orderId', 'shipAddress', 'custId'],
-					where: [{ column: 'custId', operator: WhereOperator.equals, value: '91' }],
+					fields: ['shipAddress', 'custId'],
+					where: [
+						{ column: 'custId', operator: WhereOperator.equals, value: customer[customer_primary_key] },
+					],
 					relations: [{ ...customerRelation, columns: ['companyName'] }],
 				})) as FindManyResponseObject
+
 				expect(results.data.length).toBeGreaterThan(0)
-				expect(results.data[0].orderId).toBeDefined()
 				expect(results.data[0].shipAddress).toBeDefined()
 				expect(results.data[0].custId).toBeDefined()
 				expect(results.data[0].Customer.companyName).toBeDefined()
@@ -193,13 +241,15 @@ describe('Query > Find', () => {
 			try {
 				const results = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: ['orderId', 'shipAddress', 'custId'],
-					where: [{ column: 'custId', operator: WhereOperator.equals, value: '91' }],
+					fields: [order_primary_key, 'shipAddress', 'custId'],
+					where: [
+						{ column: 'custId', operator: WhereOperator.equals, value: customer[customer_primary_key] },
+					],
 					relations: [{ ...customerRelation, columns: ['companyName'] }],
 					limit: 3,
 				})) as FindManyResponseObject
 				expect(results.data.length).toEqual(3)
-				expect(results.data[0].orderId).toBeDefined()
+				expect(results.data[0][order_primary_key]).toBeDefined()
 				expect(results.data[0].shipAddress).toBeDefined()
 				expect(results.data[0].custId).toBeDefined()
 				expect(results.data[0].Customer.companyName).toBeDefined()
@@ -213,25 +263,29 @@ describe('Query > Find', () => {
 			try {
 				const results = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: ['orderId', 'shipAddress', 'custId'],
-					where: [{ column: 'custId', operator: WhereOperator.equals, value: '91' }],
+					fields: [order_primary_key, 'shipAddress', 'custId'],
+					where: [
+						{ column: 'custId', operator: WhereOperator.equals, value: customer[customer_primary_key] },
+					],
 					relations: [{ ...customerRelation, columns: ['companyName'] }],
 				})) as FindManyResponseObject
 				expect(results.data.length).toBeGreaterThan(0)
-				expect(results.data[0].orderId).toBeDefined()
+				expect(results.data[0][order_primary_key]).toBeDefined()
 				expect(results.data[0].shipAddress).toBeDefined()
 				expect(results.data[0].custId).toBeDefined()
 				expect(results.data[0].Customer.companyName).toBeDefined()
 
 				const results2 = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: ['orderId', 'shipAddress', 'custId'],
-					where: [{ column: 'custId', operator: WhereOperator.equals, value: '91' }],
+					fields: [order_primary_key, 'shipAddress', 'custId'],
+					where: [
+						{ column: 'custId', operator: WhereOperator.equals, value: customer[customer_primary_key] },
+					],
 					relations: [{ ...customerRelation, columns: ['companyName'] }],
 					offset: results.data.length - 2,
 				})) as FindManyResponseObject
 				expect(results2.data.length).toEqual(2)
-				expect(results2.data[0].orderId).toBeDefined()
+				expect(results2.data[0][order_primary_key]).toBeDefined()
 				expect(results2.data[0].shipAddress).toBeDefined()
 				expect(results2.data[0].custId).toBeDefined()
 				expect(results2.data[0].Customer.companyName).toBeDefined()

@@ -3,15 +3,18 @@ import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import { Cache } from 'cache-manager'
+import { isUndefined } from 'lodash'
 
 import { CACHE_DEFAULT_IDENTITY_DATA_TTL, LLANA_AUTH_TABLE } from '../app.constants'
 import { FindManyResponseObject } from '../dtos/response.dto'
 import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
 import { DatabaseFindOneOptions, DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
+import { RolePermission } from '../types/roles.types'
 import { Env } from '../utils/Env'
 import { findDotNotation } from '../utils/Find'
 import { Logger } from './Logger'
 import { Query } from './Query'
+import { Roles } from './Roles'
 import { Schema } from './Schema'
 
 @Injectable()
@@ -23,22 +26,30 @@ export class Authentication {
 		private readonly query: Query,
 		private readonly schema: Schema,
 		private readonly jwtService: JwtService,
+		private readonly roles: Roles,
 	) {}
+
+	/**
+	 * Helper to check if we are skipping authentication
+	 */
+
+	skipAuth(): boolean {
+		const skip_auth = this.configService.get<boolean | undefined>('SKIP_AUTH')
+
+		if (isUndefined(skip_auth)) {
+			return false
+		}
+
+		return !!(skip_auth === true)
+	}
 
 	/**
 	 * Create entity schema from database schema
 	 * @param schema
 	 */
 
-	async auth(options: { req; x_request_id: string }): Promise<AuthRestrictionsResponse> {
+	async auth(options: { req; x_request_id: string; access: RolePermission }): Promise<AuthRestrictionsResponse> {
 		const authentications = this.configService.get<Auth[]>('auth')
-
-		if (!authentications) {
-			return {
-				valid: true,
-			}
-		}
-
 		const auth_schema = await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: options.x_request_id })
 
 		let auth_passed: AuthRestrictionsResponse = {
@@ -85,13 +96,21 @@ export class Authentication {
 				)
 			}
 
-			const excludes = rules.data.filter(rule => rule.exclude)
-			const includes = rules.data.filter(rule => rule.exclude)
+			const excludes = rules.data.filter(rule => rule.type === 'EXCLUDE')
+			const includes = rules.data.filter(rule => rule.type === 'INCLUDE')
 
 			if (excludes) {
 				for (const exclude of excludes) {
 					if (options.req.originalUrl.includes(exclude.table)) {
-						check_required = false
+						if (!exclude.public_records) {
+							exclude.public_records = RolePermission.READ
+						}
+
+						if (this.roles.rolePass(exclude.public_records, options.access)) {
+							check_required = false
+						} else {
+							check_required = true
+						}
 					}
 				}
 			}
@@ -105,6 +124,21 @@ export class Authentication {
 			}
 
 			if (!check_required) continue
+
+			if (this.skipAuth()) {
+				switch (options.access) {
+					case RolePermission.READ:
+						this.logger.debug(`[Authentication][auth] Skipping authentication due to SKIP_AUTH being true`)
+						return { valid: true }
+					case RolePermission.WRITE:
+					case RolePermission.DELETE:
+					case RolePermission.NONE:
+						this.logger.debug(
+							`[Authentication][auth] Skipping authentication due to SKIP_AUTH being true, however no _llana_auth table found for WRITE/DELETE permissions, defaulting to false`,
+						)
+						return { valid: false, message: 'Unauthorized' }
+				}
+			}
 
 			let identity_column
 			let schema: DatabaseSchema

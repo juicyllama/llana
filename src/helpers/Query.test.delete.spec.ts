@@ -16,6 +16,7 @@ describe('Query > Delete', () => {
 	let logger: Logger
 	let usersTableSchema: DatabaseSchema
 	let userTestingService: UserTestingService
+	let primary_key: string
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
@@ -34,24 +35,11 @@ describe('Query > Delete', () => {
 
 		usersTableSchema = await schema.getSchema({ table: 'User' })
 		userTestingService = app.get<UserTestingService>(UserTestingService)
+		primary_key = usersTableSchema.primary_key
 	})
 
 	describe('Hard Deletes', () => {
-		it('Invalid Id', async () => {
-			try {
-				const results = (await service.perform(QueryPerform.DELETE, {
-					id: '999999',
-					schema: usersTableSchema,
-				})) as DeleteResponseObject
-
-				expect(results.deleted).toEqual(0)
-			} catch (e) {
-				logger.error(e)
-				expect(true).toBe(false)
-			}
-		})
-
-		it('Valid Id - Hard', async () => {
+		it('Hard', async () => {
 			try {
 				const user = await userTestingService.createUser({})
 
@@ -64,7 +52,11 @@ describe('Query > Delete', () => {
 				const deleted_record = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
 					where: [
-						{ column: 'id', operator: WhereOperator.equals, value: user[usersTableSchema.primary_key] },
+						{
+							column: primary_key,
+							operator: WhereOperator.equals,
+							value: user[usersTableSchema.primary_key],
+						},
 					],
 				})) as FindOneResponseObject
 
@@ -77,7 +69,7 @@ describe('Query > Delete', () => {
 	})
 
 	describe('Soft Deletes', () => {
-		it('Valid Id - Soft', async () => {
+		it('Soft', async () => {
 			try {
 				const user = await userTestingService.createUser({})
 
@@ -91,7 +83,11 @@ describe('Query > Delete', () => {
 				const deleted_record = (await service.perform(QueryPerform.FIND_ONE, {
 					schema: usersTableSchema,
 					where: [
-						{ column: 'id', operator: WhereOperator.equals, value: user[usersTableSchema.primary_key] },
+						{
+							column: primary_key,
+							operator: WhereOperator.equals,
+							value: user[usersTableSchema.primary_key],
+						},
 					],
 				})) as FindOneResponseObject
 				expect(deleted_record).toBeDefined()

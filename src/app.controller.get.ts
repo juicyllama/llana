@@ -65,7 +65,7 @@ export class GetController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({ req, x_request_id })
+		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.READ })
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
@@ -115,7 +115,7 @@ export class GetController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({ req, x_request_id })
+		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.READ })
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
@@ -253,8 +253,6 @@ export class GetController {
 		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
 
-		console.log('/* GET', queryParams)
-
 		const options: DatabaseFindManyOptions = {
 			schema: null,
 			fields: [],
@@ -269,7 +267,7 @@ export class GetController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({ req, x_request_id })
+		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.READ })
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
