@@ -242,7 +242,7 @@ export class Roles {
 		return role?.[config.location.column]
 	}
 
-	private rolePass(access: RolePermission, permission: RolePermission): boolean {
+	rolePass(access: RolePermission, permission: RolePermission): boolean {
 		switch (access) {
 			case RolePermission.NONE:
 				return false

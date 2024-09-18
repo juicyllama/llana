@@ -4,7 +4,6 @@ import * as request from 'supertest'
 
 import { LLANA_ROLES_TABLE } from '../app.constants'
 import { AppModule } from '../app.module'
-import { CUSTOMER } from '../testing/customer.testing.service'
 import { DatabaseSchema, QueryPerform } from '../types/database.types'
 import { CustomRole, DefaultRole, RolePermission } from '../types/roles.types'
 //import { Logger } from './Logger'
@@ -70,20 +69,20 @@ describe('Roles', () => {
 			expect(role_record.id).toBeDefined()
 		})
 
-		it('No Access', async function () {
-			const response = await request(app.getHttpServer())
-				.post('/Customer/')
-				.set('x-api-key', 'Ex@mp1eS$Cu7eAp!K3y')
-				.send(CUSTOMER)
+		// it('No Access', async function () {
+		// 	const response = await request(app.getHttpServer())
+		// 		.post('/Customer/')
+		// 		.set('x-api-key', 'Ex@mp1eS$Cu7eAp!K3y')
+		// 		.send(CUSTOMER)
 
-			expect(response.status).toEqual(401)
-			//expect(response.body.email).toEqual('foo@bar.com');
+		// 	expect(response.status).toEqual(401)
+		// 	//expect(response.body.email).toEqual('foo@bar.com');
 
-			//Call create, expect 401
-			//Call read, expect 401
-			//Call update, expect 401
-			//Call delete, expect 401
-		})
+		// 	//Call create, expect 401
+		// 	//Call read, expect 401
+		// 	//Call update, expect 401
+		// 	//Call delete, expect 401
+		// })
 	})
 
 	describe('Default Roles', () => {

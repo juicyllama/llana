@@ -3,10 +3,11 @@ import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Cache } from 'cache-manager'
 import { plainToInstance } from 'class-transformer'
-import { IsBoolean, IsDateString, IsJSON, IsNumber, IsOptional, IsString, validate } from 'class-validator'
+import { IsBoolean, IsDateString, IsNumber, IsOptional, IsString, validate } from 'class-validator'
 import { isDate, isObject } from 'lodash'
 
 import { CACHE_DEFAULT_TABLE_SCHEMA_TTL, NON_FIELD_PARAMS } from '../app.constants'
+import { Mongo } from '../databases/mongo.database'
 import { MySQL } from '../databases/mysql.database'
 import { Postgres } from '../databases/postgres.database'
 import {
@@ -34,8 +35,9 @@ export class Schema {
 		@Inject(CACHE_MANAGER) private cacheManager: Cache,
 		private readonly logger: Logger,
 		private readonly configService: ConfigService,
-		private readonly mysql: MySQL,
 		private readonly postgres: Postgres,
+		private readonly mongo: Mongo,
+		private readonly mysql: MySQL,
 	) {}
 
 	/**
@@ -65,6 +67,9 @@ export class Schema {
 					break
 				case DatabaseType.POSTGRES:
 					result = await this.postgres.getSchema({ table: options.table, x_request_id: options.x_request_id })
+					break
+				case DatabaseType.MONGODB:
+					result = await this.mongo.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
 				default:
 					this.logger.error(
@@ -137,7 +142,7 @@ export class Schema {
 					decorators.push(IsDateString())
 					break
 				case DatabaseColumnType.JSON:
-					decorators.push(IsJSON())
+					//decorators.push(IsJSON()) //breaks nested objects
 					break
 				default:
 					break
@@ -182,31 +187,37 @@ export class Schema {
 
 		//Loop over the nested object and create the class if the key is an object
 
-		const keys = Object.keys(nestedObject)
-		for (const key of keys) {
-			if (isObject(nestedObject[key]) && !isDate(nestedObject[key])) {
-				const relation = options.relations.find(col => col.table === key)
-				const DynamicClass = this.schemaToClass(relation.schema, nestedObject[key])
-				const instance: object = plainToInstance(DynamicClass, nestedObject[key])
-				try {
-					const errors = await validate(instance)
+		if (options.relations) {
+			const keys = Object.keys(nestedObject)
+			for (const key of keys) {
+				if (isObject(nestedObject[key]) && !isDate(nestedObject[key])) {
+					const relation = options.relations?.find(col => col.table === key)
+					if (relation) {
+						const DynamicClass = this.schemaToClass(relation.schema, nestedObject[key])
+						const instance: object = plainToInstance(DynamicClass, nestedObject[key])
+						try {
+							const errors = await validate(instance)
 
-					if (errors.length > 0) {
-						this.logger.error(
-							`[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`,
-							x_request_id,
-						)
-						this.logger.error({
-							data,
-							instance,
-							errors,
-						})
-						throw new Error(`Error piping response - ${Object.values(errors[0].constraints).join(', ')}`)
-					} else {
-						nestedObject[key] = instance
+							if (errors.length > 0) {
+								this.logger.error(
+									`[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`,
+									x_request_id,
+								)
+								this.logger.error({
+									data,
+									instance,
+									errors,
+								})
+								throw new Error(
+									`Error piping response - ${Object.values(errors[0].constraints).join(', ')}`,
+								)
+							} else {
+								nestedObject[key] = instance
+							}
+						} catch (e) {
+							throw new Error(e.message)
+						}
 					}
-				} catch (e) {
-					throw new Error(e.message)
 				}
 			}
 		}

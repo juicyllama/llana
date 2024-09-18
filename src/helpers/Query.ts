@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
+import { Mongo } from '../databases/mongo.database'
 import { MySQL } from '../databases/mysql.database'
 import { Postgres } from '../databases/postgres.database'
 import {
@@ -35,6 +36,7 @@ export class Query {
 		private readonly schema: Schema,
 		private readonly mysql: MySQL,
 		private readonly postgres: Postgres,
+		private readonly mongo: Mongo,
 	) {}
 
 	async perform(
@@ -48,6 +50,14 @@ export class Query {
 			| DatabaseUniqueCheckOptions,
 		x_request_id?: string,
 	): Promise<FindOneResponseObject | FindManyResponseObject | IsUniqueResponse | DeleteResponseObject> {
+		if (!options.schema?.table) {
+			this.logger.warn(
+				`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)}`,
+				x_request_id,
+			)
+			throw new Error('Table not defined')
+		}
+
 		const table_name = options.schema.table
 		this.logger.debug(
 			`[Query][${action.toUpperCase()}][${table_name}] Performing action: ${JSON.stringify(options)}`,
@@ -62,14 +72,14 @@ export class Query {
 					const createOptions = options as DatabaseCreateOneOptions
 					createOptions.data = await this.identityOperationCheck(createOptions)
 					result = await this.createOne(createOptions, x_request_id)
-					return this.schema.pipeResponse(options, result)
+					return await this.schema.pipeResponse(options, result)
 				case QueryPerform.FIND_ONE:
 					const findOptions = options as DatabaseFindOneOptions
 					result = await this.findOne(findOptions, x_request_id)
 					if (!result) {
 						return null
 					}
-					return this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
+					return await this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
 				case QueryPerform.FIND_MANY:
 					const findManyOptions = options as DatabaseFindManyOptions
 					result = await this.findMany(findManyOptions, x_request_id)
@@ -81,7 +91,7 @@ export class Query {
 					const updateOptions = options as DatabaseUpdateOneOptions
 					updateOptions.data = await this.identityOperationCheck(updateOptions)
 					result = await this.updateOne(updateOptions, x_request_id)
-					return this.schema.pipeResponse(options, result)
+					return await this.schema.pipeResponse(options, result)
 				case QueryPerform.DELETE:
 					return await this.deleteOne(options as DatabaseDeleteOneOptions, x_request_id)
 				case QueryPerform.UNIQUE:
@@ -135,6 +145,8 @@ export class Query {
 				return await this.mysql.createTable(schema)
 			case DatabaseType.POSTGRES:
 				return await this.postgres.createTable(schema)
+			case DatabaseType.MONGODB:
+				return await this.mongo.createTable(schema)
 			default:
 				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
@@ -154,6 +166,9 @@ export class Query {
 				break
 			case DatabaseType.POSTGRES:
 				result = await this.postgres.createOne(options, x_request_id)
+				break
+			case DatabaseType.MONGODB:
+				result = await this.mongo.createOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -182,6 +197,9 @@ export class Query {
 				break
 			case DatabaseType.POSTGRES:
 				result = await this.postgres.findOne(options, x_request_id)
+				break
+			case DatabaseType.MONGODB:
+				result = await this.mongo.findOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -215,6 +233,9 @@ export class Query {
 			case DatabaseType.POSTGRES:
 				result = await this.postgres.findMany(options, x_request_id)
 				break
+			case DatabaseType.MONGODB:
+				result = await this.mongo.findMany(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
@@ -242,6 +263,9 @@ export class Query {
 				break
 			case DatabaseType.POSTGRES:
 				result = await this.postgres.updateOne(options, x_request_id)
+				break
+			case DatabaseType.MONGODB:
+				result = await this.mongo.updateOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -271,6 +295,9 @@ export class Query {
 			case DatabaseType.POSTGRES:
 				result = await this.postgres.deleteOne(options, x_request_id)
 				break
+			case DatabaseType.MONGODB:
+				result = await this.mongo.deleteOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported`,
@@ -298,6 +325,9 @@ export class Query {
 				break
 			case DatabaseType.POSTGRES:
 				result = await this.postgres.uniqueCheck(options, x_request_id)
+				break
+			case DatabaseType.MONGODB:
+				result = await this.mongo.uniqueCheck(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -327,6 +357,8 @@ export class Query {
 				return await this.mysql.truncate(table_name)
 			case DatabaseType.POSTGRES:
 				return await this.postgres.truncate(table_name)
+			case DatabaseType.MONGODB:
+				return await this.mongo.truncate(table_name)
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
@@ -354,5 +386,26 @@ export class Query {
 		}
 
 		return options.data
+	}
+
+	/**
+	 * Check if connection is alive
+	 */
+
+	async checkConnection(options: { x_request_id?: string }): Promise<boolean> {
+		switch (this.configService.get<string>('database.type')) {
+			case DatabaseType.MYSQL:
+				return await this.mysql.checkConnection({ x_request_id: options.x_request_id })
+			case DatabaseType.POSTGRES:
+				return await this.postgres.checkConnection({ x_request_id: options.x_request_id })
+			case DatabaseType.MONGODB:
+				return await this.mongo.checkConnection({ x_request_id: options.x_request_id })
+			default:
+				this.logger.error(
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					options.x_request_id,
+				)
+				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
 	}
 }

@@ -15,6 +15,7 @@ import database from './config/database.config'
 import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
+import { Mongo } from './databases/mongo.database'
 import { MySQL } from './databases/mysql.database'
 import { Postgres } from './databases/postgres.database'
 import { Authentication } from './helpers/Authentication'
@@ -42,6 +43,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Encryption,
 		Logger,
 		AuthService,
+		Mongo,
 		MySQL,
 		Pagination,
 		Postgres,
@@ -55,6 +57,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Encryption,
 		Logger,
 		AuthService,
+		Mongo,
 		MySQL,
 		Pagination,
 		Postgres,

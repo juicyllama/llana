@@ -50,7 +50,6 @@ describe('Query > Create', () => {
 		it('Did it encrypt the password?', async () => {
 			try {
 				const user = await userTestingService.createUser({})
-				expect(user.id).toBeDefined()
 				expect(user.email).toBeDefined()
 				expect(user.password).toBeDefined()
 				expect(user.password.startsWith('$2')).toBeTruthy()

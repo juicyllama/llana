@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post, Req, Res } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Get, Headers, Post, Req, Res } from '@nestjs/common'
 
 import { AuthService } from './app.service.auth'
 import { HeaderParams } from './dtos/requests.dto'
@@ -7,6 +7,7 @@ import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Schema } from './helpers/Schema'
 import { DatabaseFindOneOptions, QueryPerform, WhereOperator } from './types/database.types'
+import { RolePermission } from './types/roles.types'
 
 @Controller('auth')
 export class AuthController {
@@ -27,6 +28,10 @@ export class AuthController {
 		@Body() signInDto: Record<string, any>,
 		@Headers() headers: HeaderParams,
 	): Promise<{ access_token: string; id: any }> {
+		if (this.authentication.skipAuth()) {
+			throw new BadRequestException('Authentication is disabled')
+		}
+
 		const x_request_id = headers['x-request-id']
 		return this.authService.signIn(signInDto.username, signInDto.password, x_request_id)
 	}
@@ -37,8 +42,12 @@ export class AuthController {
 
 	@Get('/profile')
 	async profile(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<any> {
+		if (this.authentication.skipAuth()) {
+			throw new BadRequestException('Authentication is disabled')
+		}
+
 		const x_request_id = headers['x-request-id']
-		const auth = await this.authentication.auth({ req, x_request_id })
+		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.READ })
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}

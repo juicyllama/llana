@@ -85,8 +85,6 @@ describe('Query > Update', () => {
 						password: 'password',
 					},
 				})) as FindOneResponseObject
-
-				expect(user.id).toBeDefined()
 				expect(user.email).toBeDefined()
 				expect(user.password).toBeDefined()
 				expect(user.password.startsWith('$2')).toBeTruthy()

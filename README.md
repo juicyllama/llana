@@ -27,7 +27,7 @@ We are working to support all major databases, if you would like to contribute t
 ![MYSQL](https://badgen.net/badge/MYSQL/Beta%20Phase/green)<br>
 ![MSSQL](https://badgen.net/badge/MSSQL/Help%20Welcomed/red)<br>
 ![POSTGRES](https://badgen.net/badge/POSTGRES/Beta%20Phase/green)<br>
-![MONGODB](https://badgen.net/badge/MONGODB/Help%20Welcomed/red)<br>
+![MONGODB](https://badgen.net/badge/MONGODB/Beta%20Phase/green)<br>
 ![REDIS](https://badgen.net/badge/REDIS/Help%20Welcomed/red)<br>
 ![SNOWFLAKE](https://badgen.net/badge/SNOWFLAKE/Help%20Welcomed/red)<br>
 ![ELASTICSEARCH](https://badgen.net/badge/ELASTICSEARCH/Help%20Welcomed/red)<br>
