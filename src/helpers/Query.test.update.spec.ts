@@ -43,12 +43,18 @@ describe('Query > Update', () => {
 		it('Updates a record', async () => {
 			try {
 				const record = await customerTestingService.createCustomer({})
-				expect(record.custId).toBeDefined()
+				expect(record[customerTableSchema.primary_key]).toBeDefined()
 
 				const updatedRecord = (await service.perform(QueryPerform.UPDATE, {
-					id: record.custId,
+					id: record[customerTableSchema.primary_key],
 					schema: customerTableSchema,
-					where: [{ column: 'custId', operator: WhereOperator.equals, value: record.custId }],
+					where: [
+						{
+							column: customerTableSchema.primary_key,
+							operator: WhereOperator.equals,
+							value: record[customerTableSchema.primary_key],
+						},
+					],
 					data: {
 						address: '1600 Pennsylvania Avenue',
 						city: 'Washington',
@@ -56,7 +62,7 @@ describe('Query > Update', () => {
 						postalCode: '20500',
 					},
 				})) as FindOneResponseObject
-				expect(updatedRecord.custId).toBeDefined()
+				expect(updatedRecord[customerTableSchema.primary_key]).toBeDefined()
 				expect(updatedRecord.companyName).toBeDefined()
 				expect(updatedRecord.contactName).toBeDefined()
 				expect(updatedRecord.contactTitle).toBeDefined()
@@ -78,9 +84,15 @@ describe('Query > Update', () => {
 				let user = await userTestingService.createUser({})
 
 				user = (await service.perform(QueryPerform.UPDATE, {
-					id: user.id,
+					id: user[userTableSchema.primary_key],
 					schema: userTableSchema,
-					where: [{ column: 'password', operator: WhereOperator.equals, value: user.id }],
+					where: [
+						{
+							column: userTableSchema.primary_key,
+							operator: WhereOperator.equals,
+							value: user[userTableSchema.primary_key],
+						},
+					],
 					data: {
 						password: 'password',
 					},

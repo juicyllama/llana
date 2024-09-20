@@ -207,6 +207,9 @@ describe('Query > Find', () => {
 					schema: customerTableSchema,
 					where: [{ column: 'companyName', operator: WhereOperator.search, value: customer.companyName }],
 				})) as FindManyResponseObject
+
+				console.log(results)
+
 				expect(results.data.length).toBeGreaterThan(0)
 				expect(results.data[0][customer_primary_key]).toBeDefined()
 				expect(results.data[0].companyName).toBe(customer.companyName)

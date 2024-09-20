@@ -9,6 +9,7 @@ import {
 	FindManyResponseObject,
 	FindOneResponseObject,
 	IsUniqueResponse,
+	ListTablesResponseObject,
 } from '../dtos/response.dto'
 import { AuthType } from '../types/auth.types'
 import {
@@ -41,7 +42,7 @@ export class Query {
 
 	async perform(
 		action: QueryPerform,
-		options:
+		options?:
 			| DatabaseCreateOneOptions
 			| DatabaseFindOneOptions
 			| DatabaseFindManyOptions
@@ -49,20 +50,43 @@ export class Query {
 			| DatabaseDeleteOneOptions
 			| DatabaseUniqueCheckOptions,
 		x_request_id?: string,
-	): Promise<FindOneResponseObject | FindManyResponseObject | IsUniqueResponse | DeleteResponseObject> {
-		if (!options.schema?.table) {
-			this.logger.warn(
-				`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)}`,
+	): Promise<
+		| FindOneResponseObject
+		| FindManyResponseObject
+		| IsUniqueResponse
+		| DeleteResponseObject
+		| void
+		| boolean
+		| ListTablesResponseObject
+	> {
+		let table_name
+
+		if (
+			[
+				QueryPerform.CREATE,
+				QueryPerform.CREATE_TABLE,
+				QueryPerform.DELETE,
+				QueryPerform.FIND_MANY,
+				QueryPerform.FIND_ONE,
+				QueryPerform.TRUNCATE,
+				QueryPerform.UNIQUE,
+				QueryPerform.UPDATE,
+			].includes(action)
+		) {
+			if (!options.schema?.table) {
+				this.logger.warn(
+					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)}`,
+					x_request_id,
+				)
+				throw new Error('Table not defined')
+			}
+
+			table_name = options.schema.table
+			this.logger.debug(
+				`[Query][${action.toUpperCase()}][${table_name}] Performing action: ${JSON.stringify(options)}`,
 				x_request_id,
 			)
-			throw new Error('Table not defined')
 		}
-
-		const table_name = options.schema.table
-		this.logger.debug(
-			`[Query][${action.toUpperCase()}][${table_name}] Performing action: ${JSON.stringify(options)}`,
-			x_request_id,
-		)
 
 		try {
 			let result
@@ -73,6 +97,7 @@ export class Query {
 					createOptions.data = await this.identityOperationCheck(createOptions)
 					result = await this.createOne(createOptions, x_request_id)
 					return await this.schema.pipeResponse(options, result)
+
 				case QueryPerform.FIND_ONE:
 					const findOptions = options as DatabaseFindOneOptions
 					result = await this.findOne(findOptions, x_request_id)
@@ -80,6 +105,7 @@ export class Query {
 						return null
 					}
 					return await this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
+
 				case QueryPerform.FIND_MANY:
 					const findManyOptions = options as DatabaseFindManyOptions
 					result = await this.findMany(findManyOptions, x_request_id)
@@ -87,15 +113,31 @@ export class Query {
 						result.data[i] = await this.schema.pipeResponse(findManyOptions, result.data[i])
 					}
 					return result
+
 				case QueryPerform.UPDATE:
 					const updateOptions = options as DatabaseUpdateOneOptions
 					updateOptions.data = await this.identityOperationCheck(updateOptions)
 					result = await this.updateOne(updateOptions, x_request_id)
 					return await this.schema.pipeResponse(options, result)
+
 				case QueryPerform.DELETE:
 					return await this.deleteOne(options as DatabaseDeleteOneOptions, x_request_id)
+
 				case QueryPerform.UNIQUE:
 					return await this.isUnique(options as DatabaseUniqueCheckOptions, x_request_id)
+
+				case QueryPerform.TRUNCATE:
+					return await this.truncate(options.schema.table, x_request_id)
+
+				case QueryPerform.CREATE_TABLE:
+					return await this.createTable(options.schema)
+
+				case QueryPerform.CHECK_CONNECTION:
+					return await this.checkConnection({ x_request_id })
+
+				case QueryPerform.LIST_TABLES:
+					return await this.listTables({ x_request_id })
+
 				default:
 					this.logger.error(`[Query] Action ${action} not supported`, x_request_id)
 					throw new Error(`Action ${action} not supported`)
@@ -139,7 +181,7 @@ export class Query {
 	 * * Used as part of the setup process
 	 */
 
-	async createTable(schema: DatabaseSchema): Promise<boolean> {
+	private async createTable(schema: DatabaseSchema): Promise<boolean> {
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
 				return await this.mysql.createTable(schema)
@@ -347,7 +389,7 @@ export class Query {
 	 * Truncate a table - used for testing only, not for production
 	 */
 
-	async truncate(table_name: string, x_request_id?: string): Promise<void> {
+	private async truncate(table_name: string, x_request_id?: string): Promise<void> {
 		if (Env.IsProd()) {
 			throw new Error('Truncate not allowed in production')
 		}
@@ -392,7 +434,7 @@ export class Query {
 	 * Check if connection is alive
 	 */
 
-	async checkConnection(options: { x_request_id?: string }): Promise<boolean> {
+	private async checkConnection(options: { x_request_id?: string }): Promise<boolean> {
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
 				return await this.mysql.checkConnection({ x_request_id: options.x_request_id })
@@ -406,6 +448,37 @@ export class Query {
 					options.x_request_id,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+	}
+
+	/**
+	 * List tables in the database
+	 */
+
+	private async listTables(options: { x_request_id?: string }): Promise<ListTablesResponseObject> {
+		let tables: string[]
+
+		switch (this.configService.get<string>('database.type')) {
+			case DatabaseType.MYSQL:
+				tables = await this.mysql.listTables({ x_request_id: options.x_request_id })
+				break
+			case DatabaseType.POSTGRES:
+				tables = await this.postgres.listTables({ x_request_id: options.x_request_id })
+				break
+			case DatabaseType.MONGODB:
+				tables = await this.mongo.listTables({ x_request_id: options.x_request_id })
+				break
+			default:
+				this.logger.error(
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					options.x_request_id,
+				)
+				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+
+		return {
+			tables: tables.filter(table => !table.startsWith('_llana_')),
+			_x_request_id: options.x_request_id,
 		}
 	}
 }

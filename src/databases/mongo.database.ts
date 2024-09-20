@@ -84,6 +84,29 @@ export class Mongo {
 	}
 
 	/**
+	 * List Tables
+	 */
+
+	async listTables(options: { x_request_id?: string }): Promise<string[]> {
+		const mongo = await this.createConnection()
+
+		try {
+			this.logger.debug(`[${DATABASE_TYPE}] List Tables`, options.x_request_id)
+
+			const collections = await mongo.db.listCollections().toArray()
+			const tables = collections.map(c => c.name)
+
+			mongo.connection.close()
+
+			return tables
+		} catch (e) {
+			mongo.connection.close()
+			this.logger.error(`[${DATABASE_TYPE}] Error listing tables - ${e.message}`)
+			throw new Error(e)
+		}
+	}
+
+	/**
 	 * Get Table Schema
 	 * @param repository
 	 * @param table_name
@@ -287,6 +310,9 @@ export class Mongo {
 			}
 
 			const mongoFilters = await this.whereToFilter(options.where)
+
+			console.log('mongoFilters', mongoFilters)
+
 			const results = <any>(
 				await mongo.collection
 					.find(mongoFilters)
@@ -562,78 +588,76 @@ export class Mongo {
 					filter[w.column] = {
 						$eq: w.value,
 					}
-
 					break
+
 				case WhereOperator.not_equals:
 					filter[w.column] = {
 						$ne: w.value,
 					}
-
 					break
+
 				case WhereOperator.gt:
 					filter[w.column] = {
 						$gt: w.value,
 					}
-
 					break
+
 				case WhereOperator.gte:
 					filter[w.column] = {
 						$gte: w.value,
 					}
-
 					break
+
 				case WhereOperator.lt:
 					filter[w.column] = {
 						$lt: w.value,
 					}
-
 					break
+
 				case WhereOperator.lte:
 					filter[w.column] = {
 						$lte: w.value,
 					}
-
 					break
+
 				case WhereOperator.in:
 					filter[w.column] = {
 						$in: w.value,
 					}
-
 					break
+
 				case WhereOperator.not_in:
 					filter[w.column] = {
 						$nin: w.value,
 					}
-
 					break
+
 				case WhereOperator.like:
+				case WhereOperator.search:
 					filter[w.column] = {
-						$text: {
-							$search: w.value,
-						},
+						$regex: w.value + '*',
 					}
-
 					break
+
 				case WhereOperator.not_like:
 					filter[w.column] = {
 						$not: {
-							$text: {
-								$search: w.value,
-							},
+							$regex: w.value + '*',
 						},
 					}
 
 					break
+
 				case WhereOperator.not_null:
 					filter[w.column] = {
 						$not: null,
 					}
-
 					break
+
 				case WhereOperator.null:
 					filter[w.column] = null
-
 					break
+
 				default:
 					this.logger.warn(`[${DATABASE_TYPE}] Operator not supported: ${w.operator}`)
 

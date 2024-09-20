@@ -75,3 +75,12 @@ export class DeleteResponseObject {
 	@IsString()
 	_x_request_id?: string
 }
+
+export class ListTablesResponseObject {
+	@IsArray()
+	tables: string[]
+
+	@IsOptional()
+	@IsString()
+	_x_request_id?: string
+}

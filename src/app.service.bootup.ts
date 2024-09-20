@@ -30,7 +30,7 @@ export class AppBootup implements OnApplicationBootstrap {
 		await this.cacheManager.reset()
 
 		try {
-			await this.query.checkConnection({ x_request_id: APP_BOOT_CONTEXT })
+			await this.query.perform(QueryPerform.CHECK_CONNECTION, undefined, APP_BOOT_CONTEXT)
 			this.logger.log('Database Connection Successful', APP_BOOT_CONTEXT)
 		} catch (e) {
 			this.logger.error(`Database Connection Error - ${e.message}`, APP_BOOT_CONTEXT)
@@ -111,7 +111,7 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
-			await this.query.createTable(schema)
+			await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
 			// Example Auth Table - For example allowing external API access to see Employee data
 
@@ -238,7 +238,7 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
-			await this.query.createTable(schema)
+			await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
 			if (!this.authentication.skipAuth()) {
 				const default_roles: DefaultRole[] = [
@@ -339,5 +339,9 @@ export class AppBootup implements OnApplicationBootstrap {
 				APP_BOOT_CONTEXT,
 			)
 		}
+
+		this.logger.log('TODO: Build out OPenAPI docs', APP_BOOT_CONTEXT)
+
+		this.logger.log('Application Bootstrapping Complete', APP_BOOT_CONTEXT)
 	}
 }

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config'
 
 import { version } from '../package.json'
 import { FindManyQueryParams, HeaderParams } from './dtos/requests.dto'
-import { FindManyResponseObject, FindOneResponseObject } from './dtos/response.dto'
+import { FindManyResponseObject, FindOneResponseObject, ListTablesResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Pagination } from './helpers/Pagination'
@@ -52,7 +52,7 @@ export class GetController {
 	}
 
 	@Get('*/schema')
-	async getSchema(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DatabaseSchema> {
+	async getSchema(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<ListTablesResponseObject> {
 		const x_request_id = headers['x-request-id']
 
 		const table_name = UrlToTable(req.originalUrl, 1)
@@ -85,6 +85,18 @@ export class GetController {
 		}
 
 		return res.status(200).send(schema)
+	}
+
+	@Get('/tables')
+	async listTables(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DatabaseSchema> {
+		const x_request_id = headers['x-request-id']
+
+		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.READ })
+		if (!auth.valid) {
+			return res.status(401).send(this.response.text(auth.message))
+		}
+
+		return res.status(200).send(await this.query.perform(QueryPerform.LIST_TABLES, undefined, x_request_id))
 	}
 
 	@Get('*/:id')
