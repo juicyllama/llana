@@ -310,9 +310,6 @@ export class Mongo {
 			}
 
 			const mongoFilters = await this.whereToFilter(options.where)
-
-			console.log('mongoFilters', mongoFilters)
-
 			const results = <any>(
 				await mongo.collection
 					.find(mongoFilters)
