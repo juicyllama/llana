@@ -64,6 +64,22 @@ export class MySQL {
 		}
 	}
 
+	/**
+	 * List all tables in the database
+	 */
+
+	async listTables(options: { x_request_id?: string }): Promise<string[]> {
+		try {
+			const results = await this.performQuery({ sql: 'SHOW TABLES', x_request_id: options.x_request_id })
+			const tables = results.map(row => Object.values(row)[0]) as string[]
+			this.logger.debug(`[${DATABASE_TYPE}] Tables: ${tables}`, options.x_request_id)
+			return tables
+		} catch (e) {
+			this.logger.error(`[${DATABASE_TYPE}] Error listing tables`, options.x_request_id)
+			throw new Error(e)
+		}
+	}
+
 	async performQuery(options: { sql: string; values?: any[]; x_request_id?: string }): Promise<any> {
 		const connection = await this.createConnection()
 

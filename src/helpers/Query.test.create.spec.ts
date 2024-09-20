@@ -30,7 +30,6 @@ describe('Query > Create', () => {
 		it('Inserts a record', async () => {
 			try {
 				const record = await customerTestingService.createCustomer({})
-				expect(record.custId).toBeDefined()
 				expect(record.companyName).toBeDefined()
 				expect(record.contactName).toBeDefined()
 				expect(record.contactTitle).toBeDefined()

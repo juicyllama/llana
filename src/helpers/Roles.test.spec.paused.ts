@@ -44,7 +44,13 @@ describe('Roles', () => {
 
 	describe('No roles', () => {
 		it('Full permissions for all', async function () {
-			await query.truncate(LLANA_ROLES_TABLE)
+			const schema: DatabaseSchema = {
+				table: LLANA_ROLES_TABLE,
+				primary_key: null,
+				columns: [],
+			}
+
+			await query.perform(QueryPerform.TRUNCATE, { schema })
 			const customers = await request(app.getHttpServer())
 				.get('/Customer/')
 				.set('x-api-key', 'Ex@mp1eS$Cu7eAp!K3y')

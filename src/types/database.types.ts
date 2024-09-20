@@ -18,6 +18,10 @@ export enum QueryPerform {
 	UPDATE = 'update',
 	DELETE = 'delete',
 	UNIQUE = 'unique',
+	TRUNCATE = 'truncate',
+	CREATE_TABLE = 'createTable',
+	CHECK_CONNECTION = 'checkConnection',
+	LIST_TABLES = 'listTables',
 }
 
 export enum WhereOperator {

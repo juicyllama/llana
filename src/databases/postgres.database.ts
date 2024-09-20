@@ -68,6 +68,25 @@ export class Postgres {
 		}
 	}
 
+	/**
+	 * List all tables in the database
+	 */
+
+	async listTables(options: { x_request_id?: string }): Promise<string[]> {
+		try {
+			const results = await this.performQuery({
+				sql: "SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';",
+				x_request_id: options.x_request_id,
+			})
+			const tables = results.map((table: any) => table.tablename)
+			this.logger.debug(`[${DATABASE_TYPE}] Tables: ${tables}`, options.x_request_id)
+			return tables
+		} catch (e) {
+			this.logger.error(`[${DATABASE_TYPE}] Error listing tables`, options.x_request_id)
+			throw new Error(e)
+		}
+	}
+
 	async performQuery(options: { sql: string; values?: any[]; x_request_id?: string }): Promise<any> {
 		const connection = await this.createConnection()
 

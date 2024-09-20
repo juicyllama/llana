@@ -42,6 +42,7 @@
 		"@nestjs/core": "^10.4.1",
 		"@nestjs/jwt": "^10.2.0",
 		"@nestjs/platform-express": "^10.4.1",
+		"@nestjs/swagger": "^7.4.2",
 		"@types/pg": "^8.11.10",
 		"argon2": "^0.41.1",
 		"axios": "^1.7.7",
