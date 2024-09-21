@@ -1,6 +1,5 @@
 import { Controller, Get, Res } from '@nestjs/common'
 import * as fs from 'fs'
-import {} from 'redoc'
 
 import { version } from '../package.json'
 import { Documentation } from './helpers/Documentation'
