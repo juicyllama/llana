@@ -3,7 +3,9 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "assets": [{"include": "**/*.handlebars", "outDir": "./dist/src"}],
+    "tsConfigPath": "tsconfig.build.json"
   },
   "watchOptions": {
     "aggregateTimeout": 500,

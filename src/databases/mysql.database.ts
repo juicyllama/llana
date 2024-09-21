@@ -141,6 +141,9 @@ export class MySQL {
 				foreign_key: column.Key === 'MUL',
 				default: column.Default,
 				extra: column.Extra,
+				enums: column.Type.includes('enum')
+					? column.Type.match(/'([^']+)'/g).map((e: string) => e.replace(/'/g, ''))
+					: undefined,
 			}
 		})
 
@@ -521,6 +524,14 @@ export class MySQL {
 	private fieldMapper(type: MySQLColumnType): DatabaseColumnType {
 		if (type.includes('enum')) {
 			return DatabaseColumnType.ENUM
+		}
+
+		if (type.includes('int')) {
+			return DatabaseColumnType.NUMBER
+		}
+
+		if (type.includes('text') || type.includes('blob') || type.includes('binary') || type.includes('varchar')) {
+			return DatabaseColumnType.STRING
 		}
 
 		switch (type) {

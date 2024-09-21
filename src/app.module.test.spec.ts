@@ -18,11 +18,8 @@ describe('App', () => {
 	})
 
 	describe('Boots Up', () => {
-		it('Llana Version Printed', async function () {
-			const home = await request(app.getHttpServer()).get('/').expect(200)
-
-			expect(home.text).toBeDefined()
-			expect(home.text.includes('🦙')).toBeTruthy()
+		it('Serving 200', async function () {
+			await request(app.getHttpServer()).get('/').expect(200)
 		})
 	})
 

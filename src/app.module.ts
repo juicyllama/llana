@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt'
 
 import { AuthController } from './app.controller.auth'
 import { DeleteController } from './app.controller.delete'
+import { DocsController } from './app.controller.docs'
 import { GetController } from './app.controller.get'
 import { PostController } from './app.controller.post'
 import { PutController } from './app.controller.put'
@@ -19,6 +20,7 @@ import { Mongo } from './databases/mongo.database'
 import { MySQL } from './databases/mysql.database'
 import { Postgres } from './databases/postgres.database'
 import { Authentication } from './helpers/Authentication'
+import { Documentation } from './helpers/Documentation'
 import { Encryption } from './helpers/Encryption'
 import { Logger } from './helpers/Logger'
 import { Pagination } from './helpers/Pagination'
@@ -36,10 +38,11 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		JwtModule.register(jwt()),
 		CacheModule.register(),
 	],
-	controllers: [AuthController, DeleteController, GetController, PostController, PutController],
+	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
 	providers: [
 		AppBootup,
 		Authentication,
+		Documentation,
 		Encryption,
 		Logger,
 		AuthService,
@@ -54,6 +57,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 	],
 	exports: [
 		Authentication,
+		Documentation,
 		Encryption,
 		Logger,
 		AuthService,
