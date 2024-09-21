@@ -24,7 +24,8 @@ export class AuthController {
 	 */
 
 	@Post('/login')
-	login(
+	async login(
+		@Res() res,
 		@Body() signInDto: Record<string, any>,
 		@Headers() headers: HeaderParams,
 	): Promise<{ access_token: string; id: any }> {
@@ -33,7 +34,7 @@ export class AuthController {
 		}
 
 		const x_request_id = headers['x-request-id']
-		return this.authService.signIn(signInDto.username, signInDto.password, x_request_id)
+		return res.status(200).send(await this.authService.signIn(signInDto.username, signInDto.password, x_request_id))
 	}
 
 	/*

@@ -2,9 +2,11 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Cache } from 'cache-manager'
+import * as fs from 'fs'
 
 import { APP_BOOT_CONTEXT, LLANA_AUTH_TABLE, LLANA_ROLES_TABLE } from './app.constants'
 import { Authentication } from './helpers/Authentication'
+import { Documentation } from './helpers/Documentation'
 import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
@@ -18,6 +20,7 @@ export class AppBootup implements OnApplicationBootstrap {
 		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
 		@Inject(CACHE_MANAGER) private cacheManager: Cache,
+		private readonly documentation: Documentation,
 		private readonly logger: Logger,
 		private readonly query: Query,
 		private readonly schema: Schema,
@@ -340,8 +343,16 @@ export class AppBootup implements OnApplicationBootstrap {
 			)
 		}
 
-		this.logger.log('TODO: Build out OPenAPI docs', APP_BOOT_CONTEXT)
+		if (this.documentation.skipDocs()) {
+			this.logger.warn('Skipping docs is set to true', APP_BOOT_CONTEXT)
+		} else {
+			const docs = await this.documentation.generateDocumentation()
 
+			//write docs to file to be consumed by the UI
+
+			this.logger.log('Docs Generated', APP_BOOT_CONTEXT)
+			fs.writeFileSync('openapi.json', JSON.stringify(docs))
+		}
 		this.logger.log('Application Bootstrapping Complete', APP_BOOT_CONTEXT)
 	}
 }

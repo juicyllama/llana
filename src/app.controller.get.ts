@@ -1,11 +1,11 @@
 import { Controller, Get, Headers, Param, ParseArrayPipe, Query as QueryParams, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
-import { version } from '../package.json'
 import { FindManyQueryParams, HeaderParams } from './dtos/requests.dto'
 import { FindManyResponseObject, FindOneResponseObject, ListTablesResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
+import { Documentation } from './helpers/Documentation'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
@@ -26,30 +26,13 @@ export class GetController {
 	constructor(
 		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
+		private readonly documentation: Documentation,
 		private readonly pagination: Pagination,
 		private readonly query: Query,
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
 	) {}
-
-	@Get('')
-	homepage(@Res() res): string {
-		const showDocs = this.configService.get('DOCS') ?? false
-
-		if (showDocs) {
-			//TODO: build doc portal - https://github.com/juicyllama/llana/issues/27
-			return res.send(`
-			<h1>Docs</h1>`)
-		} else {
-			return res.send(`🦙 v${version}`)
-		}
-	}
-
-	@Get('/favicon.ico')
-	fav(@Res() res): string {
-		return res.sendFile('favicon.ico', { root: 'public' })
-	}
 
 	@Get('*/schema')
 	async getSchema(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<ListTablesResponseObject> {
