@@ -252,6 +252,24 @@ export class Schema {
 		data: { [key: string]: any },
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
 		try {
+
+			for(const key in data){
+				const column = schema.columns.find(col => col.field)
+
+				switch(column.type){
+					case DatabaseColumnType.NUMBER:
+						if(isNaN(data[key])){
+							return {
+								valid: false,
+								message: `${key} must be a number`
+							}
+						}
+
+						data[key] = parseInt(data[key])
+						break
+				}
+			}
+
 			const DynamicClass = this.schemaToClass(schema, data)
 			const instance: object = plainToInstance(DynamicClass, data)
 			const errors = await validate(instance)
@@ -455,6 +473,8 @@ export class Schema {
 
 			const validation = await this.validateData(options.schema, { [column]: value })
 
+			console.log(validation)
+
 			if (!validation.valid) {
 				return validation
 			}
@@ -465,6 +485,8 @@ export class Schema {
 				value,
 			})
 		}
+
+		console.log(where)
 
 		return {
 			valid: true,

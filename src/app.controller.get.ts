@@ -5,7 +5,6 @@ import { FindManyQueryParams, HeaderParams } from './dtos/requests.dto'
 import { FindManyResponseObject, FindOneResponseObject, ListTablesResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
-import { Documentation } from './helpers/Documentation'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
@@ -26,7 +25,6 @@ export class GetController {
 	constructor(
 		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
-		private readonly documentation: Documentation,
 		private readonly pagination: Pagination,
 		private readonly query: Query,
 		private readonly response: Response,
@@ -245,6 +243,7 @@ export class GetController {
 		@QueryParams('sort', new ParseArrayPipe({ items: String, separator: ',', optional: true }))
 		querySort?: string[],
 	): Promise<FindManyResponseObject> {
+
 		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
 
