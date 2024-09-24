@@ -28,6 +28,7 @@ import {
 	validateWhereResponse,
 } from '../types/schema.types'
 import { Logger } from './Logger'
+import { de } from '@faker-js/faker/.'
 
 @Injectable()
 export class Schema {
@@ -254,7 +255,7 @@ export class Schema {
 		try {
 
 			for(const key in data){
-				const column = schema.columns.find(col => col.field)
+				const column = schema.columns.find(col => col.field === key)
 
 				switch(column.type){
 					case DatabaseColumnType.NUMBER:
@@ -266,6 +267,8 @@ export class Schema {
 						}
 
 						data[key] = parseInt(data[key])
+						break
+					default:
 						break
 				}
 			}
