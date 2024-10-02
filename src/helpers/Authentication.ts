@@ -36,11 +36,11 @@ export class Authentication {
 	skipAuth(): boolean {
 		const skip_auth = this.configService.get<boolean | undefined>('SKIP_AUTH')
 
-		if (isUndefined(skip_auth)) {
+		if (!skip_auth || isUndefined(skip_auth)) {
 			return false
 		}
 
-		return !!(skip_auth === true)
+		return true
 	}
 
 	/**
