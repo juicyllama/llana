@@ -26,21 +26,22 @@ export class HostCheckMiddleware implements NestMiddleware {
 		}
 
 		for (const host of allowed_hosts) {
-			if (req.get('host') === host) {
+			if (req.get('origin') === host) {
 				return next()
 			}
 		}
 
 		if (Env.IsDev()) {
 			this.logger.warn(`Host not in approved list, skipping forbidden response as in dev mode`, {
-				host: req.get('host'),
+				host: req.get('origin'),
 				allowed_hosts,
 			})
 			return next()
 		} else {
 			this.logger.debug(`Host not in approved list, returning forbidden response`, {
-				host: req.get('host'),
+				host: req.get('origin'),
 				allowed_hosts,
+				headers: req.headers,
 			})
 			res.status(403).send('Forbidden')
 			return
