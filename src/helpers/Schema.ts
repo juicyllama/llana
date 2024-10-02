@@ -476,8 +476,6 @@ export class Schema {
 
 			const validation = await this.validateData(options.schema, { [column]: value })
 
-			console.log(validation)
-
 			if (!validation.valid) {
 				return validation
 			}
@@ -488,9 +486,7 @@ export class Schema {
 				value,
 			})
 		}
-
-		console.log(where)
-
+		
 		return {
 			valid: true,
 			where,

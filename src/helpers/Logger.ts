@@ -56,26 +56,29 @@ export class Logger extends ConsoleLogger {
 }
 
 export function logLevel(): LogLevel[] {
-	let logLevels: LogLevel[] = ['error', 'warn']
+	let logLevels: LogLevel[]
 
 	switch (Env.get()) {
 		case Environment.production:
-			logLevels = <LogLevel[]>process.env.LOG_LEVELS_PROD?.split(',') ?? ['error', 'warn', 'log']
+			logLevels = <LogLevel[]>process.env.LOG_LEVELS?.split(',') ?? ['error', 'warn', 'log']
 			break
 		case Environment.sandbox:
-			logLevels = <LogLevel[]>process.env.LOG_LEVELS_SANDBOX?.split(',') ?? ['error', 'warn', 'log', 'debug']
+			logLevels = <LogLevel[]>process.env.LOG_LEVELS?.split(',') ?? ['error', 'warn', 'log', 'debug']
 			break
 		case Environment.test:
-			logLevels = <LogLevel[]>process.env.LOG_LEVELS_TEST?.split(',') ?? ['error', 'warn', 'log']
+			logLevels = <LogLevel[]>process.env.LOG_LEVELS?.split(',') ?? ['error', 'warn', 'log']
 			break
 		case Environment.development:
-			logLevels = <LogLevel[]>process.env.LOG_LEVELS_DEV?.split(',') ?? [
+			logLevels = <LogLevel[]>process.env.LOG_LEVELS?.split(',') ?? [
 				'error',
 				'warn',
 				'log',
 				'debug',
 				'verbose',
 			]
+			break
+		default:
+			logLevels = ['error', 'warn', 'log']
 			break
 	}
 
