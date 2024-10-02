@@ -13,7 +13,7 @@ export class HostCheckMiddleware implements NestMiddleware {
 	) {}
 
 	use(req: Request, res: Response, next: NextFunction) {
-		const allowed_hosts = this.configService.get<string[]>('hosts') || []
+		const allowed_hosts = this.configService.get<string>('HOSTS')?.split(',') ?? []
 
 		if (allowed_hosts.length === 0) {
 			return next()
