@@ -49,6 +49,12 @@ export class Authentication {
 	 */
 
 	async auth(options: { req; x_request_id: string; access: RolePermission }): Promise<AuthRestrictionsResponse> {
+
+		if (this.skipAuth()) {
+			this.logger.debug(`[Authentication][auth] Skipping authentication due to SKIP_AUTH being true`)
+			return { valid: true }
+		}
+
 		const authentications = this.configService.get<Auth[]>('auth')
 		const auth_schema = await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: options.x_request_id })
 
@@ -124,21 +130,6 @@ export class Authentication {
 			}
 
 			if (!check_required) continue
-
-			if (this.skipAuth()) {
-				switch (options.access) {
-					case RolePermission.READ:
-						this.logger.debug(`[Authentication][auth] Skipping authentication due to SKIP_AUTH being true`)
-						return { valid: true }
-					case RolePermission.WRITE:
-					case RolePermission.DELETE:
-					case RolePermission.NONE:
-						this.logger.debug(
-							`[Authentication][auth] Skipping authentication due to SKIP_AUTH being true, however no _llana_auth table found for WRITE/DELETE permissions, defaulting to false`,
-						)
-						return { valid: false, message: 'Unauthorized' }
-				}
-			}
 
 			let identity_column
 			let schema: DatabaseSchema

@@ -16,6 +16,6 @@ export function fromStringToEnv(env = process.env.NODE_ENV): Environment {
 		case 'test':
 			return Environment.test
 		default:
-			return Environment.development
+			return Environment.production
 	}
 }
