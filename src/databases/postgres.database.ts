@@ -136,35 +136,35 @@ export class Postgres {
 	 */
 
 	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
-		let sql = `SELECT column_name AS "Field", data_type AS "Type", is_nullable AS "Null", column_default AS "Default", 
-			CASE 
-				WHEN column_name = ANY (SELECT kcu.column_name 
-							  FROM information_schema.key_column_usage AS kcu 
-							  JOIN information_schema.table_constraints AS tc 
-							  ON kcu.constraint_name = tc.constraint_name 
-							  WHERE kcu.table_name = '${options.table}' AND tc.constraint_type = 'PRIMARY KEY') 
-				THEN 'PRI' 
-				ELSE '' 
+		let sql = `SELECT column_name AS "Field", data_type AS "Type", is_nullable AS "Null", column_default AS "Default",
+			CASE
+				WHEN column_name = ANY (SELECT kcu.column_name
+							  FROM information_schema.key_column_usage AS kcu
+							  JOIN information_schema.table_constraints AS tc
+							  ON kcu.constraint_name = tc.constraint_name
+							  WHERE kcu.table_name = '${options.table}' AND tc.constraint_type = 'PRIMARY KEY')
+				THEN 'PRI'
+				ELSE ''
 			END AS "Key",
-			CASE 
-				WHEN column_name = ANY (SELECT kcu.column_name 
-							  FROM information_schema.key_column_usage AS kcu 
-							  JOIN information_schema.table_constraints AS tc 
-							  ON kcu.constraint_name = tc.constraint_name 
-							  WHERE kcu.table_name = '${options.table}' AND tc.constraint_type = 'UNIQUE') 
-				THEN 'UNI' 
-				ELSE '' 
+			CASE
+				WHEN column_name = ANY (SELECT kcu.column_name
+							  FROM information_schema.key_column_usage AS kcu
+							  JOIN information_schema.table_constraints AS tc
+							  ON kcu.constraint_name = tc.constraint_name
+							  WHERE kcu.table_name = '${options.table}' AND tc.constraint_type = 'UNIQUE')
+				THEN 'UNI'
+				ELSE ''
 			END AS "Key_Unique",
-			CASE 
-				WHEN column_name = ANY (SELECT kcu.column_name 
-							  FROM information_schema.key_column_usage AS kcu 
-							  JOIN information_schema.table_constraints AS tc 
-							  ON kcu.constraint_name = tc.constraint_name 
-							  WHERE kcu.table_name = '${options.table}' AND tc.constraint_type = 'FOREIGN KEY') 
-				THEN 'MUL' 
-				ELSE '' 
-			END AS "Key_Multiple", 
-		'extra' AS "Extra" 
+			CASE
+				WHEN column_name = ANY (SELECT kcu.column_name
+							  FROM information_schema.key_column_usage AS kcu
+							  JOIN information_schema.table_constraints AS tc
+							  ON kcu.constraint_name = tc.constraint_name
+							  WHERE kcu.table_name = '${options.table}' AND tc.constraint_type = 'FOREIGN KEY')
+				THEN 'MUL'
+				ELSE ''
+			END AS "Key_Multiple",
+		'extra' AS "Extra"
 		FROM information_schema.columns WHERE table_name = '${options.table}'`
 
 		const columns_result = await this.performQuery({
@@ -277,7 +277,7 @@ export class Postgres {
 		}
 
 		if (sort?.length) {
-			command += `ORDER BY ${sort.map(sort => `${sort.column} ${sort.operator}`).join(', ')}`
+			command += ` ORDER BY ${sort.map(sort => `${sort.column} ${sort.operator}`).join(', ')}`
 		}
 
 		if (!options.limit) {

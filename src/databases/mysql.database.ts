@@ -238,7 +238,7 @@ export class MySQL {
 		}
 
 		if (sort?.length) {
-			command += `ORDER BY ${sort.map(sort => `${sort.column} ${sort.operator}`).join(', ')}`
+			command += ` ORDER BY ${sort.map(sort => `${sort.column} ${sort.operator}`).join(', ')}`
 		}
 
 		if (!options.limit) {
