@@ -10,16 +10,16 @@
 
 ## Database REST API in minuites
 
-Llana is a no-code API wrapper that exposes a REST API for any database within minutes. Stop wasting time building endpoints, just connect your database and start playing. Open source, free to use, and no vendor lock-in.
+Llana is a lightweight no-code API wrapper that exposes a REST API for any database within minutes. Stop wasting time building endpoints, just connect your database and start playing. Open source, free to use, and no vendor lock-in.
 
 ## Documentation
 
-Visit [JuicyLlama](https://juicyllama.com) > [Tools](https://juicyllama.com/tools) > [Llana](https://juicyllama.com/tools/llana) for full documentation. 
+Visit [Llana.io](https://llana.io) for full documentation. 
 
 
 ## Databases
 
-We are working to support all major databases, if you would like to contribute to the open source project and help integrate your preferred database flavor, checkout our [contribution guidelines](https://juicyllama.com/developers/contributing).
+We are working to support all major databases, if you would like to contribute to the open source project and help integrate your preferred database flavor, checkout our [contribution guidelines](https://llana.io/developers/contributing).
 
 [ExpressJs Database Integration Guide](https://expressjs.com/en/guide/database-integration.html)
 
@@ -35,4 +35,4 @@ We are working to support all major databases, if you would like to contribute t
 ![CASSANDRA](https://badgen.net/badge/CASSANDRA/Help%20Welcomed/red)<br>
 ![MARIADB](https://badgen.net/badge/MARIADB/Help%20Welcomed/red)<br>
 
-[See the complete breakdown of which databases are integrated with which endpoints](https://juicyllama.com/tools/llana/support) 
+[See the complete breakdown of which data sources are integrated](https://llana.io/data-sources/overview) 
