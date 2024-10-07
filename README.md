@@ -8,7 +8,7 @@
 
 </div>
 
-## Database REST API in minuites
+## Database REST API in minutes
 
 Llana is a lightweight no-code API wrapper that exposes a REST API for any database within minutes. Stop wasting time building endpoints, just connect your database and start playing. Open source, free to use, and no vendor lock-in.
 

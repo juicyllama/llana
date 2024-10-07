@@ -24,6 +24,12 @@ export enum QueryPerform {
 	LIST_TABLES = 'listTables',
 }
 
+export enum SocketType {
+	INSERT = 'INSERT',
+	UPDATE = 'UPDATE',
+	DELETE = 'DELETE',
+}
+
 export enum WhereOperator {
 	equals = '=',
 	not_equals = '!=',

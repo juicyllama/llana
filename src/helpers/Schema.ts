@@ -28,7 +28,6 @@ import {
 	validateWhereResponse,
 } from '../types/schema.types'
 import { Logger } from './Logger'
-import { de } from '@faker-js/faker/.'
 
 @Injectable()
 export class Schema {
@@ -253,16 +252,15 @@ export class Schema {
 		data: { [key: string]: any },
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
 		try {
-
-			for(const key in data){
+			for (const key in data) {
 				const column = schema.columns.find(col => col.field === key)
 
-				switch(column.type){
+				switch (column.type) {
 					case DatabaseColumnType.NUMBER:
-						if(isNaN(data[key])){
+						if (isNaN(data[key])) {
 							return {
 								valid: false,
-								message: `${key} must be a number`
+								message: `${key} must be a number`,
 							}
 						}
 
@@ -486,7 +484,7 @@ export class Schema {
 				value,
 			})
 		}
-		
+
 		return {
 			valid: true,
 			where,

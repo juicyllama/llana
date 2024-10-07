@@ -8,8 +8,9 @@ import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
+import { Websockets } from './helpers/Websockets'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
-import { DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from './types/database.types'
+import { DatabaseSchema, DatabaseWhere, QueryPerform, SocketType, WhereOperator } from './types/database.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller()
@@ -20,6 +21,7 @@ export class PutController {
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
+		private readonly websockets: Websockets,
 	) {}
 
 	@Put('*/:id')
@@ -127,17 +129,13 @@ export class PutController {
 		}
 
 		try {
-			return res.status(200).send(
-				await this.query.perform(
-					QueryPerform.UPDATE,
-					{
-						id: id,
-						schema,
-						data: validate.instance,
-					},
-					x_request_id,
-				),
+			const result = await this.query.perform(
+				QueryPerform.UPDATE,
+				{ id, schema, data: validate.instance },
+				x_request_id,
 			)
+			await this.websockets.publish(schema, SocketType.UPDATE, result[schema.primary_key])
+			return res.status(200).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}

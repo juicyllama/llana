@@ -49,7 +49,6 @@ export class Authentication {
 	 */
 
 	async auth(options: { req; x_request_id: string; access: RolePermission }): Promise<AuthRestrictionsResponse> {
-
 		if (this.skipAuth()) {
 			this.logger.debug(`[Authentication][auth] Skipping authentication due to SKIP_AUTH being true`)
 			return { valid: true }

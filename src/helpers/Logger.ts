@@ -69,13 +69,7 @@ export function logLevel(): LogLevel[] {
 			logLevels = <LogLevel[]>process.env.LOG_LEVELS?.split(',') ?? ['error', 'warn', 'log']
 			break
 		case Environment.development:
-			logLevels = <LogLevel[]>process.env.LOG_LEVELS?.split(',') ?? [
-				'error',
-				'warn',
-				'log',
-				'debug',
-				'verbose',
-			]
+			logLevels = <LogLevel[]>process.env.LOG_LEVELS?.split(',') ?? ['error', 'warn', 'log', 'debug', 'verbose']
 			break
 		default:
 			logLevels = ['error', 'warn', 'log']

@@ -9,8 +9,16 @@ import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
+import { Websockets } from './helpers/Websockets'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
-import { DatabaseConfig, DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from './types/database.types'
+import {
+	DatabaseConfig,
+	DatabaseSchema,
+	DatabaseWhere,
+	QueryPerform,
+	SocketType,
+	WhereOperator,
+} from './types/database.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller()
@@ -22,6 +30,7 @@ export class DeleteController {
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
+		private readonly websockets: Websockets,
 	) {}
 
 	@Delete('*/:id')
@@ -117,7 +126,7 @@ export class DeleteController {
 		}
 
 		try {
-			return res.status(200).send(
+			const result = res.status(200).send(
 				await this.query.perform(
 					QueryPerform.DELETE,
 					{
@@ -128,6 +137,8 @@ export class DeleteController {
 					x_request_id,
 				),
 			)
+			await this.websockets.publish(schema, SocketType.DELETE, id)
+			return result
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}

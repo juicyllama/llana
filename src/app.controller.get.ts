@@ -243,7 +243,6 @@ export class GetController {
 		@QueryParams('sort', new ParseArrayPipe({ items: String, separator: ',', optional: true }))
 		querySort?: string[],
 	): Promise<FindManyResponseObject> {
-
 		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
 

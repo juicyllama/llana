@@ -8,8 +8,9 @@ import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
+import { Websockets } from './helpers/Websockets'
 import { AuthTablePermissionFailResponse } from './types/auth.types'
-import { DatabaseCreateOneOptions, QueryPerform } from './types/database.types'
+import { DatabaseCreateOneOptions, QueryPerform, SocketType } from './types/database.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller()
@@ -20,6 +21,7 @@ export class PostController {
 		private readonly schema: Schema,
 		private readonly response: Response,
 		private readonly roles: Roles,
+		private readonly websockets: Websockets,
 	) {}
 
 	/**
@@ -82,6 +84,7 @@ export class PostController {
 
 		try {
 			const result = await this.query.perform(QueryPerform.CREATE, options, x_request_id)
+			await this.websockets.publish(options.schema, SocketType.INSERT, result[options.schema.primary_key])
 			return res.status(201).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
