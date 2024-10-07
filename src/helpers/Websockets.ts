@@ -4,7 +4,11 @@ import { Server } from 'socket.io'
 import { DatabaseSchema, SocketType } from '../types/database.types'
 import { Logger } from './Logger'
 
-@WebSocketGateway()
+@WebSocketGateway({
+	cors: {
+	  origin: '*',
+	},
+  })
 export class Websockets implements OnGatewayConnection {
 	@WebSocketServer()
 	server: Server
@@ -32,6 +36,8 @@ export class Websockets implements OnGatewayConnection {
 
 		for (const client of this.server.sockets.sockets) {
 			this.logger.log(client)
+
+			//DO VALIDATION CHECKS ON CLIENT
 
 			// this.server.to(client.).emit(DatabaseSchema.table, {
 			// 	type,
