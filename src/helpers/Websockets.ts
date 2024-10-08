@@ -1,5 +1,5 @@
 import { OnGatewayConnection, WebSocketGateway, WebSocketServer } from '@nestjs/websockets'
-import { Server } from 'socket.io'
+import { Server, Socket } from 'socket.io'
 
 import { DatabaseSchema, SocketType } from '../types/database.types'
 import { Logger } from './Logger'
@@ -15,16 +15,33 @@ export class Websockets implements OnGatewayConnection {
 
 	constructor(private readonly logger: Logger) {}
 
+
+	//https://www.youtube.com/watch?v=4h9-c6D5Pos
+
+	afterInit(client: Socket): void {
+		client.use((req, next) =>{
+
+
+			// RUN Host authentication checks
+
+			// DO Auth Check
+
+			this.logger.log("Socket.io Middlewear") //TODO: debug once working
+			console.log(req)
+			next()
+		})
+	}
+
+
 	async handleConnection(req: any): Promise<void> {
 		const ipAddress = req.handshake.address
 
-		//this.logger.debug(`Client connected from ${ipAddress}`);
-		this.logger.log(`Client connected from ${ipAddress}`)
+		// do we know the client and can we link it to the socket.io ID for later use?
 
-		// DOES middlewear run?
+		//TODO: debug once working
+		this.logger.log(`Client  connected from ${ipAddress}`)
 
-		// HOST check
-		// Auth Check
+		
 	}
 
 	async publish(schema: DatabaseSchema, type: SocketType, id: number | string): Promise<void> {
