@@ -10,7 +10,7 @@ import { HostCheckMiddleware } from '../middleware/HostCheck'
 	  origin: '*',
 	},
   })
-export class Websockets implements OnGatewayConnection {
+export class Websockets {
 	@WebSocketServer()
 	server: Server
 
