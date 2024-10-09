@@ -51,7 +51,14 @@ export class DeleteController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.DELETE })
+		const auth = await this.authentication.auth({
+			table: table_name,
+			x_request_id,
+			access: RolePermission.DELETE,
+			headers: req.headers,
+			body: req.body,
+			query: req.query,
+		})
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
@@ -126,19 +133,17 @@ export class DeleteController {
 		}
 
 		try {
-			const result = res.status(200).send(
-				await this.query.perform(
-					QueryPerform.DELETE,
-					{
-						id: id,
-						schema,
-						softDelete,
-					},
-					x_request_id,
-				),
+			const result = await this.query.perform(
+				QueryPerform.DELETE,
+				{
+					id: id,
+					schema,
+					softDelete,
+				},
+				x_request_id,
 			)
 			await this.websockets.publish(schema, SocketType.DELETE, id)
-			return result
+			return res.status(200).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}

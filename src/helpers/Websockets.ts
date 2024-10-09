@@ -1,66 +1,109 @@
-import { OnGatewayConnection, WebSocketGateway, WebSocketServer } from '@nestjs/websockets'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Inject } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { JwtService } from '@nestjs/jwt'
+import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets'
+import { Cache } from 'cache-manager'
 import { Server, Socket } from 'socket.io'
+import { CACHE_DEFAULT_WS_IDENTITY_DATA_TTL } from '../app.constants'
+import { RolePermission } from '../types/roles.types'
 
+import { HostCheckMiddleware } from '../middleware/HostCheck'
 import { DatabaseSchema, SocketType } from '../types/database.types'
+import { Authentication } from './Authentication'
 import { Logger } from './Logger'
 
 @WebSocketGateway({
 	cors: {
-	  origin: '*',
+		origin: '*',
 	},
-  })
-export class Websockets implements OnGatewayConnection {
+})
+export class Websockets {
 	@WebSocketServer()
 	server: Server
 
-	constructor(private readonly logger: Logger) {}
+	constructor(
+		@Inject(CACHE_MANAGER) private cacheManager: Cache,
+		private readonly authentication: Authentication,
+		private readonly configService: ConfigService,
+		private readonly hostCheckMiddleware: HostCheckMiddleware,
+		private readonly jwtService: JwtService,
+		private readonly logger: Logger,
+	) {}
 
+	async afterInit(client: Socket): Promise<void> {
+		client.use(async (socket: any, next) => {
+			if (!this.hostCheckMiddleware.validateHost(socket.handshake, 'WebSocket')) {
+				this.logger.debug('[Websockets] Socket Host Failed - Unauthorized')
+				return next(new Error('Forbidden'))
+			}
 
-	//https://www.youtube.com/watch?v=4h9-c6D5Pos
+			if (this.authentication.skipAuth()) {
+				this.logger.debug(`[Websockets] Skipping authentication due to SKIP_AUTH being true`)
+				return next()
+			}
 
-	afterInit(client: Socket): void {
-		client.use((req, next) =>{
+			const jwt_config = this.configService.get<any>('jwt')
 
+			let token = socket.handshake.headers.authorization
 
-			// RUN Host authentication checks
+			if (!token) {
+				token = socket.handshake.auth.token
+			}
 
-			// DO Auth Check
+			if (!token) {
+				this.logger.error('Socket Auth Failed - No auth token provided')
+				return next(new Error('No auth token provided'))
+			}
 
-			this.logger.log("Socket.io Middlewear") //TODO: debug once working
-			console.log(req)
-			next()
+			try {
+				const payload = await this.jwtService.verifyAsync(token.replace('Bearer ', ''), {
+					secret: jwt_config.secret,
+				})
+
+				await this.cacheManager.set(
+					`ws:id:${socket.id}`,
+					payload,
+					this.configService.get('CACHE_WS_IDENTITY_DATA_TTL') ?? CACHE_DEFAULT_WS_IDENTITY_DATA_TTL,
+				)
+
+				return next()
+			} catch (e: any) {
+				this.logger.error(`Socket Auth Failed - ${e.message}`)
+				return next(new Error('Forbidden'))
+			}
 		})
-	}
-
-
-	async handleConnection(req: any): Promise<void> {
-		const ipAddress = req.handshake.address
-
-		// do we know the client and can we link it to the socket.io ID for later use?
-
-		//TODO: debug once working
-		this.logger.log(`Client  connected from ${ipAddress}`)
-
-		
 	}
 
 	async publish(schema: DatabaseSchema, type: SocketType, id: number | string): Promise<void> {
-		this.logger.log({
-			table: schema.table,
-			type,
-			[schema.primary_key]: id,
+		const clients = Array.from(this.server.sockets.sockets.values()).map(socket => {
+			return socket.id
 		})
 
-		for (const client of this.server.sockets.sockets) {
-			this.logger.log(client)
+		for (const client of clients) {
+			const identity = <any>await this.cacheManager.get(`ws:id:${client}`)
+			const auth = await this.authentication.auth({
+				table: schema.table,
+				access: RolePermission.READ,
+				user_identifier: identity.sub,
+			})
 
-			//DO VALIDATION CHECKS ON CLIENT
+			if (auth.valid) {
+				this.logger.debug(
+					`[Websockets] Skipping ${schema.table} ${type} for #${id} to ${client} due to lack of permission`,
+				)
+				continue
+			}
 
-			// this.server.to(client.).emit(DatabaseSchema.table, {
-			// 	type,
-			// 	[schema.primary_key]: id,
-			// });
-			// socket.to(id).emit("my message", msg);
+			try {
+				this.logger.debug(`[Websockets] Emitting ${schema.table} ${type} for #${id} to ${client}`)
+				this.server.to(client).emit(schema.table, {
+					type,
+					[schema.primary_key]: id,
+				})
+			} catch (e) {
+				this.logger.error(e)
+			}
 		}
 	}
 }

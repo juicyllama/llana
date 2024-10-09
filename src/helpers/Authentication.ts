@@ -44,11 +44,19 @@ export class Authentication {
 	}
 
 	/**
-	 * Create entity schema from database schema
+	 * Check is user is authorized to access a table, optional pass in user_identifier for specific user check
 	 * @param schema
 	 */
 
-	async auth(options: { req; x_request_id: string; access: RolePermission }): Promise<AuthRestrictionsResponse> {
+	async auth(options: {
+		table: string
+		access: RolePermission
+		headers?: any
+		body?: any
+		query?: any
+		x_request_id?: string
+		user_identifier?: string | number
+	}): Promise<AuthRestrictionsResponse> {
 		if (this.skipAuth()) {
 			this.logger.debug(`[Authentication][auth] Skipping authentication due to SKIP_AUTH being true`)
 			return { valid: true }
@@ -106,7 +114,7 @@ export class Authentication {
 
 			if (excludes) {
 				for (const exclude of excludes) {
-					if (options.req.originalUrl.includes(exclude.table)) {
+					if (options.table.includes(exclude.table)) {
 						if (!exclude.public_records) {
 							exclude.public_records = RolePermission.READ
 						}
@@ -122,13 +130,20 @@ export class Authentication {
 
 			if (includes) {
 				for (const include of includes) {
-					if (options.req.originalUrl.includes(include.table)) {
+					if (options.table.includes(include.table)) {
 						check_required = true
 					}
 				}
 			}
 
 			if (!check_required) continue
+
+			if (options.user_identifier) {
+				return {
+					valid: true,
+					user_identifier: options.user_identifier.toString(),
+				}
+			}
 
 			let identity_column
 			let schema: DatabaseSchema
@@ -171,36 +186,36 @@ export class Authentication {
 
 					switch (auth.location) {
 						case AuthLocation.HEADER:
-							if (!options.req.headers[auth.name]) {
+							if (!options.headers[auth.name]) {
 								auth_passed = {
 									valid: false,
 									message: `API key header ${auth.name} required`,
 								}
 								continue
 							}
-							req_api_key = options.req.headers[auth.name]
+							req_api_key = options.headers[auth.name]
 							break
 
 						case AuthLocation.QUERY:
-							if (!options.req.query[auth.name]) {
+							if (!options.query[auth.name]) {
 								auth_passed = {
 									valid: false,
 									message: `API key query ${auth.name} required`,
 								}
 								continue
 							}
-							req_api_key = options.req.query[auth.name]
+							req_api_key = options.query[auth.name]
 							break
 
 						case AuthLocation.BODY:
-							if (!options.req.body[auth.name]) {
+							if (!options.body[auth.name]) {
 								auth_passed = {
 									valid: false,
 									message: `API key body ${auth.name} required`,
 								}
 								continue
 							}
-							req_api_key = options.req.body[auth.name]
+							req_api_key = options.body[auth.name]
 							break
 					}
 
@@ -353,7 +368,7 @@ export class Authentication {
 					break
 
 				case AuthType.JWT:
-					const jwt_token = options.req.headers['authorization']?.split(' ')[1]
+					const jwt_token = options.headers['authorization']?.split(' ')[1]
 
 					if (!jwt_token) {
 						auth_passed = {

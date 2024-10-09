@@ -264,6 +264,10 @@ export class Schema {
 							}
 						}
 
+						if (typeof data[key] === 'boolean') {
+							data[key] = data[key] ? 1 : 0
+						}
+
 						data[key] = parseInt(data[key])
 						break
 					default:

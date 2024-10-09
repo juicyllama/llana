@@ -46,7 +46,14 @@ export class GetController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.READ })
+		const auth = await this.authentication.auth({
+			table: table_name,
+			x_request_id,
+			access: RolePermission.READ,
+			headers: req.headers,
+			body: req.body,
+			query: req.query,
+		})
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
@@ -72,7 +79,14 @@ export class GetController {
 	async listTables(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DatabaseSchema> {
 		const x_request_id = headers['x-request-id']
 
-		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.READ })
+		const auth = await this.authentication.auth({
+			table: '',
+			x_request_id,
+			access: RolePermission.READ,
+			headers: req.headers,
+			body: req.body,
+			query: req.query,
+		})
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
@@ -108,7 +122,14 @@ export class GetController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.READ })
+		const auth = await this.authentication.auth({
+			table: table_name,
+			x_request_id,
+			access: RolePermission.READ,
+			headers: req.headers,
+			body: req.body,
+			query: req.query,
+		})
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
@@ -260,7 +281,14 @@ export class GetController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.READ })
+		const auth = await this.authentication.auth({
+			table: table_name,
+			x_request_id,
+			access: RolePermission.READ,
+			headers: req.headers,
+			body: req.body,
+			query: req.query,
+		})
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
