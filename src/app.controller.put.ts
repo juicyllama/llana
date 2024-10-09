@@ -43,7 +43,7 @@ export class PutController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({ req, x_request_id, access: RolePermission.WRITE })
+		const auth = await this.authentication.auth({ table: table_name, x_request_id, access: RolePermission.WRITE, headers: req.headers, body: req.body, query: req.query })
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}

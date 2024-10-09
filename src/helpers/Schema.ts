@@ -251,6 +251,7 @@ export class Schema {
 		schema: DatabaseSchema,
 		data: { [key: string]: any },
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
+
 		try {
 			for (const key in data) {
 				const column = schema.columns.find(col => col.field === key)
@@ -262,6 +263,10 @@ export class Schema {
 								valid: false,
 								message: `${key} must be a number`,
 							}
+						}
+
+						if(typeof data[key] === 'boolean'){
+							data[key] = data[key] ? 1 : 0
 						}
 
 						data[key] = parseInt(data[key])

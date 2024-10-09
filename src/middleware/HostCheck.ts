@@ -13,7 +13,7 @@ export class HostCheckMiddleware implements NestMiddleware {
 	) {}
 
 	use(req: Request, res: Response, next: NextFunction) {
-		if(this.validateHost(req.headers)){
+		if(this.validateHost(req.headers, 'HTTP')){
 			next()
 		}else{
 			res.status(403).send('Forbidden')
@@ -27,10 +27,17 @@ export class HostCheckMiddleware implements NestMiddleware {
 	 * Returns true if host is allowed, false if not
 	 */
 
-	validateHost(headers: any): boolean{
+	validateHost(headers: any, domain?: string): boolean{
 
-		const ip = headers['x-real-ip']
-		this.logger.debug(`Client connecting from ${ip}`)
+		let ip = headers['x-real-ip']
+		if(!ip) ip = headers['x-forwarded-for']
+		if(!ip) ip = headers['address']
+		
+		if(!ip){
+			this.logger.debug(`${domain ? domain + ' ' : ''}No IP found`)
+		} else{
+			this.logger.debug(`${domain ? domain + ' ' : ''}Client connecting from ${ip}`)
+		}
 
 		const allowed_hosts = this.configService.get<string>('HOSTS')?.split(',') ?? []
 
@@ -51,13 +58,13 @@ export class HostCheckMiddleware implements NestMiddleware {
 		}
 
 		if (Env.IsDev()) {
-			this.logger.warn(`Host not in approved list, skipping forbidden response as in dev mode`, {
+			this.logger.warn(`${domain ? domain + ' ' : ''}Host not in approved list, skipping forbidden response as in dev mode`, {
 				host: ip,
 				allowed_hosts,
 			})
 			return true
 		} else {
-			this.logger.debug(`Host not in approved list, returning forbidden response`, {
+			this.logger.debug(`${domain ? domain + ' ' : ''}Host not in approved list, returning forbidden response`, {
 				host: ip,
 				allowed_hosts,
 				headers
