@@ -49,7 +49,14 @@ export class AuthController {
 
 		const x_request_id = headers['x-request-id']
 		const table = this.authentication.getIdentityTable()
-		const auth = await this.authentication.auth({ table, x_request_id, access: RolePermission.READ, headers: req.headers, body: req.body, query: req.query })
+		const auth = await this.authentication.auth({
+			table,
+			x_request_id,
+			access: RolePermission.READ,
+			headers: req.headers,
+			body: req.body,
+			query: req.query,
+		})
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}

@@ -251,7 +251,6 @@ export class Schema {
 		schema: DatabaseSchema,
 		data: { [key: string]: any },
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
-
 		try {
 			for (const key in data) {
 				const column = schema.columns.find(col => col.field === key)
@@ -265,7 +264,7 @@ export class Schema {
 							}
 						}
 
-						if(typeof data[key] === 'boolean'){
+						if (typeof data[key] === 'boolean') {
 							data[key] = data[key] ? 1 : 0
 						}
 

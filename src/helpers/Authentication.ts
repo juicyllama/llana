@@ -48,8 +48,15 @@ export class Authentication {
 	 * @param schema
 	 */
 
-	async auth(options: { table: string; access: RolePermission, headers?: any, body?: any, query?: any, x_request_id?: string; user_identifier?: string | number }): Promise<AuthRestrictionsResponse> {
-		
+	async auth(options: {
+		table: string
+		access: RolePermission
+		headers?: any
+		body?: any
+		query?: any
+		x_request_id?: string
+		user_identifier?: string | number
+	}): Promise<AuthRestrictionsResponse> {
 		if (this.skipAuth()) {
 			this.logger.debug(`[Authentication][auth] Skipping authentication due to SKIP_AUTH being true`)
 			return { valid: true }
@@ -131,13 +138,13 @@ export class Authentication {
 
 			if (!check_required) continue
 
-			if(options.user_identifier){
+			if (options.user_identifier) {
 				return {
 					valid: true,
 					user_identifier: options.user_identifier.toString(),
 				}
 			}
-			
+
 			let identity_column
 			let schema: DatabaseSchema
 
