@@ -32,8 +32,14 @@ export class Websockets {
 	) {}
 
 	async afterInit(client: Socket): Promise<void> {
-		client.use(async (socket: any, next) => {
-			if (!this.hostCheckMiddleware.validateHost(socket.handshake, 'WebSocket')) {
+		client.use(async (event: any, next) => {
+
+			if(!event.handshake.headers['_llana_table']){
+				this.logger.debug('[Websockets] Socket Failed - No table provided')
+				return next(new Error('No Table Provided In Headers[_llana_table]'))
+			}
+
+			if (!this.hostCheckMiddleware.validateHost(event.handshake, 'WebSocket')) {
 				this.logger.debug('[Websockets] Socket Host Failed - Unauthorized')
 				return next(new Error('Forbidden'))
 			}
@@ -45,10 +51,10 @@ export class Websockets {
 
 			const jwt_config = this.configService.get<any>('jwt')
 
-			let token = socket.handshake.headers.authorization
+			let token = event.handshake.headers.authorization
 
 			if (!token) {
-				token = socket.handshake.auth.token
+				token = event.handshake.auth.token
 			}
 
 			if (!token) {
@@ -61,11 +67,30 @@ export class Websockets {
 					secret: jwt_config.secret,
 				})
 
+				//if other sockets are connected with the same user and table, disconnect them
+				const clients = Array.from(this.server.sockets.sockets.values()).map(socket => {
+					return socket.id
+				})
+				for (const client of clients) {
+					const cachedEvent = <any>await this.cacheManager.get(`ws:id:${client}`)
+					if(event){
+						if (cachedEvent.auth.sub === payload.sub && cachedEvent.table === event.handshake.headers['_llana_table']) {
+							this.logger.debug(`[WebSockets] Disconnecting duplicate ${client} socket for ${cachedEvent.auth.sub} & ${cachedEvent.table}`)
+							this.server.sockets.sockets.get(client).disconnect()
+						}
+					}
+				}
+
 				await this.cacheManager.set(
-					`ws:id:${socket.id}`,
-					payload,
+					`ws:id:${event.id}`,
+					{
+						auth: payload,
+						table: event.handshake.headers['_llana_table'],
+					},
 					this.configService.get('CACHE_WS_IDENTITY_DATA_TTL') ?? CACHE_DEFAULT_WS_IDENTITY_DATA_TTL,
 				)
+
+				
 
 				return next()
 			} catch (e: any) {
@@ -76,19 +101,35 @@ export class Websockets {
 	}
 
 	async publish(schema: DatabaseSchema, type: SocketType, id: number | string): Promise<void> {
+
+		this.logger.debug(`[WebSockets] Publishing ${schema.table} ${type} for #${id}`)
+
 		const clients = Array.from(this.server.sockets.sockets.values()).map(socket => {
 			return socket.id
 		})
 
+		this.logger.debug(`[Websockets] Found ${clients.length} users to notify`)
+
 		for (const client of clients) {
-			const identity = <any>await this.cacheManager.get(`ws:id:${client}`)
+			const event = <any>await this.cacheManager.get(`ws:id:${client}`)
+
+			if(!event){
+				this.logger.debug(`[Websockets] Skipping ${schema.table} ${type} for #${id} to ${client} due to no event`)
+				continue
+			}
+
+			if(event.table !== schema.table){
+				this.logger.debug(`[Websockets] Skipping ${schema.table} ${type} for #${id} to ${client} due to table mismatch`)
+				continue
+			}
+
 			const auth = await this.authentication.auth({
 				table: schema.table,
 				access: RolePermission.READ,
-				user_identifier: identity.sub,
+				user_identifier: event.auth.sub,
 			})
 
-			if (auth.valid) {
+			if (!auth.valid) {
 				this.logger.debug(
 					`[Websockets] Skipping ${schema.table} ${type} for #${id} to ${client} due to lack of permission`,
 				)
@@ -96,7 +137,7 @@ export class Websockets {
 			}
 
 			try {
-				this.logger.debug(`[Websockets] Emitting ${schema.table} ${type} for #${id} to ${client}`)
+				this.logger.debug(`[Websockets] Emitting ${schema.table} ${type} for #${id} to ${client} (User: ${event.auth.sub})`)
 				this.server.to(client).emit(schema.table, {
 					type,
 					[schema.primary_key]: id,
