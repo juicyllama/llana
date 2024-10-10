@@ -11,7 +11,9 @@ describe('App > Controller > Delete', () => {
 
 	let authTestingService: AuthTestingService
 	let customerTestingService: CustomerTestingService
-	let customer: any
+	let customer1: any
+	let customer2: any
+	let customer3: any
 
 	let jwt: string
 
@@ -29,16 +31,38 @@ describe('App > Controller > Delete', () => {
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
 
-		customer = await customerTestingService.createCustomer({})
+		customer1 = await customerTestingService.createCustomer({})
+		customer2 = await customerTestingService.createCustomer({})
+		customer3 = await customerTestingService.createCustomer({})
+
 		jwt = await authTestingService.login()
 	})
 
 	describe('Delete', () => {
 		it('Delete One', async function () {
-			await request(app.getHttpServer())
-			.delete(`/Customer/${customer.custId}`)
+			const result = await request(app.getHttpServer())
+			.delete(`/Customer/${customer1.custId}`)
 			.set('Authorization', `Bearer ${jwt}`)
 			.expect(200)
+			expect(result.body).toBeDefined()
+			expect(result.body.deleted).toEqual(1)
+		})
+		it('Delete Many', async function () {
+
+			customer2.companyName = 'Customer2 Company Name'
+			customer3.companyName = 'Customer2 Company Name'
+
+			const result = await request(app.getHttpServer())
+			.delete(`/Customer/`)
+			.send([{
+				custId: customer2.custId,
+			}, {
+				custId: customer3.custId,
+			}])
+			.set('Authorization', `Bearer ${jwt}`)
+			.expect(200)
+			expect(result.body).toBeDefined()
+			expect(result.body.deleted).toEqual(2)
 		})
 	})
 

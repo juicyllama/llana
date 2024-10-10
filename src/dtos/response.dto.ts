@@ -116,3 +116,22 @@ export class CreateManyResponseObject {
 	@IsString()
 	_x_request_id?: string
 }
+
+export class DeleteManyResponseObject {
+	@IsNumber()
+	total: number
+
+	@IsNumber()
+	deleted: number
+
+	@IsNumber()
+	errored: number
+
+	@IsOptional()
+	@IsObject()
+	errors?: CreateResponseError[]
+
+	@IsOptional()
+	@IsString()
+	_x_request_id?: string
+}
