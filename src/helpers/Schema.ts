@@ -53,7 +53,7 @@ export class Schema {
 		let result: DatabaseSchema = await this.cacheManager.get(`schema:${options.table}`)
 
 		if (result?.table) {
-			this.logger.debug(`[GetSchema] Cache hit for ${options.table}`, options.x_request_id)
+			this.logger.debug(`[GetSchema] Cache hit for ${options.table} ${options.x_request_id ?? ''}`)
 			return {
 				...result,
 				_x_request_id: options.x_request_id,
@@ -93,7 +93,7 @@ export class Schema {
 				_x_request_id: options.x_request_id,
 			}
 		} catch (e) {
-			this.logger.error(`[GetSchema] ${e.message}`, options.x_request_id)
+			this.logger.error(`[GetSchema] ${e.message} ${options.x_request_id ?? ''}`)
 			throw new Error(`Error processing schema for ${options.table}`)
 		}
 	}
