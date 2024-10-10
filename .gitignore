@@ -1,3 +1,8 @@
+#Env
+.env
+.env.*
+!.env.example
+
 #llana specific
 openapi.json
 
@@ -402,5 +407,3 @@ dist
 .webpack
 .serverless/**/*.zip
 
-
-.env
