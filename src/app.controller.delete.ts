@@ -1,4 +1,4 @@
-import { Controller, Delete, Headers, Param, Req, Res, Body } from '@nestjs/common'
+import { Body, Controller, Delete, Headers, Param, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { HeaderParams } from './dtos/requests.dto'
@@ -207,22 +207,20 @@ export class DeleteController {
 			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
-		if(body instanceof Array){
-
+		if (body instanceof Array) {
 			let total = body.length
 			let deleted = 0
 			let errored = 0
 			const errors = []
 
-			for(const item of body){
-
+			for (const item of body) {
 				const id = item[primary_key]
-				
+
 				const validateKey = await this.schema.validateData(schema, { [primary_key]: id })
 				if (!validateKey.valid) {
 					return res.status(400).send(this.response.text(validateKey.message))
 				}
-		
+
 				const where = <DatabaseWhere[]>[
 					{
 						column: primary_key,
@@ -236,7 +234,7 @@ export class DeleteController {
 				}
 
 				//Check record exists
-	
+
 				const record = await this.query.perform(
 					QueryPerform.FIND_ONE,
 					{
@@ -245,25 +243,28 @@ export class DeleteController {
 					},
 					x_request_id,
 				)
-		
+
 				if (!record) {
 					errored++
 					errors.push({
 						item: body.indexOf(item),
-						message: `Record with id ${id} not found`
+						message: `Record with id ${id} not found`,
 					})
 					continue
 				}
-		
+
 				//Soft or Hard delete check
 				const databaseConfig: DatabaseConfig = this.configService.get('database')
-		
+
 				let softDelete: string = null
-		
-				if (databaseConfig.deletes.soft && schema.columns.find(col => col.field === databaseConfig.deletes.soft)) {
+
+				if (
+					databaseConfig.deletes.soft &&
+					schema.columns.find(col => col.field === databaseConfig.deletes.soft)
+				) {
 					softDelete = databaseConfig.deletes.soft
 				}
-		
+
 				try {
 					await this.query.perform(
 						QueryPerform.DELETE,
@@ -280,20 +281,18 @@ export class DeleteController {
 					errored++
 					errors.push({
 						item: body.indexOf(item),
-						message: e.message
+						message: e.message,
 					})
 				}
-	
 			}
 
 			return res.status(200).send({
 				total,
 				deleted,
 				errored,
-				errors
+				errors,
 			} as DeleteManyResponseObject)
-
-		}else{
+		} else {
 			return res.status(400).send(this.response.text('Body must be an array'))
 		}
 	}

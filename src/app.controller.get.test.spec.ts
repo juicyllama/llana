@@ -36,9 +36,9 @@ describe('App > Controller > Get', () => {
 	describe('Get', () => {
 		it('Get One', async function () {
 			const result = await request(app.getHttpServer())
-			.get(`/Customer/${customer.custId}`)
-			.set('Authorization', `Bearer ${jwt}`)
-			.expect(200)
+				.get(`/Customer/${customer.custId}`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
 
 			expect(result.body).toBeDefined()
 			expect(result.body.custId).toBeDefined()
@@ -51,9 +51,9 @@ describe('App > Controller > Get', () => {
 	describe('List', () => {
 		it('List All', async function () {
 			const result = await request(app.getHttpServer())
-			.get(`/Customer/`)
-			.set('Authorization', `Bearer ${jwt}`)
-			.expect(200)
+				.get(`/Customer/`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
 
 			expect(result.body).toBeDefined()
 			expect(result.body.total).toBeDefined()

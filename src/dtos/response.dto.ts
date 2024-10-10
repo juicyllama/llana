@@ -86,7 +86,6 @@ export class ListTablesResponseObject {
 }
 
 export class CreateResponseError {
-
 	@IsNumber()
 	item: number
 
@@ -95,7 +94,6 @@ export class CreateResponseError {
 }
 
 export class CreateManyResponseObject {
-	
 	@IsNumber()
 	total: number
 

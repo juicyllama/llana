@@ -29,7 +29,11 @@ export class PostController {
 	 */
 
 	@Post('*/')
-	async createOne(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<FindOneResponseObject|CreateManyResponseObject> {
+	async createOne(
+		@Req() req,
+		@Res() res,
+		@Headers() headers: HeaderParams,
+	): Promise<FindOneResponseObject | CreateManyResponseObject> {
 		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
 		const body = req.body
@@ -71,28 +75,25 @@ export class PostController {
 			}
 		}
 
-		if(body instanceof Array){
-
+		if (body instanceof Array) {
 			const total = body.length
 			let successful = 0
 			let errored = 0
 			const errors = []
 			const data: FindOneResponseObject[] = []
 
-			for(const item of body){
-
+			for (const item of body) {
 				const insertResult = await this.createOneRecord(options, item, x_request_id)
-				if(!insertResult.valid){
+				if (!insertResult.valid) {
 					errored++
 					errors.push({
 						item: body.indexOf(item),
-						message: insertResult.message
+						message: insertResult.message,
 					})
 					continue
 				}
 				data.push(insertResult.result)
 				successful++
-				
 			}
 
 			return res.status(201).send({
@@ -100,35 +101,36 @@ export class PostController {
 				successful,
 				errored,
 				errors,
-				data
+				data,
 			} as CreateManyResponseObject)
 		}
-		
+
 		const insertResult = await this.createOneRecord(options, body, x_request_id)
-		if(!insertResult.valid){
+		if (!insertResult.valid) {
 			return res.status(400).send(this.response.text(insertResult.message))
 		}
 		return res.status(201).send(insertResult.result)
-
 	}
-
 
 	/**
 	 * Create the record
 	 */
 
-	async createOneRecord(options, data, x_request_id): Promise<{
-		valid: boolean,
-		message?: string,
-		result?: FindOneResponseObject}
-		> {
-
+	async createOneRecord(
+		options,
+		data,
+		x_request_id,
+	): Promise<{
+		valid: boolean
+		message?: string
+		result?: FindOneResponseObject
+	}> {
 		//validate input data
 		const { valid, message, instance } = await this.schema.validateData(options.schema, data)
 		if (!valid) {
 			return {
 				valid,
-				message
+				message,
 			}
 		}
 
@@ -144,21 +146,25 @@ export class PostController {
 		if (!uniqueValidation.valid) {
 			return {
 				valid: false,
-				message: uniqueValidation.message
+				message: uniqueValidation.message,
 			}
 		}
 
 		try {
-			const result = await this.query.perform(QueryPerform.CREATE, options, x_request_id) as FindOneResponseObject
+			const result = (await this.query.perform(
+				QueryPerform.CREATE,
+				options,
+				x_request_id,
+			)) as FindOneResponseObject
 			await this.websockets.publish(options.schema, SocketType.INSERT, result[options.schema.primary_key])
 			return {
 				valid: true,
-				result
+				result,
 			}
 		} catch (e) {
 			return {
 				valid: false,
-				message: e.message
+				message: e.message,
 			}
 		}
 	}

@@ -42,26 +42,28 @@ describe('App > Controller > Delete', () => {
 	describe('Delete', () => {
 		it('Delete One', async function () {
 			const result = await request(app.getHttpServer())
-			.delete(`/Customer/${customer1.custId}`)
-			.set('Authorization', `Bearer ${jwt}`)
-			.expect(200)
+				.delete(`/Customer/${customer1.custId}`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
 			expect(result.body).toBeDefined()
 			expect(result.body.deleted).toEqual(1)
 		})
 		it('Delete Many', async function () {
-
 			customer2.companyName = 'Customer2 Company Name'
 			customer3.companyName = 'Customer2 Company Name'
 
 			const result = await request(app.getHttpServer())
-			.delete(`/Customer/`)
-			.send([{
-				custId: customer2.custId,
-			}, {
-				custId: customer3.custId,
-			}])
-			.set('Authorization', `Bearer ${jwt}`)
-			.expect(200)
+				.delete(`/Customer/`)
+				.send([
+					{
+						custId: customer2.custId,
+					},
+					{
+						custId: customer3.custId,
+					},
+				])
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
 			expect(result.body).toBeDefined()
 			expect(result.body.deleted).toEqual(2)
 			expect(result.body.errored).toEqual(0)

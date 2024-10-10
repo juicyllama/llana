@@ -34,10 +34,10 @@ describe('App > Controller > Post', () => {
 	describe('Create', () => {
 		it('Create One', async function () {
 			const result = await request(app.getHttpServer())
-			.post(`/Customer/`)
-			.send(customerTestingService.mockCustomer())
-			.set('Authorization', `Bearer ${jwt}`)
-			.expect(201)
+				.post(`/Customer/`)
+				.send(customerTestingService.mockCustomer())
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(201)
 
 			expect(result.body).toBeDefined()
 			expect(result.body.custId).toBeDefined()
@@ -47,10 +47,10 @@ describe('App > Controller > Post', () => {
 		})
 		it('Create Many', async function () {
 			const result = await request(app.getHttpServer())
-			.post(`/Customer/`)
-			.send([customerTestingService.mockCustomer(), customerTestingService.mockCustomer()])
-			.set('Authorization', `Bearer ${jwt}`)
-			.expect(201)
+				.post(`/Customer/`)
+				.send([customerTestingService.mockCustomer(), customerTestingService.mockCustomer()])
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(201)
 			expect(result.body).toBeDefined()
 			expect(result.body.total).toBeDefined()
 			expect(result.body.total).toEqual(2)

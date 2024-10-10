@@ -157,7 +157,7 @@ export class PutController {
 	): Promise<UpdateManyResponseObject> {
 		const x_request_id = headers['x-request-id']
 		const table_name = UrlToTable(req.originalUrl, 1)
-		
+
 		let schema: DatabaseSchema
 
 		try {
@@ -206,23 +206,21 @@ export class PutController {
 			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
-		if(body instanceof Array){
-
+		if (body instanceof Array) {
 			const total = body.length
 			let successful = 0
 			let errored = 0
 			const errors = []
 			const data: FindOneResponseObject[] = []
 
-			for(const item of body){
-
+			for (const item of body) {
 				//validate input data
 				const validate = await this.schema.validateData(schema, item)
 				if (!validate.valid) {
 					errored++
 					errors.push({
 						item: body.indexOf(item),
-						message: validate.message
+						message: validate.message,
 					})
 					continue
 				}
@@ -232,7 +230,7 @@ export class PutController {
 					errored++
 					errors.push({
 						item: body.indexOf(item),
-						message: validateKey.message
+						message: validateKey.message,
 					})
 					continue
 				}
@@ -252,7 +250,7 @@ export class PutController {
 					errored++
 					errors.push({
 						item: body.indexOf(item),
-						message: uniqueValidation.message
+						message: uniqueValidation.message,
 					})
 					continue
 				}
@@ -284,17 +282,17 @@ export class PutController {
 					errored++
 					errors.push({
 						item: body.indexOf(item),
-						message: `Record with id ${item[primary_key]} not found`
+						message: `Record with id ${item[primary_key]} not found`,
 					})
 					continue
 				}
 
 				try {
-					const result = await this.query.perform(
+					const result = (await this.query.perform(
 						QueryPerform.UPDATE,
 						{ id: item[primary_key], schema, data: validate.instance },
 						x_request_id,
-					) as FindOneResponseObject
+					)) as FindOneResponseObject
 					await this.websockets.publish(schema, SocketType.UPDATE, result[schema.primary_key])
 					successful++
 					data.push(result)
@@ -302,7 +300,7 @@ export class PutController {
 					errored++
 					errors.push({
 						item: body.indexOf(item),
-						message: e.message
+						message: e.message,
 					})
 					continue
 				}
@@ -313,12 +311,10 @@ export class PutController {
 				successful,
 				errored,
 				errors,
-				data
+				data,
 			} as UpdateManyResponseObject)
-
 		}
 
 		return res.status(400).send(this.response.text('Body must be an array'))
-	
 	}
 }

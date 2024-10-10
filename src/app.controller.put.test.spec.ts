@@ -40,13 +40,13 @@ describe('App > Controller > Put', () => {
 	describe('Update', () => {
 		it('Update One', async function () {
 			const result = await request(app.getHttpServer())
-			.put(`/Customer/${customer1.custId}`)
-			.send({
-				companyName: 'Updated Company Name',
-				contactName: 'Updated Contact Name',
-			})
-			.set('Authorization', `Bearer ${jwt}`)
-			.expect(200)
+				.put(`/Customer/${customer1.custId}`)
+				.send({
+					companyName: 'Updated Company Name',
+					contactName: 'Updated Contact Name',
+				})
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
 
 			expect(result.body).toBeDefined()
 			expect(result.body.custId).toEqual(customer1.custId)
@@ -55,21 +55,23 @@ describe('App > Controller > Put', () => {
 			customer1 = result.body
 		})
 		it('Update Many', async function () {
-
 			customer2.companyName = 'Customer2 Company Name'
 			customer3.companyName = 'Customer2 Company Name'
 
 			const result = await request(app.getHttpServer())
-			.put(`/Customer/`)
-			.send([{
-				custId: customer2.custId,
-				companyName: customer2.companyName,
-			}, {
-				custId: customer3.custId,
-				companyName: customer3.companyName,
-			}])
-			.set('Authorization', `Bearer ${jwt}`)
-			.expect(200)
+				.put(`/Customer/`)
+				.send([
+					{
+						custId: customer2.custId,
+						companyName: customer2.companyName,
+					},
+					{
+						custId: customer3.custId,
+						companyName: customer3.companyName,
+					},
+				])
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
 			expect(result.body).toBeDefined()
 			expect(result.body.total).toBeDefined()
 			expect(result.body.total).toEqual(2)
