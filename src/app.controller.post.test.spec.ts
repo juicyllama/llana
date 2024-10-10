@@ -57,7 +57,7 @@ describe('App > Controller > Post', () => {
 			expect(result.body.errored).toBeDefined()
 			expect(result.body.errored).toEqual(0)
 			expect(result.body.successful).toBeDefined()
-			expect(result.body.successful).toBeGreaterThan(2)
+			expect(result.body.successful).toEqual(2)
 			expect(result.body.data.length).toBeGreaterThan(0)
 			expect(result.body.data[0].custId).toBeDefined()
 			expect(result.body.data[0].companyName).toBeDefined()
