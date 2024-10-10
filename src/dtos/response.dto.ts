@@ -117,6 +117,8 @@ export class CreateManyResponseObject {
 	_x_request_id?: string
 }
 
+export class UpdateManyResponseObject extends CreateManyResponseObject {}
+
 export class DeleteManyResponseObject {
 	@IsNumber()
 	total: number

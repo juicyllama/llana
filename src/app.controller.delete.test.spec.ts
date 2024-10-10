@@ -5,6 +5,7 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
+import exp from 'constants'
 
 describe('App > Controller > Delete', () => {
 	let app: INestApplication
@@ -63,6 +64,8 @@ describe('App > Controller > Delete', () => {
 			.expect(200)
 			expect(result.body).toBeDefined()
 			expect(result.body.deleted).toEqual(2)
+			expect(result.body.errored).toEqual(0)
+			expect(result.body.total).toEqual(2)
 		})
 	})
 
