@@ -84,3 +84,54 @@ export class ListTablesResponseObject {
 	@IsString()
 	_x_request_id?: string
 }
+
+export class CreateResponseError {
+	@IsNumber()
+	item: number
+
+	@IsString()
+	message: string
+}
+
+export class CreateManyResponseObject {
+	@IsNumber()
+	total: number
+
+	@IsNumber()
+	successful: number
+
+	@IsNumber()
+	errored: number
+
+	@IsOptional()
+	@IsObject()
+	errors?: CreateResponseError[]
+
+	@IsArray()
+	data: FindOneResponseObject[]
+
+	@IsOptional()
+	@IsString()
+	_x_request_id?: string
+}
+
+export class UpdateManyResponseObject extends CreateManyResponseObject {}
+
+export class DeleteManyResponseObject {
+	@IsNumber()
+	total: number
+
+	@IsNumber()
+	deleted: number
+
+	@IsNumber()
+	errored: number
+
+	@IsOptional()
+	@IsObject()
+	errors?: CreateResponseError[]
+
+	@IsOptional()
+	@IsString()
+	_x_request_id?: string
+}

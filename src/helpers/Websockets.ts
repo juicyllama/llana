@@ -5,11 +5,11 @@ import { JwtService } from '@nestjs/jwt'
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets'
 import { Cache } from 'cache-manager'
 import { Server, Socket } from 'socket.io'
-import { CACHE_DEFAULT_WS_IDENTITY_DATA_TTL } from '../app.constants'
-import { RolePermission } from '../types/roles.types'
 
+import { CACHE_DEFAULT_WS_IDENTITY_DATA_TTL } from '../app.constants'
 import { HostCheckMiddleware } from '../middleware/HostCheck'
 import { DatabaseSchema, SocketType } from '../types/database.types'
+import { RolePermission } from '../types/roles.types'
 import { Authentication } from './Authentication'
 import { Logger } from './Logger'
 
@@ -33,8 +33,7 @@ export class Websockets {
 
 	async afterInit(client: Socket): Promise<void> {
 		client.use(async (event: any, next) => {
-
-			if(!event.handshake.headers['x-llana-table']){
+			if (!event.handshake.headers['x-llana-table']) {
 				this.logger.debug('[WS] Socket Failed - No table provided')
 				this.logger.debug(event.handshake.headers)
 				return next(new Error('No Table Provided In Headers[x-llana-table]'))
@@ -74,9 +73,14 @@ export class Websockets {
 				})
 				for (const client of clients) {
 					const cachedEvent = <any>await this.cacheManager.get(`ws:id:${client}`)
-					if(event){
-						if (cachedEvent.auth.sub === payload.sub && cachedEvent.table === event.handshake.headers['x-llana-table']) {
-							this.logger.debug(`[WS] Disconnecting duplicate ${client} socket for ${cachedEvent.auth.sub} & ${cachedEvent.table}`)
+					if (event) {
+						if (
+							cachedEvent.auth.sub === payload.sub &&
+							cachedEvent.table === event.handshake.headers['x-llana-table']
+						) {
+							this.logger.debug(
+								`[WS] Disconnecting duplicate ${client} socket for ${cachedEvent.auth.sub} & ${cachedEvent.table}`,
+							)
 							this.server.sockets.sockets.get(client).disconnect()
 							await this.cacheManager.del(`ws:id:${client}`)
 						}
@@ -92,8 +96,6 @@ export class Websockets {
 					this.configService.get('CACHE_WS_IDENTITY_DATA_TTL') ?? CACHE_DEFAULT_WS_IDENTITY_DATA_TTL,
 				)
 
-				
-
 				return next()
 			} catch (e: any) {
 				this.logger.error(`[WS] Socket Auth Failed - ${e.message}`)
@@ -103,7 +105,6 @@ export class Websockets {
 	}
 
 	async publish(schema: DatabaseSchema, type: SocketType, id: number | string): Promise<void> {
-
 		this.logger.debug(`[WS] Publishing ${schema.table} ${type} for #${id}`)
 
 		const clients = Array.from(this.server.sockets.sockets.values()).map(socket => {
@@ -115,12 +116,12 @@ export class Websockets {
 		for (const client of clients) {
 			const event = <any>await this.cacheManager.get(`ws:id:${client}`)
 
-			if(!event){
+			if (!event) {
 				this.logger.debug(`[WS] Skipping ${schema.table} ${type} for #${id} to ${client} due to no event`)
 				continue
 			}
 
-			if(event.table !== schema.table){
+			if (event.table !== schema.table) {
 				this.logger.debug(`[WS] Skipping ${schema.table} ${type} for #${id} to ${client} due to table mismatch`)
 				continue
 			}
@@ -139,7 +140,9 @@ export class Websockets {
 			}
 
 			try {
-				this.logger.debug(`[WS] Emitting ${schema.table} ${type} for #${id} to ${client} (User: ${event.auth.sub})`)
+				this.logger.debug(
+					`[WS] Emitting ${schema.table} ${type} for #${id} to ${client} (User: ${event.auth.sub})`,
+				)
 				this.server.to(client).emit(schema.table, {
 					type,
 					[schema.primary_key]: id,

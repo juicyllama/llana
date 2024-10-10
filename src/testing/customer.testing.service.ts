@@ -13,10 +13,8 @@ export class CustomerTestingService {
 		private readonly schema: Schema,
 	) {}
 
-	async createCustomer(customer: any): Promise<any> {
-		const customerTableSchema = await this.schema.getSchema({ table: 'Customer' })
-
-		const CUSTOMER = {
+	mockCustomer(): any {
+		return {
 			companyName: faker.company.name(),
 			contactName: faker.person.firstName() + ', ' + faker.person.lastName(),
 			contactTitle: faker.person.prefix(),
@@ -26,6 +24,12 @@ export class CustomerTestingService {
 			postalCode: faker.location.zipCode(),
 			country: faker.location.countryCode(),
 		}
+	}
+
+	async createCustomer(customer: any): Promise<any> {
+		const customerTableSchema = await this.schema.getSchema({ table: 'Customer' })
+
+		const CUSTOMER = this.mockCustomer()
 
 		return (await this.query.perform(
 			QueryPerform.CREATE,
@@ -38,5 +42,17 @@ export class CustomerTestingService {
 			},
 			'testing',
 		)) as FindOneResponseObject
+	}
+
+	async deleteCustomer(customer_id: any): Promise<void> {
+		const customerTableSchema = await this.schema.getSchema({ table: 'Customer' })
+		await this.query.perform(
+			QueryPerform.DELETE,
+			{
+				schema: customerTableSchema,
+				id: customer_id,
+			},
+			'testing',
+		)
 	}
 }

@@ -75,14 +75,14 @@ export class Query {
 		) {
 			if (!options.schema?.table) {
 				this.logger.warn(
-					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)} ${x_request_id ?? ''}`
+					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)} ${x_request_id ?? ''}`,
 				)
 				throw new Error('Table not defined')
 			}
 
 			table_name = options.schema.table
 			this.logger.debug(
-				`[Query][${action.toUpperCase()}][${table_name}] Performing action: ${JSON.stringify(options)} ${x_request_id ?? ''}`
+				`[Query][${action.toUpperCase()}][${table_name}] Performing action: ${JSON.stringify(options)} ${x_request_id ?? ''}`,
 			)
 		}
 
@@ -212,7 +212,7 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -276,7 +276,7 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -306,7 +306,7 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -367,7 +367,7 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -436,7 +436,7 @@ export class Query {
 				return await this.mongo.checkConnection({ x_request_id: options.x_request_id })
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
@@ -461,7 +461,7 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}

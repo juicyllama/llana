@@ -57,7 +57,7 @@ export class MySQL {
 			return true
 		} catch (e) {
 			this.logger.error(
-				`[${DATABASE_TYPE}] Error checking database connection - ${e.message} ${options.x_request_id ?? ''}`
+				`[${DATABASE_TYPE}] Error checking database connection - ${e.message} ${options.x_request_id ?? ''}`,
 			)
 			return false
 		}
@@ -85,7 +85,7 @@ export class MySQL {
 		try {
 			let results
 			this.logger.debug(
-				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`
+				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`,
 			)
 
 			if (!options.values || !options.values.length) {
