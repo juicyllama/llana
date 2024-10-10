@@ -57,8 +57,7 @@ export class MySQL {
 			return true
 		} catch (e) {
 			this.logger.error(
-				`[${DATABASE_TYPE}] Error checking database connection - ${e.message}`,
-				options.x_request_id,
+				`[${DATABASE_TYPE}] Error checking database connection - ${e.message} ${options.x_request_id ?? ''}`
 			)
 			return false
 		}
@@ -72,10 +71,10 @@ export class MySQL {
 		try {
 			const results = await this.performQuery({ sql: 'SHOW TABLES', x_request_id: options.x_request_id })
 			const tables = results.map(row => Object.values(row)[0]) as string[]
-			this.logger.debug(`[${DATABASE_TYPE}] Tables: ${tables}`, options.x_request_id)
+			this.logger.debug(`[${DATABASE_TYPE}] Tables: ${tables} ${options.x_request_id ?? ''}`)
 			return tables
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}] Error listing tables`, options.x_request_id)
+			this.logger.error(`[${DATABASE_TYPE}] Error listing tables ${options.x_request_id ?? ''}`)
 			throw new Error(e)
 		}
 	}
@@ -86,8 +85,7 @@ export class MySQL {
 		try {
 			let results
 			this.logger.debug(
-				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`,
-				options.x_request_id,
+				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`
 			)
 
 			if (!options.values || !options.values.length) {
@@ -95,12 +93,13 @@ export class MySQL {
 			} else {
 				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)}`, options.x_request_id)
+			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)}  ${options.x_request_id ?? ''}`)
 			connection.end()
 			return results
 		} catch (e) {
-			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`, options.x_request_id)
+			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`)
 			this.logger.warn({
+				x_request_id: options.x_request_id,
 				sql: {
 					sql: options.sql,
 					values: options.values ?? [],
@@ -127,7 +126,7 @@ export class MySQL {
 		})
 
 		if (!columns_result.length) {
-			throw new Error(`Table ${options.table} does not exist`)
+			throw new Error(`Table ${options.table} does not exist  ${options.x_request_id ?? ''}`)
 		}
 
 		const columns = columns_result.map((column: any) => {

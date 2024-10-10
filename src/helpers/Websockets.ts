@@ -34,9 +34,10 @@ export class Websockets {
 	async afterInit(client: Socket): Promise<void> {
 		client.use(async (event: any, next) => {
 
-			if(!event.handshake.headers['_llana_table']){
+			if(!event.handshake.headers['x-llana-table']){
 				this.logger.debug('[WS] Socket Failed - No table provided')
-				return next(new Error('No Table Provided In Headers[_llana_table]'))
+				this.logger.debug(event.handshake.headers)
+				return next(new Error('No Table Provided In Headers[x-llana-table]'))
 			}
 
 			if (!this.hostCheckMiddleware.validateHost(event.handshake, '[WS]')) {
@@ -74,9 +75,10 @@ export class Websockets {
 				for (const client of clients) {
 					const cachedEvent = <any>await this.cacheManager.get(`ws:id:${client}`)
 					if(event){
-						if (cachedEvent.auth.sub === payload.sub && cachedEvent.table === event.handshake.headers['_llana_table']) {
+						if (cachedEvent.auth.sub === payload.sub && cachedEvent.table === event.handshake.headers['x-llana-table']) {
 							this.logger.debug(`[WS] Disconnecting duplicate ${client} socket for ${cachedEvent.auth.sub} & ${cachedEvent.table}`)
 							this.server.sockets.sockets.get(client).disconnect()
+							await this.cacheManager.del(`ws:id:${client}`)
 						}
 					}
 				}
@@ -85,7 +87,7 @@ export class Websockets {
 					`ws:id:${event.id}`,
 					{
 						auth: payload,
-						table: event.handshake.headers['_llana_table'],
+						table: event.handshake.headers['x-llana-table'],
 					},
 					this.configService.get('CACHE_WS_IDENTITY_DATA_TTL') ?? CACHE_DEFAULT_WS_IDENTITY_DATA_TTL,
 				)

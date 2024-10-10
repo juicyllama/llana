@@ -8,6 +8,10 @@
 # * Pull the latest changes
 # * Bump version number
 # * Release to NPM
+# * Pull the latest changes
+# * Generate Docker meta
+# * Build and push image
+
 #
 
 name: 'Release Package: Llana'
