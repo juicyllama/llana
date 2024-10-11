@@ -5,21 +5,25 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
+import { SalesOrderTestingService } from './testing/salesorder.testing.service'
 
 describe('App > Controller > Get', () => {
 	let app: INestApplication
 
 	let authTestingService: AuthTestingService
 	let customerTestingService: CustomerTestingService
+	let salesOrderTestingService: SalesOrderTestingService
+	
 	let customer: any
-
+	let salesOrder1: any
+	let salesOrder2: any
 	let jwt: string
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
-			providers: [AuthTestingService, CustomerTestingService],
-			exports: [AuthTestingService, CustomerTestingService],
+			providers: [AuthTestingService, CustomerTestingService, SalesOrderTestingService],
+			exports: [AuthTestingService, CustomerTestingService, SalesOrderTestingService],
 		}).compile()
 
 		app = moduleRef.createNestApplication()
@@ -28,8 +32,11 @@ describe('App > Controller > Get', () => {
 
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
+		salesOrderTestingService = app.get<SalesOrderTestingService>(SalesOrderTestingService)
 
 		customer = await customerTestingService.createCustomer({})
+		salesOrder1 = await salesOrderTestingService.createOrder({ custId: customer.custId, employeeId: 1, shipperId: 1 })
+		salesOrder2 = await salesOrderTestingService.createOrder({ custId: customer.custId, employeeId: 1, shipperId: 1 })
 		jwt = await authTestingService.login()
 	})
 
@@ -45,6 +52,22 @@ describe('App > Controller > Get', () => {
 			expect(result.body.companyName).toEqual(customer.companyName)
 			expect(result.body.contactName).toEqual(customer.contactName)
 			expect(result.body.contactTitle).toEqual(customer.contactTitle)
+		})
+
+		it('Get One - With Relations', async function () {
+			const result = await request(app.getHttpServer())
+				.get(`/Customer/${customer.custId}?relations=SalesOrder`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+		
+				console.log(result.body)
+
+			expect(result.body).toBeDefined()
+			expect(result.body.custId).toBeDefined()
+			expect(result.body.SalesOrder).toBeDefined()
+			expect(result.body.SalesOrder.length).toEqual(2)
+			expect(result.body.SalesOrder[0].orderId).toBeDefined()
+			expect(result.body.SalesOrder[1].orderId).toBeDefined()
 		})
 	})
 
@@ -65,6 +88,8 @@ describe('App > Controller > Get', () => {
 	})
 
 	afterAll(async () => {
+		await salesOrderTestingService.deleteOrder(salesOrder1.orderId)
+		await salesOrderTestingService.deleteOrder(salesOrder2.orderId)
 		await customerTestingService.deleteCustomer(customer.custId)
 		await app.close()
 	})
