@@ -102,7 +102,9 @@ export class Query {
 					if (!result) {
 						return null
 					}
-					return await this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
+
+					result = await this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
+					return result
 
 				case QueryPerform.FIND_MANY:
 					const findManyOptions = options as DatabaseFindManyOptions
@@ -471,4 +473,5 @@ export class Query {
 			_x_request_id: options.x_request_id,
 		}
 	}
+
 }
