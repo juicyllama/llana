@@ -116,6 +116,8 @@ export class GetController {
 			relations: [],
 		}
 
+		const postQueryRelations = []
+
 		try {
 			options.schema = await this.schema.getSchema({ table: table_name, x_request_id })
 		} catch (e) {
@@ -196,8 +198,8 @@ export class GetController {
 				}
 
 				for (const relation of relations) {
-					if (!options.relations.find(r => r.table === relation.table)) {
-						options.relations.push(relation)
+					if (!postQueryRelations.find(r => r.table === relation.table)) {
+						postQueryRelations.push(relation)
 					}
 				}
 			}
@@ -213,13 +215,13 @@ export class GetController {
 					return res.status(400).send(this.response.text(message))
 				}
 
-				if (relations) {
-					for (const relation of relations) {
-						if (!options.relations.find(r => r.table === relation.table)) {
-							options.relations.push(relation)
-						}
+				for (const relation of relations) {
+					if (!postQueryRelations.find(r => r.table === relation.table)) {
+						postQueryRelations.push(relation)
 					}
 				}
+
+
 			}
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
@@ -239,10 +241,15 @@ export class GetController {
 		}
 
 		try {
-			const result = await this.query.perform(QueryPerform.FIND_ONE, options, x_request_id)
+			let result = await this.query.perform(QueryPerform.FIND_ONE, options, x_request_id) as FindOneResponseObject
 
 			if (!result) {
 				return res.status(204).send(this.response.text(`No record found for id ${id}`))
+			}
+
+			if(postQueryRelations?.length){			
+				options.relations = postQueryRelations
+				result = await this.query.buildRelations(options as DatabaseFindOneOptions, result, x_request_id)
 			}
 
 			return res.status(200).send(result)
@@ -274,6 +281,8 @@ export class GetController {
 			relations: [],
 			sort: [],
 		}
+
+		const postQueryRelations = []
 
 		try {
 			options.schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -347,8 +356,8 @@ export class GetController {
 				}
 
 				for (const relation of relations) {
-					if (!options.relations.find(r => r.table === relation.table)) {
-						options.relations.push(relation)
+					if (!postQueryRelations.find(r => r.table === relation.table)) {
+						postQueryRelations.push(relation)
 					}
 				}
 			}
@@ -366,8 +375,8 @@ export class GetController {
 
 				if (relations) {
 					for (const relation of relations) {
-						if (!options.relations.find(r => r.table === relation.table)) {
-							options.relations.push(relation)
+						if (!postQueryRelations.find(r => r.table === relation.table)) {
+							postQueryRelations.push(relation)
 						}
 					}
 				}
@@ -403,7 +412,15 @@ export class GetController {
 		}
 
 		try {
-			return res.status(200).send(await this.query.perform(QueryPerform.FIND_MANY, options, x_request_id))
+			let result = await this.query.perform(QueryPerform.FIND_MANY, options, x_request_id) as FindManyResponseObject
+
+			if(postQueryRelations?.length){			
+				options.relations = postQueryRelations	
+				for(const i in result.data){
+					result.data[i] = await this.query.buildRelations(options as DatabaseFindOneOptions, result.data[i], x_request_id)
+				}
+			}
+			return res.status(200).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}

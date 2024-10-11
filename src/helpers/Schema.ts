@@ -361,6 +361,7 @@ export class Schema {
 	}): Promise<validateRelationsResponse> {
 		try {
 			const relations = options.relation_query
+			const validated: DatabaseRelations[] = []
 
 			for (const relation of relations) {
 				if (relation.includes('.')) {
@@ -374,7 +375,7 @@ export class Schema {
 						if (options.existing_relations.find(relation => relation.table === rel.table)) {
 							continue
 						}
-						options.existing_relations.push(rel)
+						validated.push(rel)
 					}
 				} else {
 					if (!options.schema.relations.find(col => col.table === relation)) {
@@ -393,7 +394,7 @@ export class Schema {
 						x_request_id: options.x_request_id,
 					})
 
-					options.existing_relations.push({
+					validated.push({
 						table: relation,
 						join: {
 							...options.schema.relations.find(col => col.table === relation),
@@ -407,7 +408,7 @@ export class Schema {
 
 			return {
 				valid: true,
-				relations: options.existing_relations,
+				relations: validated,
 			}
 		} catch (e) {
 			this.logger.debug(`[validateRelations] ${e.message}`, options.x_request_id)

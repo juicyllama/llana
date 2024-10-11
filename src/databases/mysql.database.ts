@@ -28,6 +28,7 @@ import {
 } from '../types/database.types'
 import { MySQLColumnType } from '../types/databases/mysql.types'
 import { SortCondition } from '../types/schema.types'
+import { replaceQ } from '../utils/String'
 
 const DATABASE_TYPE = DatabaseType.MYSQL
 
@@ -85,7 +86,7 @@ export class MySQL {
 		try {
 			let results
 			this.logger.debug(
-				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`,
+				`[${DATABASE_TYPE}] ${replaceQ(options.sql, options.values)} ${options.x_request_id ?? ''}`,
 			)
 
 			if (!options.values || !options.values.length) {
@@ -100,10 +101,7 @@ export class MySQL {
 			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`)
 			this.logger.warn({
 				x_request_id: options.x_request_id,
-				sql: {
-					sql: options.sql,
-					values: options.values ?? [],
-				},
+				sql: replaceQ(options.sql, options.values),
 				error: {
 					message: e.message,
 				},
@@ -247,7 +245,7 @@ export class MySQL {
 		if (!options.offset) {
 			options.offset = 0
 		}
-
+		
 		command += ` LIMIT ${options.limit} OFFSET ${options.offset}`
 
 		const results = await this.performQuery({ sql: command, values, x_request_id })
@@ -516,7 +514,7 @@ export class MySQL {
 				}
 			}
 		}
-
+		
 		return [command.trim(), values]
 	}
 

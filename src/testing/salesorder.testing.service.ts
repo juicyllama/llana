@@ -6,6 +6,8 @@ import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/database.types'
 
+const table = 'SalesOrder'
+
 @Injectable()
 export class SalesOrderTestingService {
 	constructor(
@@ -14,7 +16,7 @@ export class SalesOrderTestingService {
 	) {}
 
 	async createOrder(order: { custId; employeeId; shipperId }): Promise<any> {
-		const salesOrderTableSchema = await this.schema.getSchema({ table: 'SalesOrder', x_request_id: 'testing' })
+		const salesOrderTableSchema = await this.schema.getSchema({ table, x_request_id: 'testing' })
 
 		const ORDER = {
 			orderDate: faker.date.past().toISOString(),
@@ -39,5 +41,17 @@ export class SalesOrderTestingService {
 			},
 			'testing',
 		)) as FindOneResponseObject
+	}
+
+	async deleteOrder(id: any): Promise<void> {
+		const customerTableSchema = await this.schema.getSchema({ table })
+		await this.query.perform(
+			QueryPerform.DELETE,
+			{
+				schema: customerTableSchema,
+				id,
+			},
+			'testing',
+		)
 	}
 }

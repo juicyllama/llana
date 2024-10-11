@@ -21,7 +21,9 @@ import {
 	DatabaseType,
 	DatabaseUniqueCheckOptions,
 	DatabaseUpdateOneOptions,
+	DatabaseWhere,
 	QueryPerform,
+	WhereOperator,
 } from '../types/database.types'
 import { Env } from '../utils/Env'
 import { Encryption } from './Encryption'
@@ -81,9 +83,6 @@ export class Query {
 			}
 
 			table_name = options.schema.table
-			this.logger.debug(
-				`[Query][${action.toUpperCase()}][${table_name}] Performing action: ${JSON.stringify(options)} ${x_request_id ?? ''}`,
-			)
 		}
 
 		try {
@@ -102,7 +101,9 @@ export class Query {
 					if (!result) {
 						return null
 					}
-					return await this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
+
+					result = await this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
+					return result
 
 				case QueryPerform.FIND_MANY:
 					const findManyOptions = options as DatabaseFindManyOptions
@@ -471,4 +472,42 @@ export class Query {
 			_x_request_id: options.x_request_id,
 		}
 	}
+
+	/**
+	 * Build relations
+	 */
+	async buildRelations(options: DatabaseFindOneOptions, result: FindOneResponseObject, x_request_id: string): Promise<FindOneResponseObject> {
+			
+		if (!options.relations?.length) {
+			return result
+		}
+
+		for (const relation of options.relations) {
+
+			const where: DatabaseWhere[] = [{
+				column: relation.join.column,
+				operator: WhereOperator.equals,
+				value: result[relation.join.org_column],
+			}]
+
+			if(relation.where) {
+				where.concat(relation.where)
+			}
+
+				const relationOptions = <DatabaseFindManyOptions>{
+					schema: relation.schema,
+					fields: relation.columns,
+					where: where,
+				}
+
+				const relationResults = await this.findMany(relationOptions, x_request_id)
+					
+				if (relationResults) {
+					result[relation.table] = relationResults.total > 0 ? relationResults.data : []
+				}
+		}
+
+		return result
+	}
+
 }
