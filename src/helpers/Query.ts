@@ -477,7 +477,7 @@ export class Query {
 	 * Build relations
 	 */
 	async buildRelations(options: DatabaseFindOneOptions, result: FindOneResponseObject, x_request_id: string): Promise<FindOneResponseObject> {
-			
+
 		if (!options.relations?.length) {
 			return result
 		}
@@ -494,10 +494,19 @@ export class Query {
 				where.concat(relation.where)
 			}
 
+			if (this.configService.get('database.deletes.soft')) {
+				where.push({
+					column: this.configService.get('database.deletes.soft'),
+					operator: WhereOperator.null,
+				})
+			}
+
 				const relationOptions = <DatabaseFindManyOptions>{
 					schema: relation.schema,
 					fields: relation.columns,
 					where: where,
+					limit: 9999,
+					offset: 0,
 				}
 
 				const relationResults = await this.findMany(relationOptions, x_request_id)
