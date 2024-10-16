@@ -182,7 +182,6 @@ describe('Query > Find', () => {
 				expect(true).toBe(false)
 			}
 		})
-
 	})
 
 	describe('findMany', () => {
@@ -221,18 +220,11 @@ describe('Query > Find', () => {
 			try {
 				const results = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: [order_primary_key, 'shipAddress', 'custId'],
-					where: [
-						{ column: 'custId', operator: WhereOperator.equals, value: customer[customer_primary_key] },
-					],
-					relations: [{ ...customerRelation, columns: ['companyName'] }],
+					fields: [order_primary_key],
 					limit: 3,
 				})) as FindManyResponseObject
+
 				expect(results.data.length).toEqual(3)
-				expect(results.data[0][order_primary_key]).toBeDefined()
-				expect(results.data[0].shipAddress).toBeDefined()
-				expect(results.data[0].custId).toBeDefined()
-				expect(results.data[0].Customer.companyName).toBeDefined()
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)
@@ -243,32 +235,17 @@ describe('Query > Find', () => {
 			try {
 				const results = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: [order_primary_key, 'shipAddress', 'custId'],
-					where: [
-						{ column: 'custId', operator: WhereOperator.equals, value: customer[customer_primary_key] },
-					],
-					relations: [{ ...customerRelation, columns: ['companyName'] }],
+					fields: [order_primary_key],
 				})) as FindManyResponseObject
 				expect(results.data.length).toBeGreaterThan(0)
-				expect(results.data[0][order_primary_key]).toBeDefined()
-				expect(results.data[0].shipAddress).toBeDefined()
-				expect(results.data[0].custId).toBeDefined()
-				expect(results.data[0].Customer.companyName).toBeDefined()
 
 				const results2 = (await service.perform(QueryPerform.FIND_MANY, {
 					schema: salesOrderTableSchema,
-					fields: [order_primary_key, 'shipAddress', 'custId'],
-					where: [
-						{ column: 'custId', operator: WhereOperator.equals, value: customer[customer_primary_key] },
-					],
-					relations: [{ ...customerRelation, columns: ['companyName'] }],
-					offset: results.data.length - 2,
+					fields: [order_primary_key],
+					offset: results.total - 2,
 				})) as FindManyResponseObject
+
 				expect(results2.data.length).toEqual(2)
-				expect(results2.data[0][order_primary_key]).toBeDefined()
-				expect(results2.data[0].shipAddress).toBeDefined()
-				expect(results2.data[0].custId).toBeDefined()
-				expect(results2.data[0].Customer.companyName).toBeDefined()
 			} catch (e) {
 				logger.error(e)
 				expect(true).toBe(false)

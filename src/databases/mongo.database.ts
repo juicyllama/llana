@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Collection, Db, MongoClient, ObjectId } from 'mongodb'
 
+import { LLANA_RELATION_TABLE } from '../app.constants'
 import {
 	DeleteResponseObject,
 	FindManyResponseObject,
@@ -153,6 +154,49 @@ export class Mongo {
 				}
 			})
 
+			// If relation table does not exist, remove relation
+			let r = 0
+			while (r < relations.length) {
+				try {
+					await this.getSchema({ table: relations[r].table, x_request_id: options.x_request_id })
+					r++
+				} catch (e) {
+					this.logger.warn(
+						`[${DATABASE_TYPE}] Relation table does not exist ${relations[r].table} - ${e.message}`,
+					)
+					relations.splice(r, 1)
+				}
+			}
+
+			//TODO:
+			// Build two way relations from _llana_relations table
+			const relations_forward = await mongo.db
+				.collection(LLANA_RELATION_TABLE)
+				.find({ org_table: options.table })
+				.toArray()
+			const relations_backward = await mongo.db
+				.collection(LLANA_RELATION_TABLE)
+				.find({ table: options.table })
+				.toArray()
+
+			for (const relation of relations_forward) {
+				relations.push({
+					table: relation.table,
+					column: relation.column,
+					org_table: relation.org_table,
+					org_column: relation.org_column,
+				})
+			}
+
+			for (const relation of relations_backward) {
+				relations.push({
+					table: relation.org_table,
+					column: relation.org_column,
+					org_table: relation.table,
+					org_column: relation.column,
+				})
+			}
+
 			mongo.connection.close()
 
 			const schema = {
@@ -229,31 +273,6 @@ export class Mongo {
 
 			const result = await mongo.collection.find(mongoFilters).project(mongoFields).limit(1).toArray()
 
-			if (options.relations) {
-				for (const relation of options.relations) {
-					let relationFields = {}
-					if (relation.columns) {
-						for (const field of relation.columns) {
-							relationFields[field] = 1
-						}
-					}
-
-					const relationFilters = await this.whereToFilter([
-						{
-							column: relation.join.column,
-							operator: WhereOperator.equals,
-							value: result[0][relation.join.column],
-						},
-					])
-					const relationResult = await mongo.db
-						.collection(relation.table)
-						.find(relationFilters)
-						.project(relationFields)
-						.toArray()
-					result[0][relation.table] = relationResult[0]
-				}
-			}
-
 			this.logger.debug(`[${DATABASE_TYPE}] Result: ${JSON.stringify(result[0])}`, x_request_id)
 			mongo.connection.close()
 			return this.formatOutput(options, result[0])
@@ -321,34 +340,6 @@ export class Mongo {
 			)
 			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)}`, x_request_id)
 
-			for (const r in results) {
-				if (options.relations) {
-					for (const relation of options.relations) {
-						let relationFields = {}
-						if (relation.columns) {
-							for (const field of relation.columns) {
-								relationFields[field] = 1
-							}
-						}
-
-						const relationFilters = await this.whereToFilter([
-							{
-								column: relation.join.column,
-								operator: WhereOperator.equals,
-								value: results[r][relation.join.org_column],
-							},
-						])
-						const relationResult = await mongo.db
-							.collection(relation.table)
-							.find(relationFilters)
-							.project(relationFields)
-							.toArray()
-						results[r][relation.table] = relationResult[0]
-					}
-				}
-				results[r] = this.formatOutput(options, results[r])
-			}
-
 			mongo.connection.close()
 
 			return {
@@ -393,7 +384,7 @@ export class Mongo {
 				x_request_id,
 			)
 			const mongoFilters = await this.whereToFilter(options.where)
-			const total = await mongo.collection.countDocuments(mongoFilters)
+			const total = Number(await mongo.collection.countDocuments(mongoFilters))
 			this.logger.debug(`[${DATABASE_TYPE}] Total Records: ${total}`, x_request_id)
 			mongo.connection.close()
 			return total
@@ -416,6 +407,10 @@ export class Mongo {
 
 	async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		const mongo = await this.createConnection(options.schema.table)
+
+		if (options.data['_id']) {
+			delete options.data['_id']
+		}
 
 		try {
 			this.logger.debug(

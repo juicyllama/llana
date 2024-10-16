@@ -27,13 +27,16 @@
 		"start": "nest start",
 		"start:dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
-		"start:ngrok": "~/ngrok http http://localhost:3050/ --subdomain=llana",
+		"start:ngrok": "~/ngrok http http://localhost:3000/ --subdomain=llana",
 		"docker:dev": "sh ./scripts/docker.dev.sh",
 		"docker:prod:build": "sh ./scripts/docker.build.prod.sh",
 		"docker:prod:test": "sh ./scripts/docker.prod.sh",
-		"test": "jest --clear-cache && jest --runInBand --detectOpenHandles --forceExit",
 		"precommit": "npm run test && npm run lint && npm run format",
-		"commit": "git pull && git add . && git commit -m \"chore: update\" && git push"
+		"commit": "git pull && git add . && git commit -m \"chore: update\" && git push",
+		"test": "sh ./scripts/test.sh",
+		"test:mysql": "export DATABASE_URI=mysql://user:pass@localhost:3306/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
+		"test:postgresql": "export DATABASE_URI=postgresql://user:pass@localhost:5432/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
+		"test:mongodb": "export DATABASE_URI=mongodb://user:pass@localhost:27017/llana && jest --bail --runInBand --detectOpenHandles --forceExit"
 	},
 	"dependencies": {
 		"@nestjs/cache-manager": "latest",

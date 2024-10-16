@@ -6,6 +6,8 @@ import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/database.types'
 
+const table = 'Customer'
+
 @Injectable()
 export class CustomerTestingService {
 	constructor(
@@ -26,8 +28,12 @@ export class CustomerTestingService {
 		}
 	}
 
+	async getSchema(): Promise<any> {
+		return await this.schema.getSchema({ table })
+	}
+
 	async createCustomer(customer: any): Promise<any> {
-		const customerTableSchema = await this.schema.getSchema({ table: 'Customer' })
+		const customerTableSchema = await this.schema.getSchema({ table })
 
 		const CUSTOMER = this.mockCustomer()
 
@@ -45,7 +51,7 @@ export class CustomerTestingService {
 	}
 
 	async deleteCustomer(customer_id: any): Promise<void> {
-		const customerTableSchema = await this.schema.getSchema({ table: 'Customer' })
+		const customerTableSchema = await this.schema.getSchema({ table })
 		await this.query.perform(
 			QueryPerform.DELETE,
 			{

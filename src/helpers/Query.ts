@@ -476,21 +476,25 @@ export class Query {
 	/**
 	 * Build relations
 	 */
-	async buildRelations(options: DatabaseFindOneOptions, result: FindOneResponseObject, x_request_id: string): Promise<FindOneResponseObject> {
-
+	async buildRelations(
+		options: DatabaseFindOneOptions,
+		result: FindOneResponseObject,
+		x_request_id: string,
+	): Promise<FindOneResponseObject> {
 		if (!options.relations?.length) {
 			return result
 		}
 
 		for (const relation of options.relations) {
+			const where: DatabaseWhere[] = [
+				{
+					column: relation.join.column,
+					operator: WhereOperator.equals,
+					value: result[relation.join.org_column],
+				},
+			]
 
-			const where: DatabaseWhere[] = [{
-				column: relation.join.column,
-				operator: WhereOperator.equals,
-				value: result[relation.join.org_column],
-			}]
-
-			if(relation.where) {
+			if (relation.where) {
 				where.concat(relation.where)
 			}
 
@@ -501,22 +505,21 @@ export class Query {
 				})
 			}
 
-				const relationOptions = <DatabaseFindManyOptions>{
-					schema: relation.schema,
-					fields: relation.columns,
-					where: where,
-					limit: 9999,
-					offset: 0,
-				}
+			const relationOptions = <DatabaseFindManyOptions>{
+				schema: relation.schema,
+				fields: relation.columns,
+				where: where,
+				limit: 9999,
+				offset: 0,
+			}
 
-				const relationResults = await this.findMany(relationOptions, x_request_id)
-					
-				if (relationResults) {
-					result[relation.table] = relationResults.total > 0 ? relationResults.data : []
-				}
+			const relationResults = await this.findMany(relationOptions, x_request_id)
+
+			if (relationResults) {
+				result[relation.table] = relationResults.total > 0 ? relationResults.data : []
+			}
 		}
 
 		return result
 	}
-
 }

@@ -119,7 +119,6 @@ CREATE TABLE "Customer"
      "createdAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      "updatedAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      "deletedAt"  TIMESTAMP NULL
-    -- PRIMARY KEY ( "custId" ) 
   ); 
 
 
@@ -147,7 +146,6 @@ CREATE TABLE "Employee"
      "createdAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      "updatedAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      "deletedAt"  TIMESTAMP NULL
-  --   PRIMARY KEY ( "employeeId" ) 
   ); 
 
 DROP TABLE IF EXISTS "EmployeeTerritory";
@@ -225,7 +223,7 @@ CREATE TABLE "SalesOrder"
      "requiredDate"   TIMESTAMP NULL, 
      "shippedDate"    TIMESTAMP NULL, 
      "shipperId"      INT NULL, 
-     freight        DECIMAL(10, 2) NULL, 
+     "freight"        DECIMAL(10, 2) NULL, 
      "shipName"       VARCHAR (40) NULL, 
      "shipAddress"    VARCHAR (60) NULL, 
      "shipCity"       VARCHAR (15) NULL, 
@@ -235,8 +233,11 @@ CREATE TABLE "SalesOrder"
      "createdAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      "updatedAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      "deletedAt"  TIMESTAMP NULL,
-     PRIMARY KEY ( "orderId" ) 
-  ); 
+     PRIMARY KEY ( "orderId" ),
+     FOREIGN KEY ( "custId" ) REFERENCES "Customer" ( "custId" ) ON DELETE SET NULL ON UPDATE RESTRICT,
+      FOREIGN KEY ( "employeeId" ) REFERENCES "Employee" ( "employeeId" ) ON DELETE SET NULL ON UPDATE RESTRICT,
+      FOREIGN KEY ( "shipperId" ) REFERENCES "Shipper" ( "shipperId" ) ON DELETE SET NULL ON UPDATE RESTRICT
+  );
 
 DROP TABLE IF EXISTS "OrderDetail";
 CREATE TABLE "OrderDetail" 
@@ -244,11 +245,13 @@ CREATE TABLE "OrderDetail"
      "orderId"   INT NOT NULL, 
      "productId" INT NOT NULL, 
      "unitPrice" DECIMAL(10, 2) NOT NULL, 
-     qty       SMALLINT NOT NULL, 
-     discount  DECIMAL(10, 2) NOT NULL,
+     "qty"       SMALLINT NOT NULL, 
+     "discount"  DECIMAL(10, 2) NOT NULL,
      "createdAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      "updatedAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-     "deletedAt"  TIMESTAMP NULL
+     "deletedAt"  TIMESTAMP NULL,
+      FOREIGN KEY ( "orderId" ) REFERENCES "SalesOrder" ( "orderId" ) ON DELETE CASCADE ON UPDATE RESTRICT,
+      FOREIGN KEY ( "productId" ) REFERENCES "Product" ( "productId" ) ON DELETE CASCADE ON UPDATE RESTRICT
   );
 
 
