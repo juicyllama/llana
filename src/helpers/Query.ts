@@ -495,7 +495,7 @@ export class Query {
 			]
 
 			if (relation.where) {
-				where.concat(relation.where)
+				where.push(...relation.where)
 			}
 
 			if (this.configService.get('database.deletes.soft')) {
