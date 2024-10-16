@@ -28,7 +28,7 @@ describe('Roles', () => {
 		}).compile()
 
 		app = moduleRef.createNestApplication()
-		await app.listen(3050)
+		await app.listen(process.env.PORT ?? 3000)
 		await app.init()
 
 		//service = app.get<Roles>(Roles)

@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config'
 import { Cache } from 'cache-manager'
 import * as fs from 'fs'
 
-import { APP_BOOT_CONTEXT, LLANA_AUTH_TABLE, LLANA_ROLES_TABLE } from './app.constants'
+import { APP_BOOT_CONTEXT, LLANA_AUTH_TABLE, LLANA_RELATION_TABLE, LLANA_ROLES_TABLE } from './app.constants'
 import { Authentication } from './helpers/Authentication'
 import { Documentation } from './helpers/Documentation'
 import { Logger } from './helpers/Logger'
@@ -334,6 +334,78 @@ export class AppBootup implements OnApplicationBootstrap {
 					)
 				}
 			}
+		}
+
+		try {
+			await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: APP_BOOT_CONTEXT })
+		} catch (e) {
+			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist - ${e.message}`, APP_BOOT_CONTEXT)
+
+			/**
+			 * Create the _llana_auth schema
+			 *
+			 * |Field | Type | Details|
+			 * |--------|---------|--------|
+			 * |`auth` | `enum` | Which auth type this applies to, either `APIKEY` or `JWT` |
+			 * |`type` | `enum` | If to `INCLUDE` or `EXCLUDE` the endpoint, excluding means authentication will not be required |
+			 * |`table` | `string` | The table this rule applies to |
+			 * |`public_records` | `enum` | The permission level if `EXCLUDE` and opened to the public, either `NONE` `READ` `WRITE` `DELETE`|
+			 */
+
+			const schema: DatabaseSchema = {
+				table: LLANA_RELATION_TABLE,
+				primary_key: 'id',
+				columns: [
+					{
+						field: 'id',
+						type: DatabaseColumnType.NUMBER,
+						nullable: false,
+						required: true,
+						primary_key: true,
+						unique_key: true,
+						foreign_key: false,
+						auto_increment: true,
+					},
+					{
+						field: 'table',
+						type: DatabaseColumnType.STRING,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'column',
+						type: DatabaseColumnType.STRING,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'org_table',
+						type: DatabaseColumnType.STRING,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'org_column',
+						type: DatabaseColumnType.STRING,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+				],
+			}
+
+			await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 		}
 
 		if (this.authentication.skipAuth()) {

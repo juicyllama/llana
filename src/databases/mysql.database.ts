@@ -245,7 +245,7 @@ export class MySQL {
 		if (!options.offset) {
 			options.offset = 0
 		}
-		
+
 		command += ` LIMIT ${options.limit} OFFSET ${options.offset}`
 
 		const results = await this.performQuery({ sql: command, values, x_request_id })
@@ -279,7 +279,7 @@ export class MySQL {
 	async findTotalRecords(options: DatabaseFindTotalRecords, x_request_id: string): Promise<number> {
 		let [command, values] = this.find(options, true)
 		const results = await this.performQuery({ sql: command, values, x_request_id })
-		return results[0].total
+		return Number(results[0].total)
 	}
 
 	/**
@@ -514,7 +514,7 @@ export class MySQL {
 				}
 			}
 		}
-		
+
 		return [command.trim(), values]
 	}
 

@@ -24,8 +24,8 @@ We are working to support all major databases, if you would like to contribute t
 [ExpressJs Database Integration Guide](https://expressjs.com/en/guide/database-integration.html)
 
 ![ORACLE](https://badgen.net/badge/ORACLE/Help%20Welcomed/red)<br>
-![MYSQL](https://badgen.net/badge/MYSQL/Beta%20Phase/green)<br>
-![MSSQL](https://badgen.net/badge/MSSQL/Help%20Welcomed/red)<br>
+![MYSQL](https://badgen.net/badge/MYSQL/Version%201/green)<br>
+![MSSQL](https://badgen.net/badge/MSSQL/In%20Development/orange)<br>
 ![POSTGRES](https://badgen.net/badge/POSTGRES/Beta%20Phase/green)<br>
 ![MONGODB](https://badgen.net/badge/MONGODB/Beta%20Phase/green)<br>
 ![REDIS](https://badgen.net/badge/REDIS/Help%20Welcomed/red)<br>

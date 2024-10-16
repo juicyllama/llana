@@ -5,13 +5,16 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
-import exp from 'constants'
+import { DatabaseSchema } from './types/database.types'
 
 describe('App > Controller > Delete', () => {
 	let app: INestApplication
 
 	let authTestingService: AuthTestingService
 	let customerTestingService: CustomerTestingService
+
+	let customerSchema: DatabaseSchema
+
 	let customer1: any
 	let customer2: any
 	let customer3: any
@@ -26,11 +29,12 @@ describe('App > Controller > Delete', () => {
 		}).compile()
 
 		app = moduleRef.createNestApplication()
-		await app.listen(3050)
 		await app.init()
-
+		
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
+
+		customerSchema = await customerTestingService.getSchema()
 
 		customer1 = await customerTestingService.createCustomer({})
 		customer2 = await customerTestingService.createCustomer({})
@@ -42,7 +46,7 @@ describe('App > Controller > Delete', () => {
 	describe('Delete', () => {
 		it('Delete One', async function () {
 			const result = await request(app.getHttpServer())
-				.delete(`/Customer/${customer1.custId}`)
+				.delete(`/Customer/${customer1[customerSchema.primary_key]}`)
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(200)
 			expect(result.body).toBeDefined()
@@ -56,10 +60,10 @@ describe('App > Controller > Delete', () => {
 				.delete(`/Customer/`)
 				.send([
 					{
-						custId: customer2.custId,
+						[customerSchema.primary_key]: customer2[customerSchema.primary_key],
 					},
 					{
-						custId: customer3.custId,
+						[customerSchema.primary_key]: customer3[customerSchema.primary_key],
 					},
 				])
 				.set('Authorization', `Bearer ${jwt}`)

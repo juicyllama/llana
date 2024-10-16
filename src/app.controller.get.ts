@@ -211,6 +211,7 @@ export class GetController {
 					existing_relations: options.relations,
 					x_request_id,
 				})
+
 				if (!valid) {
 					return res.status(400).send(this.response.text(message))
 				}
@@ -220,8 +221,6 @@ export class GetController {
 						postQueryRelations.push(relation)
 					}
 				}
-
-
 			}
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
@@ -241,13 +240,17 @@ export class GetController {
 		}
 
 		try {
-			let result = await this.query.perform(QueryPerform.FIND_ONE, options, x_request_id) as FindOneResponseObject
+			let result = (await this.query.perform(
+				QueryPerform.FIND_ONE,
+				options,
+				x_request_id,
+			)) as FindOneResponseObject
 
 			if (!result) {
 				return res.status(204).send(this.response.text(`No record found for id ${id}`))
 			}
 
-			if(postQueryRelations?.length){			
+			if (postQueryRelations?.length) {
 				options.relations = postQueryRelations
 				result = await this.query.buildRelations(options as DatabaseFindOneOptions, result, x_request_id)
 			}
@@ -412,12 +415,20 @@ export class GetController {
 		}
 
 		try {
-			let result = await this.query.perform(QueryPerform.FIND_MANY, options, x_request_id) as FindManyResponseObject
+			let result = (await this.query.perform(
+				QueryPerform.FIND_MANY,
+				options,
+				x_request_id,
+			)) as FindManyResponseObject
 
-			if(postQueryRelations?.length){			
-				options.relations = postQueryRelations	
-				for(const i in result.data){
-					result.data[i] = await this.query.buildRelations(options as DatabaseFindOneOptions, result.data[i], x_request_id)
+			if (postQueryRelations?.length) {
+				options.relations = postQueryRelations
+				for (const i in result.data) {
+					result.data[i] = await this.query.buildRelations(
+						options as DatabaseFindOneOptions,
+						result.data[i],
+						x_request_id,
+					)
 				}
 			}
 			return res.status(200).send(result)

@@ -183,37 +183,38 @@ export class Postgres {
 				nullable: column.Null === 'YES',
 				required: column.Null === 'NO',
 				primary_key: column.Key === 'PRI',
-				unique_key: column.Key === 'UNI',
-				foreign_key: column.Key === 'MUL',
+				unique_key: column.Key_Unique === 'UNI',
+				foreign_key: column.Key_Multiple === 'MUL',
 				default: column.Default,
 				extra: column.Extra,
 			}
 		})
 
-		const relations_query = `SELECT tc.table_name AS "table", kcu.column_name AS "column", ccu.table_name AS "org_table", ccu.column_name AS "org_column"
-			FROM information_schema.table_constraints AS tc
-			JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name
-			JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
-			WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = '${options.table}';`
+		const relations_query = `SELECT tc.table_name AS "org_table", kcu.column_name AS "org_column", ccu.table_name AS "table", ccu.column_name AS "column"
+		FROM information_schema.table_constraints AS tc
+		JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name
+		JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
+		WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = '${options.table}';`
+
 		const relations_result = await this.performQuery({ sql: relations_query, x_request_id: options.x_request_id })
+
 		const relations = relations_result
 			.filter((row: DatabaseSchemaRelation) => row.table !== null)
 			.map((row: DatabaseSchemaRelation) => row)
 
-		const relation_back_query = `SELECT ccu.table_name AS "table", ccu.column_name AS "column", tc.table_name AS "org_table", kcu.column_name AS "org_column"
-			FROM information_schema.table_constraints AS tc
-			JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name
-			JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
-			WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = '${options.table}';`
-		const relation_back_result = await this.performQuery({
-			sql: relation_back_query,
-			x_request_id: options.x_request_id,
-		})
-		const relation_back = relation_back_result
-			.filter((row: DatabaseSchemaRelation) => row.table !== null)
-			.map((row: DatabaseSchemaRelation) => row)
+		for (const relation of relations) {
+			const existingRelation = relations.find(
+				r =>
+					r.table === relation.table &&
+					r.column === relation.column &&
+					r.org_table === relation.org_table &&
+					r.org_column === relation.org_column,
+			)
 
-		relations.push(...relation_back)
+			if (!existingRelation) {
+				relations.push(relation)
+			}
+		}
 
 		return {
 			table: options.table,
@@ -321,7 +322,7 @@ export class Postgres {
 	async findTotalRecords(options: DatabaseFindTotalRecords, x_request_id: string): Promise<number> {
 		let [command, values] = this.find(options, true)
 		const results = await this.performQuery({ sql: command, values, x_request_id })
-		return results[0].total
+		return Number(results[0].total)
 	}
 
 	/**

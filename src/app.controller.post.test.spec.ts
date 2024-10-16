@@ -5,12 +5,16 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
+import { DatabaseSchema } from './types/database.types'
 
 describe('App > Controller > Post', () => {
 	let app: INestApplication
 
 	let authTestingService: AuthTestingService
 	let customerTestingService: CustomerTestingService
+
+	let customerSchema: DatabaseSchema
+
 	let customer: any
 
 	let jwt: string
@@ -23,11 +27,11 @@ describe('App > Controller > Post', () => {
 		}).compile()
 
 		app = moduleRef.createNestApplication()
-		await app.listen(3050)
 		await app.init()
 
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
+		customerSchema = await customerTestingService.getSchema()
 		jwt = await authTestingService.login()
 	})
 
@@ -40,7 +44,7 @@ describe('App > Controller > Post', () => {
 				.expect(201)
 
 			expect(result.body).toBeDefined()
-			expect(result.body.custId).toBeDefined()
+			expect(result.body[customerSchema.primary_key]).toBeDefined()
 			expect(result.body.companyName).toBeDefined()
 			expect(result.body.contactName).toBeDefined()
 			customer = result.body
@@ -59,9 +63,9 @@ describe('App > Controller > Post', () => {
 			expect(result.body.successful).toBeDefined()
 			expect(result.body.successful).toEqual(2)
 			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0].custId).toBeDefined()
+			expect(result.body.data[0][customerSchema.primary_key]).toBeDefined()
 			expect(result.body.data[0].companyName).toBeDefined()
-			expect(result.body.data[1].custId).toBeDefined()
+			expect(result.body.data[1][customerSchema.primary_key]).toBeDefined()
 			expect(result.body.data[1].companyName).toBeDefined()
 			customer = result.body
 		})

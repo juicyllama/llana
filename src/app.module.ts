@@ -37,7 +37,9 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 			load: [auth, database, hosts, jwt, roles],
 		}),
 		JwtModule.register(jwt()),
-		CacheModule.register(),
+		CacheModule.register({
+			isGlobal: true,
+		}),
 	],
 	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
 	providers: [
