@@ -27,7 +27,6 @@ describe('App > Controller > Post', () => {
 		}).compile()
 
 		app = moduleRef.createNestApplication()
-		await app.listen(process.env.PORT ?? 3000)
 		await app.init()
 
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
