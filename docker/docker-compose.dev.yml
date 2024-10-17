@@ -1,0 +1,151 @@
+name: llana
+
+networks:
+    llana-network:
+        driver: bridge
+        name: llana-network
+
+volumes:
+    llana-mysql-data:
+        name: llana-mysql-data
+        driver: local
+    llana-postgres-data:
+        name: llana-postgres-data
+        driver: local
+    llana-mongodb-data:
+        name: llana-mongodb-data
+        driver: local
+    llana-mssql-data:
+        name: llana-mssql-data
+        driver: local
+
+services:
+
+    llana-mysql:
+        image: mysql:8.0
+        restart: always
+        container_name: llana-mysql
+        ports:
+            - "3306:3306"
+        environment:
+            MYSQL_ROOT_PASSWORD: pass
+            MYSQL_USER: user
+            MYSQL_PASSWORD: pass
+            MYSQL_DATABASE: llana
+            MYSQL_ROOT_HOST: '%'
+        command: --init-file /mysql/init.sql
+        volumes:
+            - llana-mysql-data:/var/lib/mysql
+            - ./demo/databases/mysql.sql:/mysql/init.sql
+        networks:
+            - llana-network
+
+    llana-postgres:
+        image: postgres
+        restart: always
+        container_name: llana-postgres
+        ports:
+            - "5432:5432"
+        environment:
+            POSTGRES_DB: llana
+            POSTGRES_USER: user
+            POSTGRES_PASSWORD: pass
+            ALLOW_IP_RANGE: '0.0.0.0/0'
+        volumes:
+            - llana-postgres-data:/var/lib/postgresql/data/
+            - ./demo/databases/postgres.sql:/docker-entrypoint-initdb.d/init.sql
+        networks:
+            - llana-network
+    
+    llana-mongodb:
+        image: mongo
+        restart: always
+        container_name: llana-mongodb
+        ports:
+            - "27017:27017"
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: user
+            MONGO_INITDB_ROOT_PASSWORD: pass
+            MONGO_INITDB_DATABASE: llana
+        volumes:
+            - llana-mongodb-data:/data/db
+            - ./demo/databases/mongodb.js:/docker-entrypoint-initdb.d/seed.js
+        networks:
+            - llana-network
+
+    llana-mssql:
+        #Bug in https://github.com/microsoft/mssql-docker/issues/892
+        image: mcr.microsoft.com/mssql/server:2022-CU13-ubuntu-22.04
+        #image: mcr.microsoft.com/mssql/server:2022-latest
+        restart: always
+        container_name: llana-mssql
+        ports:
+            - "1433:1433"
+        environment:
+            ACCEPT_EULA: "Y"
+            SA_PASSWORD: "S7$0nGpA$$w0rD"
+        volumes:
+            - llana-mssql-data:/var/opt/mssql
+            - ./demo/databases/mssql.sql:/docker-entrypoint-initdb.d/mssql.sql
+        networks:
+            - llana-network
+        healthcheck:
+            test: /opt/mssql/bin/sqlcmd -C -S localhost -U sa -P "$${SA_PASSWORD}" -Q "SELECT 1" -b -o /dev/null
+            interval: 10s
+            timeout: 3s
+            retries: 10
+            start_period: 10s
+        command:
+        - /bin/bash
+        - -c
+        - |
+            /opt/mssql/bin/sqlservr &
+            pid=$$!
+
+            echo "Waiting for MS SQL to be available ⏳"
+
+            /opt/mssql-tools/bin/sqlcmd -l 30 -S localhost -h-1 -V1 -U sa -P $$SA_PASSWORD -Q "SET NOCOUNT ON SELECT \"YAY WE ARE UP\" , @@servername"
+            is_up=$$?
+            while [ $$is_up -ne 0 ] ; do
+            echo -e $$(date)
+            /opt/mssql-tools/bin/sqlcmd -l 30 -S localhost -h-1 -V1 -U sa -P $$SA_PASSWORD -Q "SET NOCOUNT ON SELECT \"YAY WE ARE UP\" , @@servername"
+            is_up=$$?
+            sleep 5
+            done
+
+            echo "MS SQL is up and running 🚀"
+
+            
+
+            /opt/mssql-tools/bin/sqlcmd -U sa -P $$SA_PASSWORD -l 30 -e -i /docker-entrypoint-initdb.d/mssql.sql
+
+            echo "Script Execution is complete. Waiting for MS SQL Process to terminate 🎉"
+
+            wait $$pid
+
+
+            cp -r /docker-entrypoint-initdb.d/mssql.sql /var/opt/mssql/data
+
+# cp /docker-entrypoint-initdb.d/init.sql /var/opt/mssql/data
+
+#             /opt/mssql-tools/bin/sqlcmd -U sa -P $$SA_PASSWORD -l 30 -e -i /docker-entrypoint-initdb.d/init.sql
+
+#             su
+
+#   #Full permissions to /docker-entrypoint-initdb.d/init.sql
+         
+#             chmod 1001 /docker-entrypoint-initdb.d
+#             chmod 1001 /var/opt/mssql/data/init.sql
+#             chmod 1001 /var/opt/mssql/data
+#             chmod 1001 /var/opt/mssql
+#             chmod 1001 /var/opt
+#             chmod 1001 /var
+
+
+#             chown -R root:root /var/opt/mssql/data
+#             chown -R root:root /var/opt/mssql
+#             chown -R root:root /var/opt
+#             chown -R root:root /var
+#             chown -R root:root /docker-entrypoint-initdb.d
+#             chown -R root:root /docker-entrypoint-initdb.d/init.sql
+            
