@@ -4,7 +4,7 @@ import { isUndefined } from 'lodash'
 import { OpenAPIV3_1 } from 'openapi-types'
 
 import { version } from '../../package.json'
-import { APP_BOOT_CONTEXT } from '../app.constants'
+import { APP_BOOT_CONTEXT, LLANA_WEBHOOK_TABLE } from '../app.constants'
 import { ListTablesResponseObject } from '../dtos/response.dto'
 import { AuthLocation } from '../types/auth.types'
 import { DatabaseColumnType, DatabaseSchema, QueryPerform } from '../types/database.types'
@@ -12,6 +12,7 @@ import { Authentication } from './Authentication'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
+import { plural } from '../utils/String'
 
 @Injectable()
 export class Documentation {
@@ -123,8 +124,8 @@ export class Documentation {
 					},
 				},
 				get: <any>{
-					description: `Returns a list of ${table} records`,
-					summary: `List ${table}`,
+					description: `Returns a list of ${plural(table)} records`,
+					summary: `List ${plural(table)}`,
 					tags: [table],
 					requestBody: this.getListRequestBody(schema),
 					security: [
@@ -238,6 +239,131 @@ export class Documentation {
 				},
 			}
 		}
+
+		// Add webhooks endpoints
+
+		const table = 'webhook'
+		const schema = await this.schema.getSchema({ table: LLANA_WEBHOOK_TABLE , x_request_id: APP_BOOT_CONTEXT })
+
+		apiDoc.paths[`/${table}/`] = {
+			post: <any>{
+				description: `Creates a new ${table}`,
+				summary: `Create ${table}`,
+				tags: ['Webhooks'],
+				security: [
+					{
+						bearerAuth: [],
+						apiKeyAuth: [],
+					},
+				],
+				requestBody: this.getRequestBody(
+					this.convertSchemaToOpenAPIBodyRequest(schema),
+					this.convertSchemaRequiredToOpenAPI(schema),
+				),
+				responses: {
+					201: this.get200Response(this.convertSchemaToOpenAPIExample(schema), table + 'Response'),
+					400: this.get400Response(),
+					401: this.get401Response(),
+				},
+			},
+			get: <any>{
+				description: `Returns a list of ${plural(table)} records`,
+				summary: `List ${plural(table)}`,
+				tags: ['Webhooks'],
+				requestBody: this.getListRequestBody(schema),
+				security: [
+					{
+						bearerAuth: [],
+						apiKeyAuth: [],
+					},
+				],
+				responses: {
+					200: this.get200Response(
+						{
+							limit: 20,
+							offset: 0,
+							total: 70,
+							pagination: {
+								total: 20,
+								page: {
+									current: 'eyJsaW1pdCI6MjAsIm9mZnNldCI6MH0=',
+									prev: null,
+									next: 'eyJsaW1pdCI6MjAsIm9mZnNldCI6MjB9',
+									first: 'eyJsaW1pdCI6MjAsIm9mZnNldCI6MH0=',
+									last: 'eyJsaW1pdCI6MjAsIm9mZnNldCI6NTB9',
+								},
+							},
+							data: [this.convertSchemaToOpenAPIExample(schema)],
+						},
+						'List' + table + 'Response',
+					),
+					400: this.get400Response(),
+					401: this.get401Response(),
+				},
+			},
+		}
+
+		const response_schema = schema
+			delete response_schema._x_request_id
+
+			apiDoc.paths[`/${table}/:id`] = {
+				get: <any>{
+					description: `Returns a record of ${table}`,
+					summary: `Get ${table}`,
+					tags: ['Webhooks'],
+					requestBody: this.getSingleRequestBody(schema),
+					security: [
+						{
+							bearerAuth: [],
+							apiKeyAuth: [],
+						},
+					],
+					responses: {
+						200: this.get200Response(this.convertSchemaToOpenAPIExample(schema), table + 'Response'),
+						400: this.get400Response(),
+						401: this.get401Response(),
+					},
+				},
+				put: <any>{
+					description: `Updates a ${table} record`,
+					summary: `Update ${table}`,
+					tags: ['Webhooks'],
+					security: [
+						{
+							bearerAuth: [],
+							apiKeyAuth: [],
+						},
+					],
+					requestBody: this.getRequestBody(this.convertSchemaToOpenAPIBodyRequest(schema), []),
+					responses: {
+						201: this.get200Response(this.convertSchemaToOpenAPIExample(schema), table + 'Response'),
+						400: this.get400Response(),
+						401: this.get401Response(),
+					},
+				},
+				delete: <any>{
+					description: `Deletes a record of ${table}`,
+					summary: `Delete ${table}`,
+					tags: ['Webhooks'],
+					security: [
+						{
+							bearerAuth: [],
+							apiKeyAuth: [],
+						},
+					],
+					responses: {
+						200: this.get200Response(
+							{
+								deleted: 1,
+							},
+							table + 'DeleteResponse',
+						),
+						400: this.get400Response(),
+						401: this.get401Response(),
+					},
+				},
+			}
+
 		return apiDoc
 	}
 

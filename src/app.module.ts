@@ -28,8 +28,9 @@ import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
-import { Websockets } from './helpers/Websockets'
+import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
+import { Webhook } from './helpers/Webhook'
 
 @Module({
 	imports: [
@@ -58,7 +59,8 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Response,
 		Roles,
 		Schema,
-		Websockets,
+		Websocket,
+		Webhook,
 	],
 	exports: [
 		AppBootup,
@@ -76,7 +78,8 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Response,
 		Roles,
 		Schema,
-		Websockets,
+		Websocket,
+		Webhook,
 	],
 })
 export class AppModule implements NestModule {

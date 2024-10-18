@@ -2,24 +2,26 @@ import { Body, Controller, Delete, Headers, Param, Req, Res } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config'
 
 import { HeaderParams } from './dtos/requests.dto'
-import { DeleteManyResponseObject, DeleteResponseObject } from './dtos/response.dto'
+import { DeleteManyResponseObject, DeleteResponseObject, FindOneResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
-import { Websockets } from './helpers/Websockets'
+import { Websocket } from './helpers/Websocket'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import {
 	DatabaseConfig,
 	DatabaseSchema,
 	DatabaseWhere,
 	QueryPerform,
-	SocketType,
+	PublishType,
 	WhereOperator,
 } from './types/database.types'
 import { RolePermission } from './types/roles.types'
+import { Webhook } from './helpers/Webhook'
+import { LLANA_WEBHOOK_TABLE } from './app.constants'
 
 @Controller()
 export class DeleteController {
@@ -30,7 +32,8 @@ export class DeleteController {
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
-		private readonly websockets: Websockets,
+		private readonly websocket: Websocket,
+		private readonly webhook: Webhook,
 	) {}
 
 	@Delete('*/:id')
@@ -41,7 +44,11 @@ export class DeleteController {
 		@Param('id') id: string,
 	): Promise<DeleteResponseObject> {
 		const x_request_id = headers['x-request-id']
-		const table_name = UrlToTable(req.originalUrl, 1)
+		let table_name = UrlToTable(req.originalUrl, 1)
+
+		if(table_name === 'webhook') {
+			table_name = LLANA_WEBHOOK_TABLE
+		}
 
 		let schema: DatabaseSchema
 
@@ -117,7 +124,7 @@ export class DeleteController {
 				where,
 			},
 			x_request_id,
-		)
+		) as FindOneResponseObject
 
 		if (!record) {
 			return res.status(400).send(this.response.text(`Record with id ${id} not found`))
@@ -133,6 +140,48 @@ export class DeleteController {
 		}
 
 		try {
+
+
+		if(table_name === LLANA_WEBHOOK_TABLE) {
+		
+			//perform auth on webhook table
+			const auth = await this.authentication.auth({
+				table: record.table,
+				x_request_id,
+				access: RolePermission.READ,
+				headers: req.headers,
+				body: req.body,
+				query: req.query,
+			})
+			if (!auth.valid) {
+				return res.status(401).send(auth.message)
+			}
+	
+			//perform role check
+			if (auth.user_identifier) {
+				const { valid, message } = (await this.roles.tablePermission({
+					identifier: auth.user_identifier,
+					table: record.table,
+					access: RolePermission.READ,
+					x_request_id,
+				})) as AuthTablePermissionFailResponse
+	
+				if (!valid) {
+					return res.status(401).send(this.response.text(message))
+				}
+			}
+			const result = await this.query.perform(
+				QueryPerform.DELETE,
+				{
+					id: id,
+					schema,
+				},
+				x_request_id,
+			)
+			return res.status(200).send(result)
+		}
+
+
 			const result = await this.query.perform(
 				QueryPerform.DELETE,
 				{
@@ -142,7 +191,8 @@ export class DeleteController {
 				},
 				x_request_id,
 			)
-			await this.websockets.publish(schema, SocketType.DELETE, id)
+			await this.websocket.publish(schema, PublishType.DELETE, id)
+			await this.webhook.publish(schema, PublishType.DELETE, id, auth.user_identifier)
 			return res.status(200).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
@@ -157,7 +207,11 @@ export class DeleteController {
 		@Body() body: Partial<any>[],
 	): Promise<DeleteManyResponseObject> {
 		const x_request_id = headers['x-request-id']
-		const table_name = UrlToTable(req.originalUrl, 1)
+		let table_name = UrlToTable(req.originalUrl, 1)
+
+		if(table_name === 'webhook') {
+			table_name = LLANA_WEBHOOK_TABLE
+		}
 
 		let schema: DatabaseSchema
 
@@ -242,7 +296,7 @@ export class DeleteController {
 						where,
 					},
 					x_request_id,
-				)
+				) as FindOneResponseObject
 
 				if (!record) {
 					errored++
@@ -266,6 +320,39 @@ export class DeleteController {
 				}
 
 				try {
+
+					if(table_name === LLANA_WEBHOOK_TABLE) {
+			
+						//perform auth on webhook table
+						const auth = await this.authentication.auth({
+							table:record.table,
+							x_request_id,
+							access: RolePermission.READ,
+							headers: req.headers,
+							body: req.body,
+							query: req.query,
+						})
+						if (!auth.valid) {
+							return res.status(401).send(auth.message)
+						}
+				
+						//perform role check
+						if (auth.user_identifier) {
+							const { valid, message } = (await this.roles.tablePermission({
+								identifier: auth.user_identifier,
+								table:record.table,
+								access: RolePermission.READ,
+								x_request_id,
+							})) as AuthTablePermissionFailResponse
+				
+							if (!valid) {
+								return res.status(401).send(this.response.text(message))
+							}
+						}
+					}
+
+
+
 					await this.query.perform(
 						QueryPerform.DELETE,
 						{
@@ -275,7 +362,8 @@ export class DeleteController {
 						},
 						x_request_id,
 					)
-					await this.websockets.publish(schema, SocketType.DELETE, id)
+					await this.websocket.publish(schema, PublishType.DELETE, id)
+					await this.webhook.publish(schema, PublishType.DELETE, id, auth.user_identifier)
 					deleted++
 				} catch (e) {
 					errored++
