@@ -98,6 +98,44 @@ export class Webhook {
 				}
 			}
 			
+			await this.query.perform(QueryPerform.CREATE, {
+				schema: webhookLogSchema,
+				data: <WebhookLog>{
+					webhook_id: webhook.id,
+					type,
+					url: webhook.url,
+					record_key: schema.primary_key,
+					record_id: id,
+					delivered: false,
+				}
+			})
+
+		}
+	}
+
+	async getPendingWebhooks(): Promise<WebhookLog[]> {
+		const webhookLogSchema = await this.schema.getSchema({ table: LLANA_WEBHOOK_LOG_TABLE })
+		const webhooks = await this.query.perform(QueryPerform.FIND_MANY, {
+			schema: webhookLogSchema,
+			where: [{
+				column: 'delivered',
+				operator: WhereOperator.equals,
+				value: false,
+			},{
+				column: 'next_attempt_at',
+				operator: WhereOperator.lt,
+				value: new Date(),
+			}],
+			limit: 999,
+		}) as FindManyResponseObject
+
+		return webhooks.data as WebhookLog[]
+	}
+
+	async sendWebhook(webhook: WebhookLog): Promise<void> {
+
+		const webhookLogSchema = await this.schema.getSchema({ table: LLANA_WEBHOOK_LOG_TABLE })
+
 			try{
 
 				const response = await axios({
@@ -105,17 +143,15 @@ export class Webhook {
 					url: webhook.url,
 					data: {
 						webhook_id: webhook.id,
-						type,
-						[schema.primary_key]: id,
+						type: webhook.type,
+						[webhook.record_key]: webhook.record_id,
 					}
 				})
 
-				await this.query.perform(QueryPerform.CREATE, {
+				await this.query.perform(QueryPerform.UPDATE, {
+					id: webhook.id.toString(),
 					schema: webhookLogSchema,
-					data: <WebhookLog>{
-						webhook_id: webhook.id,
-						type,
-						record_id: id,
+					data: <Partial<WebhookLog>>{
 						response_status: response.status,
 						response_message: response.statusText,
 						delivered: true,
@@ -123,24 +159,28 @@ export class Webhook {
 					}
 				})
 
-				this.logger.debug(`[Webhook] Published ${schema.table} ${type} for #${id}`)
+				this.logger.debug(`[Webhook] Sending ${webhook.type} to ${webhook.url}`)
 
 			}catch(e: any){
-				this.logger.warn(`[Webhook] Error publishing ${schema.table} ${type} for #${id} - ${e.message}`)
-				await this.query.perform(QueryPerform.CREATE, {
+				this.logger.warn(`[Webhook] Error sending ${webhook.type} to ${webhook.url} - ${e.message}`)
+
+				let next_attempt_at = new Date(Date.now() + (webhook.attempt * 60000))
+
+				if(webhook.attempt >= 5){
+					next_attempt_at = null
+				}
+
+				await this.query.perform(QueryPerform.UPDATE, {
+					id: webhook.id.toString(),
 					schema: webhookLogSchema,
-					data: <WebhookLog>{
-						webhook_id: webhook.id,
-						type,
-						record_id: id,
+					data: <Partial<WebhookLog>>{
+						attempt: webhook.attempt + 1,
+						next_attempt_at: new Date(Date.now() + (webhook.attempt * webhook.attempt * webhook.attempt * 60000)),
 						response_status: e.response.status ?? 500,
 						response_message: e.response.message ?? e.message,
 					}
 				})
 			}
-
-		}
-
 	}
 
 	async addWebhook(data: Partial<WebhookType>): Promise<FindOneResponseObject> {

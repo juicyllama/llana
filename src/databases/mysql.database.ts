@@ -94,7 +94,7 @@ export class MySQL {
 			} else {
 				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)}  ${options.x_request_id ?? ''}`)
+			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
 			connection.end()
 			return results
 		} catch (e) {

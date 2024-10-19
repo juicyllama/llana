@@ -41,6 +41,12 @@ export class WebhookLog {
 	@IsEnum(PublishType)
 	type: PublishType
 
+	@IsString()
+	url: string
+
+	@IsString()
+	record_key: string
+
 	@IsNumber()
 	record_id: number
 
@@ -55,10 +61,18 @@ export class WebhookLog {
 	delivered?: boolean
 
 	@IsOptional()
+	@IsNumber()
+	attempt: number
+
+	@IsOptional()
 	@IsDateString()
-	created_at?: string
+	created_at?: Date
 
 	@IsOptional()
 	@IsDate()
 	delivered_at?: Date
+
+	@IsOptional()
+	@IsDate()
+	next_attempt_at?: Date
 }

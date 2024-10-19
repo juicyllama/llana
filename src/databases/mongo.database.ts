@@ -228,7 +228,7 @@ export class Mongo {
 
 		try {
 			const result = await mongo.collection.insertOne(options.data as any)
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)}`, x_request_id)
+			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${x_request_id}`)
 			mongo.connection.close()
 			return await this.findOne(
 				{
@@ -338,7 +338,7 @@ export class Mongo {
 					.skip(options.offset)
 					.toArray()
 			)
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)}`, x_request_id)
+			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${x_request_id}`)
 
 			mongo.connection.close()
 

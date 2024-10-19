@@ -99,8 +99,7 @@ export class Postgres {
 			}
 
 			this.logger.debug(
-				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''}`,
-				options.x_request_id,
+				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''} - ${options.x_request_id ?? ''}`
 			)
 
 			if (!options.values || !options.values.length) {
@@ -110,11 +109,11 @@ export class Postgres {
 				const res = await connection.query(options.sql, options.values)
 				results = res.rows
 			}
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)}`, options.x_request_id)
+			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
 			connection.end()
 			return results
 		} catch (e) {
-			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`, options.x_request_id)
+			this.logger.warn(`[${DATABASE_TYPE}] Error executing query - ${options.x_request_id ?? ''}`)
 			this.logger.warn({
 				sql: {
 					sql: options.sql,

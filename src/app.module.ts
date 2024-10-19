@@ -2,6 +2,7 @@ import { CacheModule } from '@nestjs/cache-manager'
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { AuthController } from './app.controller.auth'
 import { DeleteController } from './app.controller.delete'
@@ -31,6 +32,7 @@ import { Schema } from './helpers/Schema'
 import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
 import { Webhook } from './helpers/Webhook'
+import { TasksService } from './app.service.tasks';
 
 @Module({
 	imports: [
@@ -41,6 +43,7 @@ import { Webhook } from './helpers/Webhook'
 		CacheModule.register({
 			isGlobal: true,
 		}),
+		ScheduleModule.forRoot()
 	],
 	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
 	providers: [
@@ -59,6 +62,7 @@ import { Webhook } from './helpers/Webhook'
 		Response,
 		Roles,
 		Schema,
+		TasksService,
 		Websocket,
 		Webhook,
 	],
