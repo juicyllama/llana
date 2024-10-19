@@ -2,6 +2,7 @@ import { CacheModule } from '@nestjs/cache-manager'
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
+import { ScheduleModule } from '@nestjs/schedule'
 
 import { AuthController } from './app.controller.auth'
 import { DeleteController } from './app.controller.delete'
@@ -11,6 +12,7 @@ import { PostController } from './app.controller.post'
 import { PutController } from './app.controller.put'
 import { AuthService } from './app.service.auth'
 import { AppBootup } from './app.service.bootup'
+import { TasksService } from './app.service.tasks'
 import auth from './config/auth.config'
 import database from './config/database.config'
 import hosts from './config/hosts.config'
@@ -28,7 +30,8 @@ import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
-import { Websockets } from './helpers/Websockets'
+import { Webhook } from './helpers/Webhook'
+import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
 
 @Module({
@@ -40,6 +43,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		CacheModule.register({
 			isGlobal: true,
 		}),
+		ScheduleModule.forRoot(),
 	],
 	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
 	providers: [
@@ -58,7 +62,9 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Response,
 		Roles,
 		Schema,
-		Websockets,
+		TasksService,
+		Websocket,
+		Webhook,
 	],
 	exports: [
 		AppBootup,
@@ -76,7 +82,8 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Response,
 		Roles,
 		Schema,
-		Websockets,
+		Websocket,
+		Webhook,
 	],
 })
 export class AppModule implements NestModule {

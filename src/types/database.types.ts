@@ -24,7 +24,7 @@ export enum QueryPerform {
 	LIST_TABLES = 'listTables',
 }
 
-export enum SocketType {
+export enum PublishType {
 	INSERT = 'INSERT',
 	UPDATE = 'UPDATE',
 	DELETE = 'DELETE',

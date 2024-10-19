@@ -1,6 +1,7 @@
 import { Controller, Get, Headers, Param, ParseArrayPipe, Query as QueryParams, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
+import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { FindManyQueryParams, HeaderParams } from './dtos/requests.dto'
 import { FindManyResponseObject, FindOneResponseObject, ListTablesResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
@@ -106,7 +107,12 @@ export class GetController {
 		queryRelations?: string[],
 	): Promise<FindOneResponseObject> {
 		const x_request_id = headers['x-request-id']
-		const table_name = UrlToTable(req.originalUrl, 1)
+		let table_name = UrlToTable(req.originalUrl, 1)
+
+		if (table_name === 'webhook') {
+			table_name = LLANA_WEBHOOK_TABLE
+		}
+
 		let primary_key
 
 		const options: DatabaseFindOneOptions = {
@@ -275,7 +281,11 @@ export class GetController {
 		querySort?: string[],
 	): Promise<FindManyResponseObject> {
 		const x_request_id = headers['x-request-id']
-		const table_name = UrlToTable(req.originalUrl, 1)
+		let table_name = UrlToTable(req.originalUrl, 1)
+
+		if (table_name === 'webhook') {
+			table_name = LLANA_WEBHOOK_TABLE
+		}
 
 		const options: DatabaseFindManyOptions = {
 			schema: null,

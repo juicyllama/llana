@@ -46,6 +46,7 @@
 		"@nestjs/jwt": "latest",
 		"@nestjs/platform-express": "latest",
 		"@nestjs/platform-socket.io": "latest",
+		"@nestjs/schedule": "^4.1.1",
 		"@nestjs/websockets": "latest",
 		"@types/pg": "^8.11.10",
 		"argon2": "^0.41.1",

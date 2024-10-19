@@ -1,6 +1,27 @@
 //seed
 db = db.getSiblingDB('llana');
 
+db.User.insert({
+    "email": "test@test.com", 
+    "password": "$2a$10$jm6bM7acpRa18Vdy8FSqIu4yzWAdSgZgRtRrx8zknIeZhSqPJjJU.",
+    "role": "ADMIN",
+    "firstName": "Jon",
+    "lastName": "Doe",
+    "createdAt": "2000-01-01 00:00:01",
+    "updatedAt": "2000-01-01 00:00:01",
+    "deletedAt": null,
+    "UserApiKey": {
+        "apiKey": "Ex@mp1eS$Cu7eAp!K3y",
+        "createdAt": "2000-01-01 00:00:01",
+        "updatedAt": "2000-01-01 00:00:01",
+        "deletedAt": null
+    }
+});
+
+//get last inserted id
+
+const user = db.User.findOne({email: "test@test.com"});
+
 // Manual Relations Table
 db.createCollection("_llana_relation")
 
@@ -21,26 +42,38 @@ db.getCollection("_llana_relation").insertMany([{
     "org_column": "shipperId"
 }]);
 
-db.User.insert({
-        "email": "test@test.com", 
-        "password": "$2a$10$jm6bM7acpRa18Vdy8FSqIu4yzWAdSgZgRtRrx8zknIeZhSqPJjJU.",
-        "role": "ADMIN",
-        "firstName": "Jon",
-        "lastName": "Doe",
-        "createdAt": "2000-01-01 00:00:01",
-        "updatedAt": "2000-01-01 00:00:01",
-        "deletedAt": null,
-        "UserApiKey": {
-            "apiKey": "Ex@mp1eS$Cu7eAp!K3y",
-            "createdAt": "2000-01-01 00:00:01",
-            "updatedAt": "2000-01-01 00:00:01",
-            "deletedAt": null
-        }
- });
+db.createCollection("_llana_webhook")
 
- //get last inserted id
+db.getCollection("_llana_webhook").insert({
+    "type": "POST", 
+    "url": "https://wh9491c816237e1c710e.free.beeceptor.com",
+    "table": "Customer",
+    "user_identifier": user._id,
+    "on_create": true,
+    "on_update":  true,
+    "on_delete":  true,
+    "deletedAt": null,
+});
 
-const user = db.User.findOne({email: "test@test.com"});
+const webhook = db.getCollection("_llana_webhook").findOne({table: "Customer"});
+
+db.createCollection("_llana_webhook_log")
+
+db.getCollection("_llana_webhook_log").insert({
+    "webhook_id": webhook._id, 
+    "type": "INSERT",
+    "url": "https://wh9491c816237e1c710e.free.beeceptor.com",
+    "record_key": "custId",
+    "record_id": new ObjectId(),
+    "attempt": 1,
+    "delivered":  true,
+    "response_status": 200,
+    "response_message": "Success",
+    "created_at":  "2000-01-01 00:00:01",
+    "next_attempt_at":  null,
+    "delivered_at": "2000-01-01 00:00:01",
+});
+
 
 db.UserApiKey.insert({
     "userId": user._id,
