@@ -8,11 +8,11 @@ import { APP_BOOT_CONTEXT, LLANA_WEBHOOK_TABLE } from '../app.constants'
 import { ListTablesResponseObject } from '../dtos/response.dto'
 import { AuthLocation } from '../types/auth.types'
 import { DatabaseColumnType, DatabaseSchema, QueryPerform } from '../types/database.types'
+import { plural } from '../utils/String'
 import { Authentication } from './Authentication'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
-import { plural } from '../utils/String'
 
 @Injectable()
 export class Documentation {
@@ -243,7 +243,7 @@ export class Documentation {
 		// Add webhooks endpoints
 
 		const table = 'webhook'
-		const schema = await this.schema.getSchema({ table: LLANA_WEBHOOK_TABLE , x_request_id: APP_BOOT_CONTEXT })
+		const schema = await this.schema.getSchema({ table: LLANA_WEBHOOK_TABLE, x_request_id: APP_BOOT_CONTEXT })
 
 		apiDoc.paths[`/${table}/`] = {
 			post: <any>{
@@ -304,65 +304,65 @@ export class Documentation {
 		}
 
 		const response_schema = schema
-			delete response_schema._x_request_id
+		delete response_schema._x_request_id
 
-			apiDoc.paths[`/${table}/:id`] = {
-				get: <any>{
-					description: `Returns a record of ${table}`,
-					summary: `Get ${table}`,
-					tags: ['Webhooks'],
-					requestBody: this.getSingleRequestBody(schema),
-					security: [
-						{
-							bearerAuth: [],
-							apiKeyAuth: [],
-						},
-					],
-					responses: {
-						200: this.get200Response(this.convertSchemaToOpenAPIExample(schema), table + 'Response'),
-						400: this.get400Response(),
-						401: this.get401Response(),
+		apiDoc.paths[`/${table}/:id`] = {
+			get: <any>{
+				description: `Returns a record of ${table}`,
+				summary: `Get ${table}`,
+				tags: ['Webhooks'],
+				requestBody: this.getSingleRequestBody(schema),
+				security: [
+					{
+						bearerAuth: [],
+						apiKeyAuth: [],
 					},
+				],
+				responses: {
+					200: this.get200Response(this.convertSchemaToOpenAPIExample(schema), table + 'Response'),
+					400: this.get400Response(),
+					401: this.get401Response(),
 				},
-				put: <any>{
-					description: `Updates a ${table} record`,
-					summary: `Update ${table}`,
-					tags: ['Webhooks'],
-					security: [
-						{
-							bearerAuth: [],
-							apiKeyAuth: [],
-						},
-					],
-					requestBody: this.getRequestBody(this.convertSchemaToOpenAPIBodyRequest(schema), []),
-					responses: {
-						201: this.get200Response(this.convertSchemaToOpenAPIExample(schema), table + 'Response'),
-						400: this.get400Response(),
-						401: this.get401Response(),
+			},
+			put: <any>{
+				description: `Updates a ${table} record`,
+				summary: `Update ${table}`,
+				tags: ['Webhooks'],
+				security: [
+					{
+						bearerAuth: [],
+						apiKeyAuth: [],
 					},
+				],
+				requestBody: this.getRequestBody(this.convertSchemaToOpenAPIBodyRequest(schema), []),
+				responses: {
+					201: this.get200Response(this.convertSchemaToOpenAPIExample(schema), table + 'Response'),
+					400: this.get400Response(),
+					401: this.get401Response(),
 				},
-				delete: <any>{
-					description: `Deletes a record of ${table}`,
-					summary: `Delete ${table}`,
-					tags: ['Webhooks'],
-					security: [
-						{
-							bearerAuth: [],
-							apiKeyAuth: [],
-						},
-					],
-					responses: {
-						200: this.get200Response(
-							{
-								deleted: 1,
-							},
-							table + 'DeleteResponse',
-						),
-						400: this.get400Response(),
-						401: this.get401Response(),
+			},
+			delete: <any>{
+				description: `Deletes a record of ${table}`,
+				summary: `Delete ${table}`,
+				tags: ['Webhooks'],
+				security: [
+					{
+						bearerAuth: [],
+						apiKeyAuth: [],
 					},
+				],
+				responses: {
+					200: this.get200Response(
+						{
+							deleted: 1,
+						},
+						table + 'DeleteResponse',
+					),
+					400: this.get400Response(),
+					401: this.get401Response(),
 				},
-			}
+			},
+		}
 
 		return apiDoc
 	}

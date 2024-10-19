@@ -1,9 +1,9 @@
-import { IsNumber, IsOptional, IsString, IsEnum, IsBoolean, IsDateString, IsDate } from 'class-validator'
-import { Method } from '../types/response.types'
+import { IsBoolean, IsDate, IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator'
+
 import { PublishType } from '../types/database.types'
+import { Method } from '../types/response.types'
 
 export class Webhook {
-	
 	@IsNumber()
 	id: number
 
@@ -15,7 +15,7 @@ export class Webhook {
 
 	@IsString()
 	table: string
-	
+
 	@IsOptional()
 	@IsBoolean()
 	on_create?: boolean
@@ -27,11 +27,9 @@ export class Webhook {
 	@IsOptional()
 	@IsBoolean()
 	on_delete?: boolean
-
 }
 
 export class WebhookLog {
-
 	@IsNumber()
 	id: number
 

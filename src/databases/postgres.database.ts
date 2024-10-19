@@ -99,7 +99,7 @@ export class Postgres {
 			}
 
 			this.logger.debug(
-				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''} - ${options.x_request_id ?? ''}`
+				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''} - ${options.x_request_id ?? ''}`,
 			)
 
 			if (!options.values || !options.values.length) {

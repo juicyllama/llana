@@ -423,10 +423,10 @@ export class MySQL {
 
 			await this.performQuery({ sql: command })
 
-			if(schema.relations?.length) {
+			if (schema.relations?.length) {
 				for (const relation of schema.relations) {
 					const command = `ALTER TABLE ${schema.table} ADD FOREIGN KEY (${relation.column}) REFERENCES ${relation.org_table}(${relation.org_column})`
-					await this.performQuery({ sql: command })	
+					await this.performQuery({ sql: command })
 				}
 			}
 

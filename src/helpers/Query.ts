@@ -77,7 +77,7 @@ export class Query {
 		) {
 			if (!options.schema?.table) {
 				this.logger.warn(
-					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)} ${x_request_id ?? ''}`
+					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)} ${x_request_id ?? ''}`,
 				)
 				throw new Error('Table not defined')
 			}

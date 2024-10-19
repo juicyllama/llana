@@ -1,6 +1,7 @@
 import { Controller, Get, Headers, Param, ParseArrayPipe, Query as QueryParams, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
+import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { FindManyQueryParams, HeaderParams } from './dtos/requests.dto'
 import { FindManyResponseObject, FindOneResponseObject, ListTablesResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
@@ -19,7 +20,6 @@ import {
 	WhereOperator,
 } from './types/database.types'
 import { RolePermission } from './types/roles.types'
-import { LLANA_WEBHOOK_TABLE } from './app.constants'
 
 @Controller()
 export class GetController {
@@ -109,7 +109,7 @@ export class GetController {
 		const x_request_id = headers['x-request-id']
 		let table_name = UrlToTable(req.originalUrl, 1)
 
-		if(table_name === 'webhook') {
+		if (table_name === 'webhook') {
 			table_name = LLANA_WEBHOOK_TABLE
 		}
 
@@ -260,7 +260,7 @@ export class GetController {
 				options.relations = postQueryRelations
 				result = await this.query.buildRelations(options as DatabaseFindOneOptions, result, x_request_id)
 			}
-			
+
 			return res.status(200).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
@@ -283,7 +283,7 @@ export class GetController {
 		const x_request_id = headers['x-request-id']
 		let table_name = UrlToTable(req.originalUrl, 1)
 
-		if(table_name === 'webhook') {
+		if (table_name === 'webhook') {
 			table_name = LLANA_WEBHOOK_TABLE
 		}
 

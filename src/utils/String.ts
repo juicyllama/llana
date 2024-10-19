@@ -13,13 +13,13 @@ export function replaceQ(string: string, array: any[]): string {
 }
 
 /**
-	 * Returns the plural of an English word.
-	 *
-	 * @export
-	 * @param {string} word
-	 * @param {number} [amount]
-	 * @returns {string}
-	 */
+ * Returns the plural of an English word.
+ *
+ * @export
+ * @param {string} word
+ * @param {number} [amount]
+ * @returns {string}
+ */
 export function plural(word: string, amount?: number): string {
 	if (amount !== undefined && amount === 1) {
 		return word

@@ -1,5 +1,6 @@
 import { Controller, Headers, Post, Req, Res } from '@nestjs/common'
 
+import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
 import { CreateManyResponseObject, FindOneResponseObject, IsUniqueResponse } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
@@ -8,12 +9,11 @@ import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
+import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { AuthTablePermissionFailResponse } from './types/auth.types'
-import { DatabaseCreateOneOptions, QueryPerform, PublishType } from './types/database.types'
+import { DatabaseCreateOneOptions, PublishType, QueryPerform } from './types/database.types'
 import { RolePermission } from './types/roles.types'
-import { Webhook } from './helpers/Webhook'
-import { LLANA_WEBHOOK_TABLE } from './app.constants'
 
 @Controller()
 export class PostController {
@@ -40,7 +40,7 @@ export class PostController {
 		const x_request_id = headers['x-request-id']
 		let table_name = UrlToTable(req.originalUrl, 1)
 
-		if(table_name === 'webhook') {
+		if (table_name === 'webhook') {
 			table_name = LLANA_WEBHOOK_TABLE
 
 			//perform auth on webhook table
@@ -55,7 +55,7 @@ export class PostController {
 			if (!auth.valid) {
 				return res.status(401).send(auth.message)
 			}
-	
+
 			//perform role check
 			if (auth.user_identifier) {
 				const { valid, message } = (await this.roles.tablePermission({
@@ -64,17 +64,15 @@ export class PostController {
 					access: RolePermission.READ,
 					x_request_id,
 				})) as AuthTablePermissionFailResponse
-	
+
 				if (!valid) {
 					return res.status(401).send(this.response.text(message))
 				}
 			}
 
-			if(!req.body.user_identifier){
+			if (!req.body.user_identifier) {
 				req.body.user_identifier = auth.user_identifier
 			}
-	
-
 		}
 
 		const body = req.body
@@ -134,8 +132,17 @@ export class PostController {
 					continue
 				}
 				data.push(insertResult.result)
-				await this.websocket.publish(options.schema, PublishType.INSERT, insertResult.result[options.schema.primary_key])
-				await this.webhook.publish(options.schema, PublishType.INSERT, insertResult.result[options.schema.primary_key], auth.user_identifier)
+				await this.websocket.publish(
+					options.schema,
+					PublishType.INSERT,
+					insertResult.result[options.schema.primary_key],
+				)
+				await this.webhook.publish(
+					options.schema,
+					PublishType.INSERT,
+					insertResult.result[options.schema.primary_key],
+					auth.user_identifier,
+				)
 				successful++
 			}
 
@@ -201,7 +208,12 @@ export class PostController {
 				x_request_id,
 			)) as FindOneResponseObject
 			await this.websocket.publish(options.schema, PublishType.INSERT, result[options.schema.primary_key])
-			await this.webhook.publish(options.schema, PublishType.INSERT, result[options.schema.primary_key], user_identifier)
+			await this.webhook.publish(
+				options.schema,
+				PublishType.INSERT,
+				result[options.schema.primary_key],
+				user_identifier,
+			)
 			return {
 				valid: true,
 				result,

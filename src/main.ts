@@ -26,7 +26,7 @@ async function bootstrap() {
 	url = url.replace('[::1]', 'localhost')
 	logger.log(`Application is running on: ${url}`, APP_BOOT_CONTEXT)
 
-	if(process.env.TZ) {
+	if (process.env.TZ) {
 		logger.log(`Timezone is set to: ${process.env.TZ}. Current time: ${new Date()}`, APP_BOOT_CONTEXT)
 	}
 }
