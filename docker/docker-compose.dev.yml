@@ -75,22 +75,22 @@ services:
 
     llana-mssql:
         #Bug in https://github.com/microsoft/mssql-docker/issues/892
-        image: mcr.microsoft.com/mssql/server:2022-CU13-ubuntu-22.04
-        #image: mcr.microsoft.com/mssql/server:2022-latest
+        # image: mcr.microsoft.com/mssql/server:2022-CU13-ubuntu-22.04
+        image: mcr.microsoft.com/mssql/server:2022-latest
         restart: always
         container_name: llana-mssql
         ports:
             - "1433:1433"
         environment:
-            ACCEPT_EULA: "Y"
-            SA_PASSWORD: "S7$0nGpA$$w0rD"
+            ACCEPT_EULA: Y
+            MSSQL_SA_PASSWORD: S7$0nGpA$$w0rD
         volumes:
             - llana-mssql-data:/var/opt/mssql
-            - ./demo/databases/mssql.sql:/docker-entrypoint-initdb.d/mssql.sql
+            - ../demo/databases/mssql.sql:/docker-entrypoint-initdb.d/mssql.sql
         networks:
             - llana-network
         healthcheck:
-            test: /opt/mssql/bin/sqlcmd -C -S localhost -U sa -P "$${SA_PASSWORD}" -Q "SELECT 1" -b -o /dev/null
+            test: /opt/mssql-tools18/bin/sqlcmd  -C -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" -b -o /dev/null
             interval: 10s
             timeout: 3s
             retries: 10
@@ -104,11 +104,11 @@ services:
 
             echo "Waiting for MS SQL to be available ⏳"
 
-            /opt/mssql-tools/bin/sqlcmd -l 30 -S localhost -h-1 -V1 -U sa -P $$SA_PASSWORD -Q "SET NOCOUNT ON SELECT \"YAY WE ARE UP\" , @@servername"
+            /opt/mssql-tools18/bin/sqlcmd -C  -l 30 -S localhost -h-1 -V1 -U sa -P $$MSSQL_SA_PASSWORD -Q "SET NOCOUNT ON SELECT \"YAY WE ARE UP\" , @@servername"
             is_up=$$?
             while [ $$is_up -ne 0 ] ; do
             echo -e $$(date)
-            /opt/mssql-tools/bin/sqlcmd -l 30 -S localhost -h-1 -V1 -U sa -P $$SA_PASSWORD -Q "SET NOCOUNT ON SELECT \"YAY WE ARE UP\" , @@servername"
+            /opt/mssql-tools18/bin/sqlcmd -C -l 30 -S localhost -h-1 -V1 -U sa -P $$MSSQL_SA_PASSWORD -Q "SET NOCOUNT ON SELECT \"YAY WE ARE UP\" , @@servername"
             is_up=$$?
             sleep 5
             done
@@ -116,8 +116,8 @@ services:
             echo "MS SQL is up and running 🚀"
 
             
-
-            /opt/mssql-tools/bin/sqlcmd -U sa -P $$SA_PASSWORD -l 30 -e -i /docker-entrypoint-initdb.d/mssql.sql
+            /opt/mssql-tools18/bin/sqlcmd -C -U sa -P $$MSSQL_SA_PASSWORD -Q "CREATE DATABASE llana;"
+            /opt/mssql-tools18/bin/sqlcmd -C -U sa -P $$MSSQL_SA_PASSWORD -l 30 -e -i /docker-entrypoint-initdb.d/mssql.sql
 
             echo "Script Execution is complete. Waiting for MS SQL Process to terminate 🎉"
 
