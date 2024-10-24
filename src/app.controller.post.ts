@@ -1,5 +1,6 @@
 import { Controller, Headers, Post, Req, Res } from '@nestjs/common'
 
+import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
 import { CreateManyResponseObject, FindOneResponseObject, IsUniqueResponse } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
@@ -8,9 +9,10 @@ import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
-import { Websockets } from './helpers/Websockets'
+import { Webhook } from './helpers/Webhook'
+import { Websocket } from './helpers/Websocket'
 import { AuthTablePermissionFailResponse } from './types/auth.types'
-import { DatabaseCreateOneOptions, QueryPerform, SocketType } from './types/database.types'
+import { DatabaseCreateOneOptions, PublishType, QueryPerform } from './types/database.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller()
@@ -21,7 +23,8 @@ export class PostController {
 		private readonly schema: Schema,
 		private readonly response: Response,
 		private readonly roles: Roles,
-		private readonly websockets: Websockets,
+		private readonly websocket: Websocket,
+		private readonly webhook: Webhook,
 	) {}
 
 	/**
@@ -29,13 +32,49 @@ export class PostController {
 	 */
 
 	@Post('*/')
-	async createOne(
+	async create(
 		@Req() req,
 		@Res() res,
 		@Headers() headers: HeaderParams,
 	): Promise<FindOneResponseObject | CreateManyResponseObject> {
 		const x_request_id = headers['x-request-id']
-		const table_name = UrlToTable(req.originalUrl, 1)
+		let table_name = UrlToTable(req.originalUrl, 1)
+
+		if (table_name === 'webhook') {
+			table_name = LLANA_WEBHOOK_TABLE
+
+			//perform auth on webhook table
+			const auth = await this.authentication.auth({
+				table: req.body.table,
+				x_request_id,
+				access: RolePermission.READ,
+				headers: req.headers,
+				body: req.body,
+				query: req.query,
+			})
+			if (!auth.valid) {
+				return res.status(401).send(auth.message)
+			}
+
+			//perform role check
+			if (auth.user_identifier) {
+				const { valid, message } = (await this.roles.tablePermission({
+					identifier: auth.user_identifier,
+					table: req.body.table,
+					access: RolePermission.READ,
+					x_request_id,
+				})) as AuthTablePermissionFailResponse
+
+				if (!valid) {
+					return res.status(401).send(this.response.text(message))
+				}
+			}
+
+			if (!req.body.user_identifier) {
+				req.body.user_identifier = auth.user_identifier
+			}
+		}
+
 		const body = req.body
 
 		const options: DatabaseCreateOneOptions = {
@@ -83,7 +122,7 @@ export class PostController {
 			const data: FindOneResponseObject[] = []
 
 			for (const item of body) {
-				const insertResult = await this.createOneRecord(options, item, x_request_id)
+				const insertResult = await this.createOneRecord(options, item, auth.user_identifier, x_request_id)
 				if (!insertResult.valid) {
 					errored++
 					errors.push({
@@ -93,6 +132,17 @@ export class PostController {
 					continue
 				}
 				data.push(insertResult.result)
+				await this.websocket.publish(
+					options.schema,
+					PublishType.INSERT,
+					insertResult.result[options.schema.primary_key],
+				)
+				await this.webhook.publish(
+					options.schema,
+					PublishType.INSERT,
+					insertResult.result[options.schema.primary_key],
+					auth.user_identifier,
+				)
 				successful++
 			}
 
@@ -105,7 +155,7 @@ export class PostController {
 			} as CreateManyResponseObject)
 		}
 
-		const insertResult = await this.createOneRecord(options, body, x_request_id)
+		const insertResult = await this.createOneRecord(options, body, auth.user_identifier, x_request_id)
 		if (!insertResult.valid) {
 			return res.status(400).send(this.response.text(insertResult.message))
 		}
@@ -119,6 +169,7 @@ export class PostController {
 	async createOneRecord(
 		options,
 		data,
+		user_identifier,
 		x_request_id,
 	): Promise<{
 		valid: boolean
@@ -156,7 +207,13 @@ export class PostController {
 				options,
 				x_request_id,
 			)) as FindOneResponseObject
-			await this.websockets.publish(options.schema, SocketType.INSERT, result[options.schema.primary_key])
+			await this.websocket.publish(options.schema, PublishType.INSERT, result[options.schema.primary_key])
+			await this.webhook.publish(
+				options.schema,
+				PublishType.INSERT,
+				result[options.schema.primary_key],
+				user_identifier,
+			)
 			return {
 				valid: true,
 				result,

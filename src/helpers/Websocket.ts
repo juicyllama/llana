@@ -8,7 +8,7 @@ import { Server, Socket } from 'socket.io'
 
 import { CACHE_DEFAULT_WS_IDENTITY_DATA_TTL } from '../app.constants'
 import { HostCheckMiddleware } from '../middleware/HostCheck'
-import { DatabaseSchema, SocketType } from '../types/database.types'
+import { DatabaseSchema, PublishType } from '../types/database.types'
 import { RolePermission } from '../types/roles.types'
 import { Authentication } from './Authentication'
 import { Logger } from './Logger'
@@ -18,7 +18,7 @@ import { Logger } from './Logger'
 		origin: '*',
 	},
 })
-export class Websockets {
+export class Websocket {
 	@WebSocketServer()
 	server: Server
 
@@ -104,7 +104,7 @@ export class Websockets {
 		})
 	}
 
-	async publish(schema: DatabaseSchema, type: SocketType, id: number | string): Promise<void> {
+	async publish(schema: DatabaseSchema, type: PublishType, id: number | string): Promise<void> {
 		this.logger.debug(`[WS] Publishing ${schema.table} ${type} for #${id}`)
 
 		const clients = Array.from(this.server.sockets.sockets.values()).map(socket => {

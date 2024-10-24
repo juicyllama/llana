@@ -30,7 +30,7 @@ describe('App > Controller > Delete', () => {
 
 		app = moduleRef.createNestApplication()
 		await app.init()
-		
+
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
 

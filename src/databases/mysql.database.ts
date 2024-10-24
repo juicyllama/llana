@@ -94,7 +94,7 @@ export class MySQL {
 			} else {
 				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)}  ${options.x_request_id ?? ''}`)
+			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
 			connection.end()
 			return results
 		} catch (e) {
@@ -422,6 +422,13 @@ export class MySQL {
 			const command = `CREATE TABLE ${schema.table} (${columns.join(', ')})`
 
 			await this.performQuery({ sql: command })
+
+			if (schema.relations?.length) {
+				for (const relation of schema.relations) {
+					const command = `ALTER TABLE ${schema.table} ADD FOREIGN KEY (${relation.column}) REFERENCES ${relation.org_table}(${relation.org_column})`
+					await this.performQuery({ sql: command })
+				}
+			}
 
 			return true
 		} catch (e) {

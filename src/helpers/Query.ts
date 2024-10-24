@@ -138,7 +138,7 @@ export class Query {
 					return await this.listTables({ x_request_id })
 
 				default:
-					this.logger.error(`[Query] Action ${action} not supported`, x_request_id)
+					this.logger.error(`[Query] Action ${action} not supported - ${x_request_id ?? ''}`)
 					throw new Error(`Action ${action} not supported`)
 			}
 		} catch (e) {
@@ -467,8 +467,11 @@ export class Query {
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
 
+		let tables_filtered = tables.filter(table => !table.startsWith('_llana_'))
+		tables_filtered = tables_filtered.filter(table => table !== 'atlas_schema_revisions')
+
 		return {
-			tables: tables.filter(table => !table.startsWith('_llana_')),
+			tables: tables_filtered,
 			_x_request_id: options.x_request_id,
 		}
 	}
@@ -495,7 +498,7 @@ export class Query {
 			]
 
 			if (relation.where) {
-				where.push(...relation.where)
+				where.push(relation.where)
 			}
 
 			if (this.configService.get('database.deletes.soft')) {
