@@ -83,7 +83,7 @@ services:
             - "1433:1433"
         environment:
             ACCEPT_EULA: Y
-            MSSQL_SA_PASSWORD: S7$0nGpA$$w0rD
+            MSSQL_SA_PASSWORD: "S7$0nGpAw0rD"
         volumes:
             - llana-mssql-data:/var/opt/mssql
             - ../demo/databases/mssql.sql:/docker-entrypoint-initdb.d/mssql.sql
