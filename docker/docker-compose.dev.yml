@@ -74,8 +74,6 @@ services:
             - llana-network
 
     llana-mssql:
-        #Bug in https://github.com/microsoft/mssql-docker/issues/892
-        # image: mcr.microsoft.com/mssql/server:2022-CU13-ubuntu-22.04
         image: mcr.microsoft.com/mssql/server:2022-latest
         restart: always
         container_name: llana-mssql
@@ -122,30 +120,3 @@ services:
             echo "Script Execution is complete. Waiting for MS SQL Process to terminate 🎉"
 
             wait $$pid
-
-
-            cp -r /docker-entrypoint-initdb.d/mssql.sql /var/opt/mssql/data
-
-# cp /docker-entrypoint-initdb.d/init.sql /var/opt/mssql/data
-
-#             /opt/mssql-tools/bin/sqlcmd -U sa -P $$SA_PASSWORD -l 30 -e -i /docker-entrypoint-initdb.d/init.sql
-
-#             su
-
-#   #Full permissions to /docker-entrypoint-initdb.d/init.sql
-         
-#             chmod 1001 /docker-entrypoint-initdb.d
-#             chmod 1001 /var/opt/mssql/data/init.sql
-#             chmod 1001 /var/opt/mssql/data
-#             chmod 1001 /var/opt/mssql
-#             chmod 1001 /var/opt
-#             chmod 1001 /var
-
-
-#             chown -R root:root /var/opt/mssql/data
-#             chown -R root:root /var/opt/mssql
-#             chown -R root:root /var/opt
-#             chown -R root:root /var
-#             chown -R root:root /docker-entrypoint-initdb.d
-#             chown -R root:root /docker-entrypoint-initdb.d/init.sql
-            
