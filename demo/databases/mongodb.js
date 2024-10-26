@@ -40,6 +40,11 @@ db.getCollection("_llana_relation").insertMany([{
     "column": "_id",
     "org_table": "SalesOrder",
     "org_column": "shipperId"
+},{
+    "table": "User",
+    "column": "_id",
+    "org_table": "_llana_webhook",
+    "org_column": "user_identifier"
 }]);
 
 db.createCollection("_llana_webhook")
@@ -69,9 +74,9 @@ db.getCollection("_llana_webhook_log").insert({
     "delivered":  true,
     "response_status": 200,
     "response_message": "Success",
-    "created_at":  "2000-01-01 00:00:01",
+    "created_at":  new Date(),
     "next_attempt_at":  null,
-    "delivered_at": "2000-01-01 00:00:01",
+    "delivered_at": new Date(),
 });
 
 

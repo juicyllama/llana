@@ -4,6 +4,7 @@ export enum DatabaseType {
 	MYSQL = 'mysql',
 	POSTGRES = 'postgres',
 	MONGODB = 'mongodb',
+	MSSQL = 'mssql',
 }
 
 export enum DatabaseNaming {

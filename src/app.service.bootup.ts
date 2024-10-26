@@ -548,7 +548,7 @@ export class AppBootup implements OnApplicationBootstrap {
 			const records = (await this.query.perform(QueryPerform.FIND_MANY, {
 				schema,
 				fields: [schema.primary_key],
-				where: [{ column: 'created_at', operator: WhereOperator.lt, value: minusXdays }],
+				where: [{ column: 'created_at', operator: WhereOperator.lt, value: minusXdays.toISOString() }],
 				limit: 99999,
 			})) as FindManyResponseObject
 

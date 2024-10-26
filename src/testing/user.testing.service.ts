@@ -25,7 +25,7 @@ export class UserTestingService {
 			createdAt: faker.date.past().toISOString(),
 			updatedAt: faker.date.past().toISOString(),
 		}
-
+	
 		return (await this.query.perform(
 			QueryPerform.CREATE,
 			{

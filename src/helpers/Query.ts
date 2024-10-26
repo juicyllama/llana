@@ -29,6 +29,7 @@ import { Env } from '../utils/Env'
 import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
+import { MSSQL } from '../databases/mssql.database'
 
 @Injectable()
 export class Query {
@@ -38,6 +39,7 @@ export class Query {
 		private readonly logger: Logger,
 		private readonly schema: Schema,
 		private readonly mysql: MySQL,
+		private readonly mssql: MSSQL,
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
 	) {}
@@ -108,6 +110,7 @@ export class Query {
 				case QueryPerform.FIND_MANY:
 					const findManyOptions = options as DatabaseFindManyOptions
 					result = await this.findMany(findManyOptions, x_request_id)
+
 					for (let i = 0; i < result.data.length; i++) {
 						result.data[i] = await this.schema.pipeResponse(findManyOptions, result.data[i])
 					}
@@ -188,6 +191,8 @@ export class Query {
 				return await this.postgres.createTable(schema)
 			case DatabaseType.MONGODB:
 				return await this.mongo.createTable(schema)
+			case DatabaseType.MSSQL:
+				return await this.mssql.createTable(schema)
 			default:
 				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
@@ -210,6 +215,9 @@ export class Query {
 				break
 			case DatabaseType.MONGODB:
 				result = await this.mongo.createOne(options, x_request_id)
+				break
+			case DatabaseType.MSSQL:
+				result = await this.mssql.createOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -240,6 +248,9 @@ export class Query {
 				break
 			case DatabaseType.MONGODB:
 				result = await this.mongo.findOne(options, x_request_id)
+				break
+			case DatabaseType.MSSQL:
+				result = await this.mssql.findOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -275,6 +286,9 @@ export class Query {
 			case DatabaseType.MONGODB:
 				result = await this.mongo.findMany(options, x_request_id)
 				break
+			case DatabaseType.MSSQL:
+				result = await this.mssql.findMany(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -305,6 +319,9 @@ export class Query {
 			case DatabaseType.MONGODB:
 				result = await this.mongo.updateOne(options, x_request_id)
 				break
+			case DatabaseType.MSSQL:
+				result = await this.mssql.updateOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
@@ -334,6 +351,9 @@ export class Query {
 				break
 			case DatabaseType.MONGODB:
 				result = await this.mongo.deleteOne(options, x_request_id)
+				break
+			case DatabaseType.MSSQL:
+				result = await this.mssql.deleteOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -366,6 +386,9 @@ export class Query {
 			case DatabaseType.MONGODB:
 				result = await this.mongo.uniqueCheck(options, x_request_id)
 				break
+			case DatabaseType.MSSQL:
+				result = await this.mssql.uniqueCheck(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
@@ -395,6 +418,8 @@ export class Query {
 				return await this.postgres.truncate(table_name)
 			case DatabaseType.MONGODB:
 				return await this.mongo.truncate(table_name)
+			case DatabaseType.MSSQL:
+				return await this.mssql.truncate(table_name)
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -435,6 +460,8 @@ export class Query {
 				return await this.postgres.checkConnection({ x_request_id: options.x_request_id })
 			case DatabaseType.MONGODB:
 				return await this.mongo.checkConnection({ x_request_id: options.x_request_id })
+			case DatabaseType.MSSQL:
+				return await this.mssql.checkConnection({ x_request_id: options.x_request_id })
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`,
@@ -459,6 +486,9 @@ export class Query {
 				break
 			case DatabaseType.MONGODB:
 				tables = await this.mongo.listTables({ x_request_id: options.x_request_id })
+				break
+			case DatabaseType.MSSQL:
+				tables = await this.mssql.listTables({ x_request_id: options.x_request_id })
 				break
 			default:
 				this.logger.error(

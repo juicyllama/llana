@@ -28,6 +28,7 @@ import {
 	validateWhereResponse,
 } from '../types/schema.types'
 import { Logger } from './Logger'
+import { MSSQL } from '../databases/mssql.database'
 
 @Injectable()
 export class Schema {
@@ -38,6 +39,7 @@ export class Schema {
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
 		private readonly mysql: MySQL,
+		private readonly mssql: MSSQL,
 	) {}
 
 	/**
@@ -71,6 +73,9 @@ export class Schema {
 				case DatabaseType.MONGODB:
 					result = await this.mongo.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
+				case DatabaseType.MSSQL:
+					result = await this.mssql.getSchema({ table: options.table, x_request_id: options.x_request_id })
+					break
 				default:
 					this.logger.error(
 						`[GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`,
@@ -93,7 +98,7 @@ export class Schema {
 				_x_request_id: options.x_request_id,
 			}
 		} catch (e) {
-			this.logger.error(`[GetSchema] ${e.message} ${options.x_request_id ?? ''}`)
+			this.logger.debug(`[GetSchema] ${e.message} ${options.x_request_id ?? ''}`)
 			throw new Error(`Error processing schema for ${options.table}`)
 		}
 	}

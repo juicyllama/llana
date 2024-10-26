@@ -15,7 +15,9 @@ describe('App > Controller > Post', () => {
 
 	let customerSchema: DatabaseSchema
 
-	let customer: any
+	let customer1: any
+	let customer2: any
+	let customer3: any
 
 	let jwt: string
 
@@ -47,7 +49,7 @@ describe('App > Controller > Post', () => {
 			expect(result.body[customerSchema.primary_key]).toBeDefined()
 			expect(result.body.companyName).toBeDefined()
 			expect(result.body.contactName).toBeDefined()
-			customer = result.body
+			customer1 = result.body
 		})
 		it('Create Many', async function () {
 			const result = await request(app.getHttpServer())
@@ -67,12 +69,15 @@ describe('App > Controller > Post', () => {
 			expect(result.body.data[0].companyName).toBeDefined()
 			expect(result.body.data[1][customerSchema.primary_key]).toBeDefined()
 			expect(result.body.data[1].companyName).toBeDefined()
-			customer = result.body
+			customer2 = result.body.data[0]
+			customer3 = result.body.data[1]
 		})
 	})
 
 	afterAll(async () => {
-		await customerTestingService.deleteCustomer(customer.custId)
+		await customerTestingService.deleteCustomer(customer1.custId)
+		await customerTestingService.deleteCustomer(customer2.custId)
+		await customerTestingService.deleteCustomer(customer3.custId)
 		await app.close()
 	})
 })
