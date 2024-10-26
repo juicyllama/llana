@@ -127,20 +127,6 @@ export class Mongo {
 
 			const relations: DatabaseSchemaRelation[] = []
 			const columns = Object.keys(record).map(column => {
-				if (
-					typeof record[column] === 'object' &&
-					column !== '_id' &&
-					record[column] instanceof Date === false &&
-					record[column] !== null
-				) {
-					relations.push({
-						table: column,
-						column: '_id',
-						org_table: options.table,
-						org_column: column,
-					})
-				}
-
 				return <DatabaseSchemaColumn>{
 					field: column,
 					type: this.fieldMapper(record[column]),
@@ -148,35 +134,52 @@ export class Mongo {
 					required: false,
 					primary_key: !!(column === '_id'),
 					unique_key: false,
-					foreign_key: false,
+					foreign_key: (
+						typeof record[column] === 'object' &&
+						column !== '_id' &&
+						record[column] instanceof Date === false &&
+						record[column] !== null
+					),
 					default: null,
 					extra: null,
 				}
 			})
 
-			// If relation table does not exist, remove relation
-			let r = 0
-			while (r < relations.length) {
-				try {
-					await this.getSchema({ table: relations[r].table, x_request_id: options.x_request_id })
-					r++
-				} catch (e) {
-					this.logger.warn(
-						`[${DATABASE_TYPE}] Relation table does not exist ${relations[r].table} - ${e.message}`,
-					)
-					relations.splice(r, 1)
+			this.logger.debug(
+				`[${DATABASE_TYPE}] Auto build relations for collection ${options.table}`,
+			)
+
+			for(const column of columns) {
+				if (column.foreign_key) {
+
+					const field_mongo = await this.createConnection(column.field)
+					const record = await field_mongo.collection.findOne({})
+
+					if (record) {
+						relations.push({
+							table: column.field,
+							column: '_id',
+							org_table: options.table,
+							org_column: column.field,
+						})
+
+						this.logger.debug(
+							`[${DATABASE_TYPE}] Auto found relation for collection ${options.table} to ${column.field}`,
+						)
+			
+					}
+
+					field_mongo.connection.close()
 				}
 			}
 
-			//TODO:
-			// Build two way relations from _llana_relations table
+			this.logger.debug(
+				`[${DATABASE_TYPE}] Looking for relations for collection ${options.table} in ${LLANA_RELATION_TABLE}`,
+			)
+
 			const relations_forward = await mongo.db
 				.collection(LLANA_RELATION_TABLE)
 				.find({ org_table: options.table })
-				.toArray()
-			const relations_backward = await mongo.db
-				.collection(LLANA_RELATION_TABLE)
-				.find({ table: options.table })
 				.toArray()
 
 			for (const relation of relations_forward) {
@@ -188,14 +191,9 @@ export class Mongo {
 				})
 			}
 
-			for (const relation of relations_backward) {
-				relations.push({
-					table: relation.org_table,
-					column: relation.org_column,
-					org_table: relation.table,
-					org_column: relation.column,
-				})
-			}
+			this.logger.debug(
+				`[${DATABASE_TYPE}] Relations built for collection ${options.table}, relations: ${JSON.stringify(relations.map(r => r.table))}`,
+			)
 
 			mongo.connection.close()
 
@@ -209,7 +207,7 @@ export class Mongo {
 			return schema
 		} catch (e) {
 			mongo.connection.close()
-			this.logger.error(`[${DATABASE_TYPE}] Error getting schema - ${e.message}`)
+			this.logger.warn(`[${DATABASE_TYPE}] Error getting schema - ${e.message}`)
 			throw new Error(e)
 		}
 	}
@@ -505,21 +503,21 @@ export class Mongo {
 		const mongo = await this.createConnection(schema.table)
 
 		try {
-			this.logger.debug(`[${DATABASE_TYPE}] Create collection ${schema.table}`, x_request_id)
+			this.logger.debug(`[${DATABASE_TYPE}] Create collection ${schema.table} ${x_request_id ?? ''}`)
 
 			//check if collection exists
 			const collections = await mongo.db.listCollections().toArray()
 			const exists = collections.find(c => c.name === schema.table)
 
 			if (!exists) {
-				const result = await mongo.db.createCollection(schema.table)
-				this.logger.debug(`[${DATABASE_TYPE}] Result: ${JSON.stringify(result)}`, x_request_id)
+				await mongo.db.createCollection(schema.table)
+				this.logger.debug(`[${DATABASE_TYPE}] Collection ${schema.table} created ${x_request_id ?? ''}`)
 			}
 
 			mongo.connection.close()
 			return true
 		} catch (e) {
-			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`, x_request_id)
+			this.logger.warn(`[${DATABASE_TYPE}] Error executing query ${x_request_id ?? ''}`)
 			this.logger.warn({
 				error: {
 					message: e.message,

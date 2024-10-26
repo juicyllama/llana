@@ -33,6 +33,7 @@ import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
+import { MSSQL } from './databases/mssql.database'
 
 @Module({
 	imports: [
@@ -56,6 +57,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Logger,
 		Mongo,
 		MySQL,
+		MSSQL,
 		Pagination,
 		Postgres,
 		Query,
@@ -76,6 +78,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Logger,
 		Mongo,
 		MySQL,
+		MSSQL,
 		Pagination,
 		Postgres,
 		Query,

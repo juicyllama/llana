@@ -68,24 +68,6 @@ export class Postgres {
 		}
 	}
 
-	/**
-	 * List all tables in the database
-	 */
-
-	async listTables(options: { x_request_id?: string }): Promise<string[]> {
-		try {
-			const results = await this.performQuery({
-				sql: "SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';",
-				x_request_id: options.x_request_id,
-			})
-			const tables = results.map((table: any) => table.tablename)
-			this.logger.debug(`[${DATABASE_TYPE}] Tables: ${tables}`, options.x_request_id)
-			return tables
-		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}] Error listing tables`, options.x_request_id)
-			throw new Error(e)
-		}
-	}
 
 	async performQuery(options: { sql: string; values?: any[]; x_request_id?: string }): Promise<any> {
 		const connection = await this.createConnection()
@@ -127,6 +109,26 @@ export class Postgres {
 			throw new Error(e)
 		}
 	}
+
+	/**
+	 * List all tables in the database
+	 */
+
+	async listTables(options: { x_request_id?: string }): Promise<string[]> {
+		try {
+			const results = await this.performQuery({
+				sql: "SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';",
+				x_request_id: options.x_request_id,
+			})
+			const tables = results.map((table: any) => table.tablename)
+			this.logger.debug(`[${DATABASE_TYPE}] Tables: ${tables}`, options.x_request_id)
+			return tables
+		} catch (e) {
+			this.logger.error(`[${DATABASE_TYPE}] Error listing tables`, options.x_request_id)
+			throw new Error(e)
+		}
+	}
+
 
 	/**
 	 * Get Table Schema
@@ -269,31 +271,37 @@ export class Postgres {
 	async findMany(options: DatabaseFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
 		const total = await this.findTotalRecords(options, x_request_id)
 
-		let [command, values] = this.find(options)
+		let results: any[] = []
 
-		let sort: SortCondition[] = []
-		if (options.sort) {
-			sort = options.sort?.filter(sort => !sort.column.includes('.'))
-		}
+		if(total > 0){
 
-		if (sort?.length) {
-			command += ` ORDER BY ${sort.map(sort => `${sort.column} ${sort.operator}`).join(', ')}`
-		}
+			let [command, values] = this.find(options)
 
-		if (!options.limit) {
-			options.limit = this.configService.get<number>('database.defaults.limit') ?? 20
-		}
+			let sort: SortCondition[] = []
+			if (options.sort) {
+				sort = options.sort?.filter(sort => !sort.column.includes('.'))
+			}
 
-		if (!options.offset) {
-			options.offset = 0
-		}
+			if (sort?.length) {
+				command += ` ORDER BY ${sort.map(sort => `${sort.column} ${sort.operator}`).join(', ')}`
+			}
 
-		command += ` LIMIT ${options.limit} OFFSET ${options.offset}`
+			if (!options.limit) {
+				options.limit = this.configService.get<number>('database.defaults.limit') ?? 20
+			}
 
-		const results = await this.performQuery({ sql: command, values, x_request_id })
+			if (!options.offset) {
+				options.offset = 0
+			}
 
-		for (const r in results) {
-			results[r] = this.formatOutput(options, results[r])
+			command += ` LIMIT ${options.limit} OFFSET ${options.offset}`
+
+			results = await this.performQuery({ sql: command, values, x_request_id })
+
+			for (const r in results) {
+				results[r] = this.formatOutput(options, results[r])
+			}
+
 		}
 
 		return {

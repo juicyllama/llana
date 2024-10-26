@@ -36,7 +36,8 @@
 		"test": "sh ./scripts/test.sh",
 		"test:mysql": "export DATABASE_URI=mysql://user:pass@localhost:3306/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"test:postgresql": "export DATABASE_URI=postgresql://user:pass@localhost:5432/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
-		"test:mongodb": "export DATABASE_URI=mongodb://user:pass@localhost:27017/llana && jest --bail --runInBand --detectOpenHandles --forceExit"
+		"test:mongodb": "export DATABASE_URI=mongodb://user:pass@localhost:27017/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
+		"test:mssql": "export DATABASE_URI=mssql://sa:S7!0nGpAw0rD@localhost:1433/llana && jest --bail --runInBand --detectOpenHandles --forceExit"
 	},
 	"dependencies": {
 		"@nestjs/cache-manager": "latest",
@@ -48,6 +49,7 @@
 		"@nestjs/platform-socket.io": "latest",
 		"@nestjs/schedule": "^4.1.1",
 		"@nestjs/websockets": "latest",
+		"@types/mssql": "^9.1.5",
 		"@types/pg": "^8.11.10",
 		"argon2": "^0.41.1",
 		"axios": "^1.7.7",
@@ -61,6 +63,7 @@
 		"jwt-simple": "^0.5.6",
 		"lodash": "^4.17.21",
 		"mongodb": "^6.9.0",
+		"mssql": "^11.0.1",
 		"mysql2": "^3.11.3",
 		"openapi-types": "^12.1.3",
 		"pg": "^8.12.0",
@@ -116,7 +119,8 @@
 			"**/*.(t|j)s"
 		],
 		"coverageDirectory": "../coverage",
-		"testEnvironment": "node"
+		"testEnvironment": "node",
+		"testTimeout": 20000
 	},
 	"prettier": {
 		"singleQuote": true,

@@ -134,7 +134,7 @@ export class Webhook {
 				{
 					column: 'next_attempt_at',
 					operator: WhereOperator.lt,
-					value: new Date(),
+					value: new Date().toISOString(),
 				},
 			],
 			limit: 999,

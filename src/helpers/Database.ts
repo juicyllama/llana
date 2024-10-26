@@ -53,7 +53,14 @@ export function getDatabaseType(uri: string): DatabaseType {
 		return DatabaseType.POSTGRES
 	} else if (uri.includes('mongodb')) {
 		return DatabaseType.MONGODB
+	} else if (uri.includes('mssql')) {
+		return DatabaseType.MSSQL
 	} else {
 		throw new Error('Database type not supported')
 	}
+}
+
+export function getDatabaseName(connectionString: string): string {
+	const deconstructed = deconstructConnectionString(connectionString)
+	return deconstructed.database
 }

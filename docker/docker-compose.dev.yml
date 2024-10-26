@@ -22,7 +22,7 @@ volumes:
 services:
 
     llana-mysql:
-        image: mysql:8.0
+        image: mysql
         restart: always
         container_name: llana-mysql
         ports:
@@ -33,10 +33,10 @@ services:
             MYSQL_PASSWORD: pass
             MYSQL_DATABASE: llana
             MYSQL_ROOT_HOST: '%'
-        command: --init-file /mysql/init.sql
+        command: ["--init-file", "/docker-entrypoint-initdb.d/init.sql"]
         volumes:
             - llana-mysql-data:/var/lib/mysql
-            - ./demo/databases/mysql.sql:/mysql/init.sql
+            - ../demo/databases/mysql.sql:/docker-entrypoint-initdb.d/init.sql
         networks:
             - llana-network
 
@@ -53,7 +53,7 @@ services:
             ALLOW_IP_RANGE: '0.0.0.0/0'
         volumes:
             - llana-postgres-data:/var/lib/postgresql/data/
-            - ./demo/databases/postgres.sql:/docker-entrypoint-initdb.d/init.sql
+            - ../demo/databases/postgres.sql:/docker-entrypoint-initdb.d/init.sql
         networks:
             - llana-network
     
@@ -69,7 +69,7 @@ services:
             MONGO_INITDB_DATABASE: llana
         volumes:
             - llana-mongodb-data:/data/db
-            - ./demo/databases/mongodb.js:/docker-entrypoint-initdb.d/seed.js
+            - ../demo/databases/mongodb.js:/docker-entrypoint-initdb.d/seed.js
         networks:
             - llana-network
 
@@ -81,7 +81,7 @@ services:
             - "1433:1433"
         environment:
             ACCEPT_EULA: Y
-            MSSQL_SA_PASSWORD: "S7$0nGpAw0rD"
+            MSSQL_SA_PASSWORD: "S7!0nGpAw0rD"
         volumes:
             - llana-mssql-data:/var/opt/mssql
             - ../demo/databases/mssql.sql:/docker-entrypoint-initdb.d/mssql.sql
