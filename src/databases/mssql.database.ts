@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as sql from 'mssql'
+
 import {
 	DeleteResponseObject,
 	FindManyResponseObject,
 	FindOneResponseObject,
 	IsUniqueResponse,
 } from '../dtos/response.dto'
+import { deconstructConnectionString, getDatabaseName } from '../helpers/Database'
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
 import {
@@ -27,7 +29,6 @@ import {
 import { MSSQLColumnType } from '../types/databases/mssql.types'
 import { SortCondition } from '../types/schema.types'
 import { replaceQ } from '../utils/String'
-import { deconstructConnectionString, getDatabaseName } from '../helpers/Database'
 
 const DATABASE_TYPE = DatabaseType.MSSQL
 const RESERVED_WORDS = ['USER', 'TABLE']
@@ -41,7 +42,7 @@ export class MSSQL {
 	) {}
 
 	reserveWordFix(word: string): string {
-		if(RESERVED_WORDS.includes(word.toUpperCase())){
+		if (RESERVED_WORDS.includes(word.toUpperCase())) {
 			return `[${word}]`
 		}
 		return word
@@ -56,15 +57,13 @@ export class MSSQL {
 			const deconstruct = deconstructConnectionString(this.configService.get('database.host'))
 			let connectionString = `Server=${deconstruct.host},${deconstruct.port};Database=${deconstruct.database};User Id=${deconstruct.username};Password=${deconstruct.password};`
 
-			if(this.configService.get('AZURE')){
+			if (this.configService.get('AZURE')) {
 				connectionString += 'Encrypt=true'
 			}
 
-	
 			connectionString += ' TrustServerCertificate=true'
 
 			return await sql.connect(connectionString)
-
 		} catch (e) {
 			this.logger.error(`[${DATABASE_TYPE}] Error creating database connection - ${e.message}`)
 			throw new Error('Error creating database connection')
@@ -93,7 +92,7 @@ export class MSSQL {
 
 			if (options.values || options.values?.length) {
 				options.sql = replaceQ(options.sql, options.values)
-			} 
+			}
 
 			const result = await connection.query(options.sql)
 			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${options.x_request_id ?? ''}`)
@@ -113,7 +112,6 @@ export class MSSQL {
 		}
 	}
 
-
 	/**
 	 * List all tables in the database
 	 */
@@ -132,7 +130,6 @@ export class MSSQL {
 		}
 	}
 
-
 	/**
 	 * Get Table Schema
 	 * @param repository
@@ -140,15 +137,16 @@ export class MSSQL {
 	 */
 
 	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
-
 		//get schema for MSSQL database
 
 		const query = `SELECT COLUMN_NAME as 'field', DATA_TYPE as 'type', IS_NULLABLE as 'nullable', COLUMN_DEFAULT as 'default' FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${options.table}';`
 
-		let columns_result = <any>(await this.performQuery({
-			sql: query,
-			x_request_id: options.x_request_id,
-		})).recordset
+		let columns_result = <any>(
+			await this.performQuery({
+				sql: query,
+				x_request_id: options.x_request_id,
+			})
+		).recordset
 
 		if (!columns_result?.length) {
 			throw new Error(`Table ${options.table} does not exist ${options.x_request_id ?? ''}`)
@@ -156,10 +154,12 @@ export class MSSQL {
 
 		const constraints_query = `SELECT CONSTRAINT_TYPE as type, COLUMN_NAME as field from INFORMATION_SCHEMA.TABLE_CONSTRAINTS Tab, INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE Col WHERE Col.Constraint_Name = Tab.Constraint_Name AND Col.Table_Name = Tab.Table_Name AND Col.Table_Name = '${options.table}';`
 
-		const constraints_result = (await this.performQuery({
-			sql: constraints_query,
-			x_request_id: options.x_request_id,
-		})).recordset
+		const constraints_result = (
+			await this.performQuery({
+				sql: constraints_query,
+				x_request_id: options.x_request_id,
+			})
+		).recordset
 
 		const columns = columns_result.map((column: any) => {
 			return <DatabaseSchemaColumn>{
@@ -167,8 +167,14 @@ export class MSSQL {
 				type: this.fieldMapper(column.type),
 				required: column.nullable === 'NO',
 				nullable: column.nullable === 'YES',
-				primary_key: constraints_result.find((c: any) => c.type === 'PRIMARY KEY' && c.field === column.field) ? true : false,
-				foreign_key: column.key === constraints_result.find((c: any) => c.type === 'FOREIGN KEY' && c.field === column.field) ? true : false,
+				primary_key: constraints_result.find((c: any) => c.type === 'PRIMARY KEY' && c.field === column.field)
+					? true
+					: false,
+				foreign_key:
+					column.key ===
+					constraints_result.find((c: any) => c.type === 'FOREIGN KEY' && c.field === column.field)
+						? true
+						: false,
 				default: column.default,
 			}
 		})
@@ -194,30 +200,31 @@ export class MSSQL {
 				and pk_col.object_id = fk_cols.referenced_object_id
 		where tab.name = '${options.table}' AND fk_cols.constraint_column_id = 1;`
 
-		const relation_result = (await this.performQuery({
-			sql: relation_query,
-			x_request_id: options.x_request_id,
-		})).recordset
+		const relation_result = (
+			await this.performQuery({
+				sql: relation_query,
+				x_request_id: options.x_request_id,
+			})
+		).recordset
 
-		for(const r of relation_result){
-		
-				const relation: DatabaseSchemaRelation = {
-					table: r.table,
-					column: r.column,
-					org_table: r.org_table,
-					org_column: r.org_column,
-				}
+		for (const r of relation_result) {
+			const relation: DatabaseSchemaRelation = {
+				table: r.table,
+				column: r.column,
+				org_table: r.org_table,
+				org_column: r.org_column,
+			}
 
-				relations.push(relation)
+			relations.push(relation)
 
-				const relation_back: DatabaseSchemaRelation = {
-					table: r.org_table,
-					column: r.org_column,
-					org_table: r.table,
-					org_column: r.column,
-				}
+			const relation_back: DatabaseSchemaRelation = {
+				table: r.org_table,
+				column: r.org_column,
+				org_table: r.table,
+				org_column: r.column,
+			}
 
-				relations.push(relation_back)
+			relations.push(relation_back)
 		}
 
 		return {
@@ -243,21 +250,23 @@ export class MSSQL {
 
 		values.push(...dataValues)
 
-		if(values.length){
-			for(const v in values){
-				if(typeof values[v] === 'string'){
+		if (values.length) {
+			for (const v in values) {
+				if (typeof values[v] === 'string') {
 					values[v] = values[v].replace(/'/g, "''")
 				}
 			}
 		}
 
-		for(const c in columns){
+		for (const c in columns) {
 			columns[c] = this.reserveWordFix(columns[c])
 		}
 
 		const command = `INSERT INTO ${this.reserveWordFix(table_name)} (${columns.join(', ')}) VALUES ( '?'${values.map(() => ``).join(`, '?'`)} ); SELECT SCOPE_IDENTITY() AS insertId;`
 
-		const result = <{ insertId: number }><any>(await this.performQuery({ sql: command, values, x_request_id })).recordset[0]
+		const result = <{ insertId: number }>(
+			(<any>(await this.performQuery({ sql: command, values, x_request_id })).recordset[0])
+		)
 
 		return await this.findOne(
 			{
@@ -294,19 +303,21 @@ export class MSSQL {
 	 */
 
 	async findMany(options: DatabaseFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
-		
-		if(!options.sort?.length){
-
-			if(options.schema.primary_key){
-				options.sort = [{
-					column: options.schema.primary_key,
-					operator: 'ASC'
-				}]
-			}else{
-				options.sort = [{
-					column: options.schema.columns[0].field,
-					operator: 'ASC'
-				}]
+		if (!options.sort?.length) {
+			if (options.schema.primary_key) {
+				options.sort = [
+					{
+						column: options.schema.primary_key,
+						operator: 'ASC',
+					},
+				]
+			} else {
+				options.sort = [
+					{
+						column: options.schema.columns[0].field,
+						operator: 'ASC',
+					},
+				]
 			}
 		}
 
@@ -322,7 +333,7 @@ export class MSSQL {
 
 		let results: any[] = []
 
-		if(total > 0){
+		if (total > 0) {
 			let [command, values] = this.find(options)
 			results = (await this.performQuery({ sql: command, values, x_request_id })).recordset
 			for (const r in results) {
@@ -365,7 +376,7 @@ export class MSSQL {
 	async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
 
-		if(options.data[options.schema.primary_key]){
+		if (options.data[options.schema.primary_key]) {
 			delete options.data[options.schema.primary_key]
 		}
 
@@ -380,9 +391,9 @@ export class MSSQL {
 
 		command += `WHERE ${options.schema.primary_key} = ?`
 
-		if(values.length){
-			for(const v in values){
-				if(typeof values[v] === 'string'){
+		if (values.length) {
+			for (const v in values) {
+				if (typeof values[v] === 'string') {
 					values[v] = values[v].replace(/'/g, "''")
 				}
 			}
@@ -438,7 +449,7 @@ export class MSSQL {
 
 		const result = await this.performQuery({ sql: command, values, x_request_id })
 
-		return { 
+		return {
 			deleted: result.rowsAffected.length,
 		}
 	}
@@ -489,12 +500,11 @@ export class MSSQL {
 				}
 
 				if (column.default) {
-					if(column.type === DatabaseColumnType.BOOLEAN){
+					if (column.type === DatabaseColumnType.BOOLEAN) {
 						column_string += ` DEFAULT ${column.default === true ? 1 : 0}`
-					}else{
+					} else {
 						column_string += ` DEFAULT ${column.default}`
 					}
-					
 				}
 
 				return column_string
@@ -502,7 +512,7 @@ export class MSSQL {
 
 			let command = `CREATE TABLE ${this.reserveWordFix(schema.table)} (${columns.join(', ')}`
 
-			if(schema.primary_key){
+			if (schema.primary_key) {
 				command += `, PRIMARY KEY (${this.reserveWordFix(schema.primary_key)})`
 			}
 
@@ -610,9 +620,8 @@ export class MSSQL {
 		}
 
 		if (!count) {
-
 			let sort: SortCondition[] = []
-			
+
 			if ((options as DatabaseFindManyOptions).sort) {
 				sort = (options as DatabaseFindManyOptions).sort?.filter(sort => !sort.column.includes('.'))
 			}
@@ -621,16 +630,14 @@ export class MSSQL {
 				command += ` ORDER BY ${sort.map(sort => `${sort.column} ${sort.operator}`).join(', ')} `
 			}
 
-			
-			if((options as DatabaseFindManyOptions).offset || (options as DatabaseFindManyOptions).limit){
+			if ((options as DatabaseFindManyOptions).offset || (options as DatabaseFindManyOptions).limit) {
 				command += ` OFFSET ${(options as DatabaseFindManyOptions).offset} ROWS `
 			}
 
-			if((options as DatabaseFindManyOptions).limit) {
-
+			if ((options as DatabaseFindManyOptions).limit) {
 				let row = 'ROW ONLY'
 
-				if((options as DatabaseFindManyOptions).limit > 1){
+				if ((options as DatabaseFindManyOptions).limit > 1) {
 					row = 'ROWS ONLY'
 				}
 
@@ -638,19 +645,23 @@ export class MSSQL {
 			}
 		}
 
-
 		command += `;`
 
 		return [command.trim(), values]
 	}
 
 	private fieldMapper(type: MSSQLColumnType): DatabaseColumnType {
-		
 		if (type.includes('decimal') || type.includes('numeric') || type.includes('float')) {
 			return DatabaseColumnType.NUMBER
 		}
 
-		if (type.includes('char') || type.includes('varchar') || type.includes('nvarchar') || type.includes('binary') || type.includes('varbinary')) {
+		if (
+			type.includes('char') ||
+			type.includes('varchar') ||
+			type.includes('nvarchar') ||
+			type.includes('binary') ||
+			type.includes('varbinary')
+		) {
 			return DatabaseColumnType.STRING
 		}
 

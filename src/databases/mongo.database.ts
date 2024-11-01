@@ -134,24 +134,20 @@ export class Mongo {
 					required: false,
 					primary_key: !!(column === '_id'),
 					unique_key: false,
-					foreign_key: (
+					foreign_key:
 						typeof record[column] === 'object' &&
 						column !== '_id' &&
 						record[column] instanceof Date === false &&
-						record[column] !== null
-					),
+						record[column] !== null,
 					default: null,
 					extra: null,
 				}
 			})
 
-			this.logger.debug(
-				`[${DATABASE_TYPE}] Auto build relations for collection ${options.table}`,
-			)
+			this.logger.debug(`[${DATABASE_TYPE}] Auto build relations for collection ${options.table}`)
 
-			for(const column of columns) {
+			for (const column of columns) {
 				if (column.foreign_key) {
-
 					const field_mongo = await this.createConnection(column.field)
 					const record = await field_mongo.collection.findOne({})
 
@@ -166,7 +162,6 @@ export class Mongo {
 						this.logger.debug(
 							`[${DATABASE_TYPE}] Auto found relation for collection ${options.table} to ${column.field}`,
 						)
-			
 					}
 
 					field_mongo.connection.close()

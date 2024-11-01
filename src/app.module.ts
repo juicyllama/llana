@@ -19,6 +19,7 @@ import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
 import { Mongo } from './databases/mongo.database'
+import { MSSQL } from './databases/mssql.database'
 import { MySQL } from './databases/mysql.database'
 import { Postgres } from './databases/postgres.database'
 import { Authentication } from './helpers/Authentication'
@@ -33,7 +34,6 @@ import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
-import { MSSQL } from './databases/mssql.database'
 
 @Module({
 	imports: [

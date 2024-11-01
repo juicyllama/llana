@@ -68,7 +68,6 @@ export class Postgres {
 		}
 	}
 
-
 	async performQuery(options: { sql: string; values?: any[]; x_request_id?: string }): Promise<any> {
 		const connection = await this.createConnection()
 
@@ -128,7 +127,6 @@ export class Postgres {
 			throw new Error(e)
 		}
 	}
-
 
 	/**
 	 * Get Table Schema
@@ -273,8 +271,7 @@ export class Postgres {
 
 		let results: any[] = []
 
-		if(total > 0){
-
+		if (total > 0) {
 			let [command, values] = this.find(options)
 
 			let sort: SortCondition[] = []
@@ -301,7 +298,6 @@ export class Postgres {
 			for (const r in results) {
 				results[r] = this.formatOutput(options, results[r])
 			}
-
 		}
 
 		return {

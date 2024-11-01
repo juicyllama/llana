@@ -32,6 +32,10 @@ export class Webhook {
 		id: string | number,
 		user_identifier?: string | number,
 	): Promise<void> {
+		if (this.configService.get<boolean>('DISABLE_WEBHOOKS')) {
+			return
+		}
+
 		this.logger.debug(`[Webhook] Publishing ${schema.table} ${type} for #${id}`)
 
 		const webhookSchema = await this.schema.getSchema({ table: LLANA_WEBHOOK_TABLE })
@@ -122,6 +126,10 @@ export class Webhook {
 	}
 
 	async getPendingWebhooks(): Promise<WebhookLog[]> {
+		if (this.configService.get<boolean>('DISABLE_WEBHOOKS')) {
+			return
+		}
+
 		const webhookLogSchema = await this.schema.getSchema({ table: LLANA_WEBHOOK_LOG_TABLE })
 		const webhooks = (await this.query.perform(QueryPerform.FIND_MANY, {
 			schema: webhookLogSchema,
@@ -144,6 +152,10 @@ export class Webhook {
 	}
 
 	async sendWebhook(webhook: WebhookLog): Promise<void> {
+		if (this.configService.get<boolean>('DISABLE_WEBHOOKS')) {
+			return
+		}
+
 		const webhookLogSchema = await this.schema.getSchema({ table: LLANA_WEBHOOK_LOG_TABLE })
 
 		try {

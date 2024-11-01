@@ -229,8 +229,7 @@ export class MySQL {
 
 		let results: any[] = []
 
-		if(total > 0){
-
+		if (total > 0) {
 			let [command, values] = this.find(options)
 
 			let sort: SortCondition[] = []
@@ -257,7 +256,6 @@ export class MySQL {
 			for (const r in results) {
 				results[r] = this.formatOutput(options, results[r])
 			}
-
 		}
 
 		return {
