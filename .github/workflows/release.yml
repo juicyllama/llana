@@ -60,6 +60,8 @@ jobs:
                     commit-message: 'CI: Bump Version to {{version}} [skip ci]'
                     tag-prefix: 'v'
 
+            -   run: git pull --force #Ensure we have the latest package version before pushing to NPM / Docker
+
             -   name: 'Authenticate with NPM'
                 if: ${{ !contains(github.event.head_commit.message, '#skip-npm-publish') }}
                 run: echo -e "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
@@ -67,8 +69,6 @@ jobs:
             -   name: 'Publishing package'
                 if: ${{ !contains(github.event.head_commit.message, '#skip-npm-publish') }}
                 run: npm publish --no-git-checks --access public
-
-            -   run: git pull --force #Ensure we have the latest package version before pushing to Docker
 
             -   name: Docker meta
                 id: meta
