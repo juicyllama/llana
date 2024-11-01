@@ -38,8 +38,12 @@ export class HostCheckMiddleware implements NestMiddleware {
 			this.logger.debug(`${domain ? domain + ' ' : ''}Client connecting from ${ip}`)
 		}
 
-		const allowed_hosts = this.configService.get<string>('HOSTS')?.split(',') ?? []
+		let allowed_hosts = this.configService.get<string>('HOSTS')?.split(',') ?? []
 
+		//remove blank entries e.g. [""] -> []
+		allowed_hosts = allowed_hosts.filter((host) => host)
+	
+		
 		if (allowed_hosts.length === 0) {
 			return true
 		}
