@@ -8,6 +8,7 @@ import { isDate, isObject } from 'lodash'
 
 import { CACHE_DEFAULT_TABLE_SCHEMA_TTL, NON_FIELD_PARAMS } from '../app.constants'
 import { Mongo } from '../databases/mongo.database'
+import { MSSQL } from '../databases/mssql.database'
 import { MySQL } from '../databases/mysql.database'
 import { Postgres } from '../databases/postgres.database'
 import {
@@ -28,7 +29,6 @@ import {
 	validateWhereResponse,
 } from '../types/schema.types'
 import { Logger } from './Logger'
-import { MSSQL } from '../databases/mssql.database'
 
 @Injectable()
 export class Schema {

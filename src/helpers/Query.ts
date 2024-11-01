@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { Mongo } from '../databases/mongo.database'
+import { MSSQL } from '../databases/mssql.database'
 import { MySQL } from '../databases/mysql.database'
 import { Postgres } from '../databases/postgres.database'
 import {
@@ -29,7 +30,6 @@ import { Env } from '../utils/Env'
 import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
-import { MSSQL } from '../databases/mssql.database'
 
 @Injectable()
 export class Query {

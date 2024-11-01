@@ -420,62 +420,107 @@ export class AppBootup implements OnApplicationBootstrap {
 
 		// Check if _llana_webhook table exists
 
-		try {
-			await this.schema.getSchema({ table: LLANA_WEBHOOK_TABLE, x_request_id: APP_BOOT_CONTEXT })
-		} catch (e) {
-			this.logger.log(
-				`Creating ${LLANA_WEBHOOK_TABLE} schema as it does not exist - ${e.message}`,
-				APP_BOOT_CONTEXT,
-			)
+		if (!this.configService.get<boolean>('DISABLE_WEBHOOKS')) {
+			try {
+				await this.schema.getSchema({ table: LLANA_WEBHOOK_TABLE, x_request_id: APP_BOOT_CONTEXT })
+			} catch (e) {
+				this.logger.log(
+					`Creating ${LLANA_WEBHOOK_TABLE} schema as it does not exist - ${e.message}`,
+					APP_BOOT_CONTEXT,
+				)
 
-			/**
-			 * Create the _llana_webhook schema
-			 */
+				/**
+				 * Create the _llana_webhook schema
+				 */
 
-			const schema: DatabaseSchema = {
-				table: LLANA_WEBHOOK_TABLE,
-				primary_key: 'id',
-				columns: [
-					{
-						field: 'id',
-						type: DatabaseColumnType.NUMBER,
-						nullable: false,
-						required: true,
-						primary_key: true,
-						unique_key: true,
-						foreign_key: false,
-						auto_increment: true,
-					},
-					{
-						field: 'type',
-						type: DatabaseColumnType.ENUM,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						enums: [Method.GET, Method.POST, Method.PUT, Method.PATCH, Method.DELETE],
-					},
-					{
-						field: 'url',
-						type: DatabaseColumnType.STRING,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-					},
-					{
-						field: 'table',
-						type: DatabaseColumnType.STRING,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-					},
-					{
-						field: 'user_identifier',
+				const schema: DatabaseSchema = {
+					table: LLANA_WEBHOOK_TABLE,
+					primary_key: 'id',
+					columns: [
+						{
+							field: 'id',
+							type: DatabaseColumnType.NUMBER,
+							nullable: false,
+							required: true,
+							primary_key: true,
+							unique_key: true,
+							foreign_key: false,
+							auto_increment: true,
+						},
+						{
+							field: 'type',
+							type: DatabaseColumnType.ENUM,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							enums: [Method.GET, Method.POST, Method.PUT, Method.PATCH, Method.DELETE],
+						},
+						{
+							field: 'url',
+							type: DatabaseColumnType.STRING,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+						},
+						{
+							field: 'table',
+							type: DatabaseColumnType.STRING,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+						},
+						{
+							field: 'user_identifier',
+							type: DatabaseColumnType.STRING,
+							nullable: true,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: null,
+						},
+						{
+							field: 'on_create',
+							type: DatabaseColumnType.BOOLEAN,
+							nullable: false,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: true,
+						},
+						{
+							field: 'on_update',
+							type: DatabaseColumnType.BOOLEAN,
+							nullable: false,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: true,
+						},
+						{
+							field: 'on_delete',
+							type: DatabaseColumnType.BOOLEAN,
+							nullable: false,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: true,
+						},
+					],
+				}
+
+				if (this.configService.get<string>('SOFT_DELETE_COLUMN')) {
+					schema.columns.push({
+						field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
 						type: DatabaseColumnType.STRING,
 						nullable: true,
 						required: false,
@@ -483,241 +528,200 @@ export class AppBootup implements OnApplicationBootstrap {
 						unique_key: false,
 						foreign_key: false,
 						default: null,
-					},
-					{
-						field: 'on_create',
-						type: DatabaseColumnType.BOOLEAN,
-						nullable: false,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: true,
-					},
-					{
-						field: 'on_update',
-						type: DatabaseColumnType.BOOLEAN,
-						nullable: false,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: true,
-					},
-					{
-						field: 'on_delete',
-						type: DatabaseColumnType.BOOLEAN,
-						nullable: false,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: true,
-					},
-				],
+					})
+				}
+
+				await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 			}
 
-			if (this.configService.get<string>('SOFT_DELETE_COLUMN')) {
-				schema.columns.push({
-					field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
-					type: DatabaseColumnType.STRING,
-					nullable: true,
-					required: false,
-					primary_key: false,
-					unique_key: false,
-					foreign_key: false,
-					default: null,
+			// Check if _llana_webhook_log table exists
+
+			try {
+				const schema = await this.schema.getSchema({
+					table: LLANA_WEBHOOK_LOG_TABLE,
+					x_request_id: APP_BOOT_CONTEXT,
 				})
-			}
 
-			await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
-		}
+				const log_days = this.configService.get<number>('WEBHOOK_LOG_DAYS') ?? WEBHOOK_LOG_DAYS
 
-		// Check if _llana_webhook_log table exists
+				const minusXdays = new Date()
+				minusXdays.setDate(minusXdays.getDate() - log_days)
+				const records = (await this.query.perform(QueryPerform.FIND_MANY, {
+					schema,
+					fields: [schema.primary_key],
+					where: [{ column: 'created_at', operator: WhereOperator.lt, value: minusXdays.toISOString() }],
+					limit: 99999,
+				})) as FindManyResponseObject
 
-		try {
-			const schema = await this.schema.getSchema({
-				table: LLANA_WEBHOOK_LOG_TABLE,
-				x_request_id: APP_BOOT_CONTEXT,
-			})
-
-			const log_days = this.configService.get<number>('WEBHOOK_LOG_DAYS') ?? WEBHOOK_LOG_DAYS
-
-			const minusXdays = new Date()
-			minusXdays.setDate(minusXdays.getDate() - log_days)
-			const records = (await this.query.perform(QueryPerform.FIND_MANY, {
-				schema,
-				fields: [schema.primary_key],
-				where: [{ column: 'created_at', operator: WhereOperator.lt, value: minusXdays.toISOString() }],
-				limit: 99999,
-			})) as FindManyResponseObject
-
-			if (records.total > 0) {
-				for (const record of records.data) {
-					await this.query.perform(
-						QueryPerform.DELETE,
-						{ schema, id: record[schema.primary_key] },
+				if (records.total > 0) {
+					for (const record of records.data) {
+						await this.query.perform(
+							QueryPerform.DELETE,
+							{ schema, id: record[schema.primary_key] },
+							APP_BOOT_CONTEXT,
+						)
+					}
+					this.logger.log(
+						`Deleted ${records.total} records older than ${WEBHOOK_LOG_DAYS} day(s) from ${LLANA_WEBHOOK_LOG_TABLE}`,
 						APP_BOOT_CONTEXT,
 					)
 				}
+			} catch (e) {
 				this.logger.log(
-					`Deleted ${records.total} records older than ${WEBHOOK_LOG_DAYS} day(s) from ${LLANA_WEBHOOK_LOG_TABLE}`,
+					`Creating ${LLANA_WEBHOOK_LOG_TABLE} schema as it does not exist - ${e.message}`,
 					APP_BOOT_CONTEXT,
 				)
+
+				/**
+				 * Create the _llana_webhook_log schema
+				 */
+
+				const schema: DatabaseSchema = {
+					table: LLANA_WEBHOOK_LOG_TABLE,
+					primary_key: 'id',
+					columns: [
+						{
+							field: 'id',
+							type: DatabaseColumnType.NUMBER,
+							nullable: false,
+							required: true,
+							primary_key: true,
+							unique_key: true,
+							foreign_key: false,
+							auto_increment: true,
+						},
+						{
+							field: 'webhook_id',
+							type: DatabaseColumnType.NUMBER,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: true,
+							auto_increment: false,
+						},
+						{
+							field: 'type',
+							type: DatabaseColumnType.ENUM,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							enums: [PublishType.INSERT, PublishType.UPDATE, PublishType.DELETE],
+						},
+						{
+							field: 'url',
+							type: DatabaseColumnType.STRING,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+						},
+						{
+							field: 'record_key',
+							type: DatabaseColumnType.STRING,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+						},
+						{
+							field: 'record_id',
+							type: DatabaseColumnType.STRING,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+						},
+						{
+							field: 'attempt',
+							type: DatabaseColumnType.NUMBER,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: 1,
+						},
+						{
+							field: 'delivered',
+							type: DatabaseColumnType.BOOLEAN,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: false,
+						},
+						{
+							field: 'response_status',
+							type: DatabaseColumnType.NUMBER,
+							nullable: true,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: null,
+						},
+						{
+							field: 'response_message',
+							type: DatabaseColumnType.STRING,
+							nullable: true,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: null,
+						},
+						{
+							field: 'created_at',
+							type: DatabaseColumnType.DATE,
+							nullable: false,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: 'CURRENT_TIMESTAMP',
+						},
+						{
+							field: 'next_attempt_at',
+							type: DatabaseColumnType.DATE,
+							nullable: true,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: 'CURRENT_TIMESTAMP',
+						},
+						{
+							field: 'delivered_at',
+							type: DatabaseColumnType.DATE,
+							nullable: true,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: null,
+						},
+					],
+					relations: [
+						{
+							table: LLANA_WEBHOOK_LOG_TABLE,
+							column: 'webhook_id',
+							org_table: LLANA_WEBHOOK_TABLE,
+							org_column: 'id',
+						},
+					],
+				}
+
+				await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 			}
-		} catch (e) {
-			this.logger.log(
-				`Creating ${LLANA_WEBHOOK_LOG_TABLE} schema as it does not exist - ${e.message}`,
-				APP_BOOT_CONTEXT,
-			)
-
-			/**
-			 * Create the _llana_webhook_log schema
-			 */
-
-			const schema: DatabaseSchema = {
-				table: LLANA_WEBHOOK_LOG_TABLE,
-				primary_key: 'id',
-				columns: [
-					{
-						field: 'id',
-						type: DatabaseColumnType.NUMBER,
-						nullable: false,
-						required: true,
-						primary_key: true,
-						unique_key: true,
-						foreign_key: false,
-						auto_increment: true,
-					},
-					{
-						field: 'webhook_id',
-						type: DatabaseColumnType.NUMBER,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: true,
-						auto_increment: false,
-					},
-					{
-						field: 'type',
-						type: DatabaseColumnType.ENUM,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						enums: [PublishType.INSERT, PublishType.UPDATE, PublishType.DELETE],
-					},
-					{
-						field: 'url',
-						type: DatabaseColumnType.STRING,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-					},
-					{
-						field: 'record_key',
-						type: DatabaseColumnType.STRING,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-					},
-					{
-						field: 'record_id',
-						type: DatabaseColumnType.STRING,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-					},
-					{
-						field: 'attempt',
-						type: DatabaseColumnType.NUMBER,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: 1,
-					},
-					{
-						field: 'delivered',
-						type: DatabaseColumnType.BOOLEAN,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: false,
-					},
-					{
-						field: 'response_status',
-						type: DatabaseColumnType.NUMBER,
-						nullable: true,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: null,
-					},
-					{
-						field: 'response_message',
-						type: DatabaseColumnType.STRING,
-						nullable: true,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: null,
-					},
-					{
-						field: 'created_at',
-						type: DatabaseColumnType.DATE,
-						nullable: false,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: 'CURRENT_TIMESTAMP',
-					},
-					{
-						field: 'next_attempt_at',
-						type: DatabaseColumnType.DATE,
-						nullable: true,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: 'CURRENT_TIMESTAMP',
-					},
-					{
-						field: 'delivered_at',
-						type: DatabaseColumnType.DATE,
-						nullable: true,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: null,
-					},
-				],
-				relations: [
-					{
-						table: LLANA_WEBHOOK_LOG_TABLE,
-						column: 'webhook_id',
-						org_table: LLANA_WEBHOOK_TABLE,
-						org_column: 'id',
-					},
-				],
-			}
-
-			await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+		} else {
+			this.logger.warn('Skipping webhooks as DISABLE_WEBHOOKS is set to true', APP_BOOT_CONTEXT)
 		}
 
 		if (this.authentication.skipAuth()) {
