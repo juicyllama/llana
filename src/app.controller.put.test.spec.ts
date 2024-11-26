@@ -6,26 +6,31 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
 import { DatabaseSchema } from './types/database.types'
+import { SalesOrderTestingService } from './testing/salesorder.testing.service'
 
 describe('App > Controller > Put', () => {
 	let app: INestApplication
 
 	let authTestingService: AuthTestingService
 	let customerTestingService: CustomerTestingService
+	let salesOrderTestingService: SalesOrderTestingService
 
 	let customerSchema: DatabaseSchema
+	let orderSchema: DatabaseSchema
 
 	let customer1: any
 	let customer2: any
 	let customer3: any
+
+	let order: any
 
 	let jwt: string
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
-			providers: [AuthTestingService, CustomerTestingService],
-			exports: [AuthTestingService, CustomerTestingService],
+			providers: [AuthTestingService, CustomerTestingService, SalesOrderTestingService],
+			exports: [AuthTestingService, CustomerTestingService, SalesOrderTestingService],
 		}).compile()
 
 		app = moduleRef.createNestApplication()
@@ -33,12 +38,19 @@ describe('App > Controller > Put', () => {
 
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
+		salesOrderTestingService = app.get<SalesOrderTestingService>(SalesOrderTestingService)
 
 		customerSchema = await customerTestingService.getSchema()
+		orderSchema = await salesOrderTestingService.getSchema()
 
 		customer1 = await customerTestingService.createCustomer({})
 		customer2 = await customerTestingService.createCustomer({})
 		customer3 = await customerTestingService.createCustomer({})
+		order = await salesOrderTestingService.createOrder({
+			custId: customer1[customerSchema.primary_key],
+			employeeId: 1,
+			shipperId: 1,
+		})
 		jwt = await authTestingService.login()
 	})
 
@@ -100,9 +112,29 @@ describe('App > Controller > Put', () => {
 			customer2 = result.body.data[0]
 			customer3 = result.body.data[1]
 		})
+
+
+		it('Update One - Integer', async function () {
+			const result = await request(app.getHttpServer())
+				.put(`/SalesOrder/${order[orderSchema.primary_key]}`)
+				.send({
+					shipperId: order.shipperId + 1,
+				})
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+
+			expect(result.body).toBeDefined()
+			expect(result.body[orderSchema.primary_key].toString()).toEqual(
+				order[orderSchema.primary_key].toString(),
+			)
+			expect(result.body.shipperId).toEqual(order.shipperId + 1)
+			order = result.body
+		})
+
 	})
 
 	afterAll(async () => {
+		await salesOrderTestingService.deleteOrder(order[orderSchema.primary_key])
 		await customerTestingService.deleteCustomer(customer1[customerSchema.primary_key])
 		await customerTestingService.deleteCustomer(customer2[customerSchema.primary_key])
 		await customerTestingService.deleteCustomer(customer3[customerSchema.primary_key])

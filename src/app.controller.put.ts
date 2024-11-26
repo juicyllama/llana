@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Param, Put, Req, Res } from '@nestjs/common'
+import { Body, Controller, Headers, Param, Patch, Put, Req, Res } from '@nestjs/common'
 
 import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
@@ -189,6 +189,17 @@ export class PutController {
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}
+	}
+
+	@Patch('*/:id')
+	async updateByIdPatch(
+		@Req() req,
+		@Res() res,
+		@Body() body: Partial<any>,
+		@Headers() headers: HeaderParams,
+		@Param('id') id: string,
+	): Promise<FindOneResponseObject> {
+		return await this.updateById(req, res, body, headers, id)
 	}
 
 	@Put('*/')
@@ -398,5 +409,15 @@ export class PutController {
 		}
 
 		return res.status(400).send(this.response.text('Body must be an array'))
+	}
+
+	@Patch('*/')
+	async updateManyPatch(
+		@Req() req,
+		@Res() res,
+		@Body() body: Partial<any>[],
+		@Headers() headers: HeaderParams,
+	): Promise<UpdateManyResponseObject> {
+		return await this.updateMany(req, res, body, headers)
 	}
 }

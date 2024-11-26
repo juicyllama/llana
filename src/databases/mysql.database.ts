@@ -293,11 +293,11 @@ export class MySQL {
 	async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
 
-		const values = [...Object.values(options.data), options.id.toString()]
-		let command = `UPDATE ${table_name} SET `
-
 		options = this.pipeObjectToMySQL(options) as DatabaseUpdateOneOptions
 
+		const values = [...Object.values(options.data), options.id.toString()]
+		let command = `UPDATE ${table_name} SET `
+				
 		command += `${Object.keys(options.data)
 			.map(key => `${key} = ?`)
 			.join(', ')} `
