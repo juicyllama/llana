@@ -79,7 +79,7 @@
 		"@nestjs/cli": "latest",
 		"@nestjs/schematics": "latest",
 		"@nestjs/testing": "latest",
-		"@swc/cli": "^0.4.0",
+		"@swc/cli": "^0.5.1",
 		"@swc/core": "^1.7.23",
 		"@types/bcrypt": "^5.0.2",
 		"@types/express": "latest",
