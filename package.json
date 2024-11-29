@@ -78,7 +78,8 @@
 		"pg-promise": "^11.9.1",
 		"reflect-metadata": "^0.2.2",
 		"rxjs": "^7.8.1",
-		"sqlstring": "^2.3.3"
+		"sqlstring": "^2.3.3",
+		"airtable": "^0.11.3"
 	},
 	"devDependencies": {
 		"@eslint/eslintrc": "^3.1.0",

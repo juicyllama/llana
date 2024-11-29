@@ -3,6 +3,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { ScheduleModule } from '@nestjs/schedule'
+import Airtable from 'airtable'
 
 import { AuthController } from './app.controller.auth'
 import { DeleteController } from './app.controller.delete'
@@ -67,6 +68,10 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		TasksService,
 		Websocket,
 		Webhook,
+		{
+			provide: 'Airtable',
+			useValue: Airtable,
+		},
 	],
 	exports: [
 		AppBootup,
