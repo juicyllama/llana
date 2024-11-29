@@ -18,6 +18,14 @@
 	"bugs": "https://llana.io",
 	"license": "BSD-4-Clause",
 	"readmeFilename": "README.md",
+	"tags": [
+		"llana",
+		"api"
+	],
+	"keywords": [
+		"llana",
+		"api"
+	],
 	"scripts": {
 		"postinstall": "sh ./scripts/install.sh",
 		"prebuild": "rimraf dist",
