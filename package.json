@@ -1,6 +1,6 @@
 {
 	"name": "@juicyllama/llana",
-	"version": "1.14.5",
+	"version": "1.14.6",
 	"description": "API Wrapper for Databases - Llana is a no-code API wrapper that exposes a REST API for any database within minutes. No longer spend time building APIs, just connect your database and start using the API. Open source, free to use, and no vendor lock-in.",
 	"author": {
 		"name": "JuicyLlama Studio",
@@ -71,6 +71,7 @@
 		"express-basic-auth": "^1.2.1",
 		"express-handlebars": "^8.0.1",
 		"joi": "^17.13.3",
+		"hbs": "^4.2.0",
 		"jwt-simple": "^0.5.6",
 		"lodash": "^4.17.21",
 		"mongodb": "^6.9.0",

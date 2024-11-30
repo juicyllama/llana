@@ -4,7 +4,20 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "assets": [{"include": "**/*.handlebars", "outDir": "./dist/src"}],
+    "assets": [{
+      "include": "**/*.handlebars", 
+      "outDir": "./dist/src"
+      },{
+        "include": "../public",
+        "outDir": "dist/public",
+        "watchAssets": true
+      },
+      {
+        "include": "../views",
+        "outDir": "dist/views",
+        "watchAssets": true
+      }],
+      "watchAssets": true,
     "tsConfigPath": "tsconfig.build.json"
   },
   "watchOptions": {
