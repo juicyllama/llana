@@ -5,6 +5,7 @@ import { Mongo } from '../databases/mongo.database'
 import { MSSQL } from '../databases/mssql.database'
 import { MySQL } from '../databases/mysql.database'
 import { Postgres } from '../databases/postgres.database'
+import { AirtableDatabase } from '../databases/airtable.database'
 import {
 	DeleteResponseObject,
 	FindManyResponseObject,
@@ -42,6 +43,7 @@ export class Query {
 		private readonly mssql: MSSQL,
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
+		private readonly airtable: AirtableDatabase,
 	) {}
 
 	async perform(
@@ -193,6 +195,8 @@ export class Query {
 				return await this.mongo.createTable(schema)
 			case DatabaseType.MSSQL:
 				return await this.mssql.createTable(schema)
+			case DatabaseType.AIRTABLE:
+				return await this.airtable.createTable(schema)
 			default:
 				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
@@ -218,6 +222,9 @@ export class Query {
 				break
 			case DatabaseType.MSSQL:
 				result = await this.mssql.createOne(options, x_request_id)
+				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.createOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -251,6 +258,9 @@ export class Query {
 				break
 			case DatabaseType.MSSQL:
 				result = await this.mssql.findOne(options, x_request_id)
+				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.findOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -289,6 +299,9 @@ export class Query {
 			case DatabaseType.MSSQL:
 				result = await this.mssql.findMany(options, x_request_id)
 				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.findMany(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -322,6 +335,9 @@ export class Query {
 			case DatabaseType.MSSQL:
 				result = await this.mssql.updateOne(options, x_request_id)
 				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.updateOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
@@ -354,6 +370,9 @@ export class Query {
 				break
 			case DatabaseType.MSSQL:
 				result = await this.mssql.deleteOne(options, x_request_id)
+				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.deleteOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -389,6 +408,9 @@ export class Query {
 			case DatabaseType.MSSQL:
 				result = await this.mssql.uniqueCheck(options, x_request_id)
 				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.uniqueCheck(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
@@ -420,6 +442,8 @@ export class Query {
 				return await this.mongo.truncate(table_name)
 			case DatabaseType.MSSQL:
 				return await this.mssql.truncate(table_name)
+			case DatabaseType.AIRTABLE:
+				return await this.airtable.truncate(table_name)
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -462,6 +486,8 @@ export class Query {
 				return await this.mongo.checkConnection({ x_request_id: options.x_request_id })
 			case DatabaseType.MSSQL:
 				return await this.mssql.checkConnection({ x_request_id: options.x_request_id })
+			case DatabaseType.AIRTABLE:
+				return await this.airtable.checkConnection({ x_request_id: options.x_request_id })
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`,
@@ -489,6 +515,9 @@ export class Query {
 				break
 			case DatabaseType.MSSQL:
 				tables = await this.mssql.listTables({ x_request_id: options.x_request_id })
+				break
+			case DatabaseType.AIRTABLE:
+				tables = await this.airtable.listTables({ x_request_id: options.x_request_id })
 				break
 			default:
 				this.logger.error(

@@ -5,6 +5,7 @@ export enum DatabaseType {
 	POSTGRES = 'postgres',
 	MONGODB = 'mongodb',
 	MSSQL = 'mssql',
+	AIRTABLE = 'airtable',
 }
 
 export enum DatabaseNaming {

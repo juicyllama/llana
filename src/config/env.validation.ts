@@ -1,0 +1,28 @@
+import * as Joi from 'joi';
+
+export const envValidationSchema = Joi.object({
+  NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+  PORT: Joi.number().default(3000),
+  DATABASE_URI: Joi.string().required(),
+  JWT_KEY: Joi.string().required(),
+  JWT_EXPIRES_IN: Joi.string().default('1d'),
+  AUTH_USER_API_KEY_LOCATION: Joi.string().default('header'),
+  AUTH_USER_API_KEY_NAME: Joi.string().default('x-api-key'),
+  AUTH_USER_TABLE_NAME: Joi.string().default('User'),
+  AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN: Joi.string().optional(),
+  AUTH_USER_API_KEY_FIELD: Joi.string().default('UserApiKey.apiKey'),
+  AUTH_USER_IDENTITY_COLUMN: Joi.string().optional(),
+  AUTH_USER_TABLE_USERNAME_FIELD: Joi.string().default('email'),
+  AUTH_USER_TABLE_PASSWORD_FIELD: Joi.string().default('password'),
+  AUTH_USER_TABLE_PASSWORD_ENCRYPTION: Joi.string().default('bcrypt'),
+  AUTH_USER_TABLE_PASSWORD_SALT: Joi.number().default(10),
+  DEFAULT_LIMIT: Joi.number().default(20),
+  DEFAULT_RELATIONS_LIMIT: Joi.number().default(20),
+  SOFT_DELETE_COLUMN: Joi.string().optional(),
+  CRON_EXPRESSION_WEBHOOKS_SEND: Joi.string().default('*/30 * * * * *'),
+  DISABLE_WEBHOOKS: Joi.boolean().default(false),
+  DOCS_TITLE: Joi.string().default('API Documentation'),
+  HOSTS: Joi.string().optional(),
+  AIRTABLE_API_KEY: Joi.string().required(),
+  AIRTABLE_BASE_ID: Joi.string().required(),
+});

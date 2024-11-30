@@ -55,6 +55,8 @@ export function getDatabaseType(uri: string): DatabaseType {
 		return DatabaseType.MONGODB
 	} else if (uri.includes('mssql')) {
 		return DatabaseType.MSSQL
+	} else if (uri.includes('airtable')) {
+		return DatabaseType.AIRTABLE
 	} else {
 		throw new Error('Database type not supported')
 	}

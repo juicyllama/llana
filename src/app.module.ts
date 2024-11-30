@@ -35,11 +35,14 @@ import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
+import { AirtableService } from './app.service.airtable'
+import { envValidationSchema } from './config/env.validation'
 
 @Module({
 	imports: [
 		ConfigModule.forRoot({
 			load: [auth, database, hosts, jwt, roles],
+			validationSchema: envValidationSchema,
 		}),
 		JwtModule.register(jwt()),
 		CacheModule.register({
@@ -68,6 +71,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		TasksService,
 		Websocket,
 		Webhook,
+		AirtableService,
 		{
 			provide: 'Airtable',
 			useValue: Airtable,
@@ -92,6 +96,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Schema,
 		Websocket,
 		Webhook,
+		AirtableService,
 	],
 })
 export class AppModule implements NestModule {

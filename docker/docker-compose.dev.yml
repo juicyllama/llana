@@ -120,3 +120,16 @@ services:
             echo "Script Execution is complete. Waiting for MS SQL Process to terminate 🎉"
 
             wait $$pid
+
+    llana-airtable:
+        image: node:14
+        restart: always
+        container_name: llana-airtable
+        environment:
+            AIRTABLE_API_KEY: your_airtable_api_key
+            AIRTABLE_BASE_ID: your_airtable_base_id
+        volumes:
+            - ../demo/databases/airtable.js:/usr/src/app/airtable.js
+        command: ["node", "/usr/src/app/airtable.js"]
+        networks:
+            - llana-network

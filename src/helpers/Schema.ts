@@ -11,6 +11,7 @@ import { Mongo } from '../databases/mongo.database'
 import { MSSQL } from '../databases/mssql.database'
 import { MySQL } from '../databases/mysql.database'
 import { Postgres } from '../databases/postgres.database'
+import { AirtableDatabase } from '../databases/airtable.database'
 import {
 	DatabaseColumnType,
 	DatabaseFindOneOptions,
@@ -40,6 +41,7 @@ export class Schema {
 		private readonly mongo: Mongo,
 		private readonly mysql: MySQL,
 		private readonly mssql: MSSQL,
+		private readonly airtable: AirtableDatabase,
 	) {}
 
 	/**
@@ -75,6 +77,9 @@ export class Schema {
 					break
 				case DatabaseType.MSSQL:
 					result = await this.mssql.getSchema({ table: options.table, x_request_id: options.x_request_id })
+					break
+				case DatabaseType.AIRTABLE:
+					result = await this.airtable.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
 				default:
 					this.logger.error(

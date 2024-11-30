@@ -45,7 +45,8 @@
 		"test:mysql": "export DATABASE_URI=mysql://user:pass@localhost:3306/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"test:postgresql": "export DATABASE_URI=postgresql://user:pass@localhost:5432/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"test:mongodb": "export DATABASE_URI=mongodb://user:pass@localhost:27017/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
-		"test:mssql": "export DATABASE_URI=mssql://sa:S7!0nGpAw0rD@localhost:1433/llana && jest --bail --runInBand --detectOpenHandles --forceExit"
+		"test:mssql": "export DATABASE_URI=mssql://sa:S7!0nGpAw0rD@localhost:1433/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
+		"test:airtable": "export DATABASE_URI=airtable://user:pass@localhost:3000/llana && jest --bail --runInBand --detectOpenHandles --forceExit"
 	},
 	"dependencies": {
 		"@nestjs/cache-manager": "latest",
