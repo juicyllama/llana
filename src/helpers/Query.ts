@@ -43,7 +43,7 @@ export class Query {
 		private readonly mssql: MSSQL,
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
-		private readonly airtable: AirtableDatabase,
+		private readonly airtableDatabase: AirtableDatabase,
 	) {}
 
 	async perform(
@@ -196,7 +196,7 @@ export class Query {
 			case DatabaseType.MSSQL:
 				return await this.mssql.createTable(schema)
 			case DatabaseType.AIRTABLE:
-				return await this.airtable.createTable(schema)
+				return await this.airtableDatabase.createTable(schema)
 			default:
 				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
@@ -224,7 +224,7 @@ export class Query {
 				result = await this.mssql.createOne(options, x_request_id)
 				break
 			case DatabaseType.AIRTABLE:
-				result = await this.airtable.createOne(options, x_request_id)
+				result = await this.airtableDatabase.createOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -260,7 +260,7 @@ export class Query {
 				result = await this.mssql.findOne(options, x_request_id)
 				break
 			case DatabaseType.AIRTABLE:
-				result = await this.airtable.findOne(options, x_request_id)
+				result = await this.airtableDatabase.findOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -300,7 +300,7 @@ export class Query {
 				result = await this.mssql.findMany(options, x_request_id)
 				break
 			case DatabaseType.AIRTABLE:
-				result = await this.airtable.findMany(options, x_request_id)
+				result = await this.airtableDatabase.findMany(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -336,7 +336,7 @@ export class Query {
 				result = await this.mssql.updateOne(options, x_request_id)
 				break
 			case DatabaseType.AIRTABLE:
-				result = await this.airtable.updateOne(options, x_request_id)
+				result = await this.airtableDatabase.updateOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -372,7 +372,7 @@ export class Query {
 				result = await this.mssql.deleteOne(options, x_request_id)
 				break
 			case DatabaseType.AIRTABLE:
-				result = await this.airtable.deleteOne(options, x_request_id)
+				result = await this.airtableDatabase.deleteOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -409,7 +409,7 @@ export class Query {
 				result = await this.mssql.uniqueCheck(options, x_request_id)
 				break
 			case DatabaseType.AIRTABLE:
-				result = await this.airtable.uniqueCheck(options, x_request_id)
+				result = await this.airtableDatabase.uniqueCheck(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -443,7 +443,7 @@ export class Query {
 			case DatabaseType.MSSQL:
 				return await this.mssql.truncate(table_name)
 			case DatabaseType.AIRTABLE:
-				return await this.airtable.truncate(table_name)
+				return await this.airtableDatabase.truncate(table_name)
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -487,7 +487,7 @@ export class Query {
 			case DatabaseType.MSSQL:
 				return await this.mssql.checkConnection({ x_request_id: options.x_request_id })
 			case DatabaseType.AIRTABLE:
-				return await this.airtable.checkConnection({ x_request_id: options.x_request_id })
+				return await this.airtableDatabase.checkConnection({ x_request_id: options.x_request_id })
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`,
@@ -517,7 +517,7 @@ export class Query {
 				tables = await this.mssql.listTables({ x_request_id: options.x_request_id })
 				break
 			case DatabaseType.AIRTABLE:
-				tables = await this.airtable.listTables({ x_request_id: options.x_request_id })
+				tables = await this.airtableDatabase.listTables({ x_request_id: options.x_request_id })
 				break
 			default:
 				this.logger.error(

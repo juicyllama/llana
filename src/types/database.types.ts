@@ -198,3 +198,16 @@ export interface DatabaseUniqueCheckOptions {
 	}
 	id?: string
 }
+
+export interface DatabaseInterface {
+	createTable(schema: DatabaseSchema): Promise<void>
+	findOne(options: DatabaseFindOneOptions): Promise<any>
+	findMany(options: DatabaseFindManyOptions): Promise<any[]>
+	createOne(options: DatabaseCreateOneOptions): Promise<any>
+	updateOne(options: DatabaseUpdateOneOptions): Promise<any>
+	deleteOne(options: DatabaseDeleteOneOptions): Promise<void>
+	uniqueCheck(options: DatabaseUniqueCheckOptions): Promise<boolean>
+	truncate(schema: DatabaseSchema): Promise<void>
+	checkConnection(): Promise<boolean>
+	listTables(): Promise<string[]>
+}

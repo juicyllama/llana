@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt'
 import { ScheduleModule } from '@nestjs/schedule'
 import Airtable from 'airtable'
 
+import { AirtableController } from './app.controller.airtable'
 import { AuthController } from './app.controller.auth'
 import { DeleteController } from './app.controller.delete'
 import { DocsController } from './app.controller.docs'
@@ -50,7 +51,15 @@ import { envValidationSchema } from './config/env.validation'
 		}),
 		ScheduleModule.forRoot(),
 	],
-	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
+	controllers: [
+		AuthController,
+		AirtableController,
+		DocsController,
+		DeleteController,
+		GetController,
+		PostController,
+		PutController,
+	],
 	providers: [
 		AppBootup,
 		AuthService,

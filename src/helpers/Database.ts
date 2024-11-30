@@ -12,6 +12,19 @@ export function deconstructConnectionString(connectionString: string): {
 	password: string
 	database: string
 } {
+	// Special case for Airtable
+	if (connectionString.includes('airtable')) {
+		const [baseId, apiKey] = connectionString.split('://')[1].split('@')
+		return {
+			type: DatabaseType.AIRTABLE,
+			host: 'api.airtable.com',
+			port: 443,
+			username: 'apikey',
+			password: apiKey,
+			database: baseId,
+		}
+	}
+
 	const regex = /^(?<type>.*?):\/\/(?<username>.*?):(?<password>.*?)@(?<host>.*?):(?<port>\d+)\/(?<database>.*?)$/
 	const match = connectionString.match(regex)
 
