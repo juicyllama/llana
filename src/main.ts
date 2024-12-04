@@ -1,31 +1,30 @@
 import 'dotenv/config'
 import 'reflect-metadata'
 
-import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
-import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express'
+import { join } from 'path'
 
 import { APP_BOOT_CONTEXT } from './app.constants'
 import { AppModule } from './app.module'
-import { WelcomeModule } from './modules/welcome/welcome.module'
 import { Logger } from './helpers/Logger'
+import { WelcomeModule } from './modules/welcome/welcome.module'
 
 async function bootstrap() {
-
 	const logger = new Logger()
 	logger.status()
 	let app
 
-	if(!process.env.DATABASE_URI) {
+	if (!process.env.DATABASE_URI) {
 		app = await NestFactory.create<NestExpressApplication>(WelcomeModule)
-		app.useStaticAssets(join(__dirname, '..', 'public'));
-  		app.setBaseViewsDir(join(__dirname, '..', 'views'));
-		app.setViewEngine('hbs');
-	}else{
+		app.useStaticAssets(join(__dirname, '..', 'public'))
+		app.setBaseViewsDir(join(__dirname, '..', 'views'))
+		app.setViewEngine('hbs')
+	} else {
 		app = await NestFactory.create<NestExpressApplication>(AppModule)
 	}
-	
+
 	app.enableCors()
 	await app.listen(process.env.PORT ?? 3000)
 

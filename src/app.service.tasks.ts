@@ -17,7 +17,6 @@ export class TasksService {
 
 	@Cron(webhookSchedule ?? CronExpression.EVERY_30_SECONDS)
 	async sendWebhooks() {
-		
 		if (this.configService.get<boolean>('DISABLE_WEBHOOKS')) {
 			return
 		}

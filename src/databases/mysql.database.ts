@@ -297,7 +297,7 @@ export class MySQL {
 
 		const values = [...Object.values(options.data), options.id.toString()]
 		let command = `UPDATE ${table_name} SET `
-				
+
 		command += `${Object.keys(options.data)
 			.map(key => `${key} = ?`)
 			.join(', ')} `
