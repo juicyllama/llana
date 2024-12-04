@@ -113,7 +113,6 @@ describe('App > Controller > Put', () => {
 			customer3 = result.body.data[1]
 		})
 
-
 		it('Update One - Integer', async function () {
 			const result = await request(app.getHttpServer())
 				.put(`/SalesOrder/${order[orderSchema.primary_key]}`)
@@ -124,13 +123,10 @@ describe('App > Controller > Put', () => {
 				.expect(200)
 
 			expect(result.body).toBeDefined()
-			expect(result.body[orderSchema.primary_key].toString()).toEqual(
-				order[orderSchema.primary_key].toString(),
-			)
+			expect(result.body[orderSchema.primary_key].toString()).toEqual(order[orderSchema.primary_key].toString())
 			expect(result.body.shipperId).toEqual(order.shipperId + 1)
 			order = result.body
 		})
-
 	})
 
 	afterAll(async () => {
