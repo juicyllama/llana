@@ -41,9 +41,8 @@ export class HostCheckMiddleware implements NestMiddleware {
 		let allowed_hosts = this.configService.get<string>('HOSTS')?.split(',') ?? []
 
 		//remove blank entries e.g. [""] -> []
-		allowed_hosts = allowed_hosts.filter((host) => host)
-	
-		
+		allowed_hosts = allowed_hosts.filter(host => host)
+
 		if (allowed_hosts.length === 0) {
 			return true
 		}
