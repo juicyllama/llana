@@ -11,7 +11,7 @@ import { Mongo } from '../databases/mongo.database'
 import { MSSQL } from '../databases/mssql.database'
 import { MySQL } from '../databases/mysql.database'
 import { Postgres } from '../databases/postgres.database'
-import { AirtableDatabase } from '../databases/airtable.database'
+import { Airtable } from '../databases/airtable.database'
 import {
 	DatabaseColumnType,
 	DatabaseFindOneOptions,
@@ -41,7 +41,7 @@ export class Schema {
 		private readonly mongo: Mongo,
 		private readonly mysql: MySQL,
 		private readonly mssql: MSSQL,
-		private readonly airtable: AirtableDatabase,
+		private readonly airtable: Airtable,
 	) {}
 
 	/**
@@ -80,42 +80,6 @@ export class Schema {
 					break
 				case DatabaseType.AIRTABLE:
 					result = await this.airtable.getSchema({ table: options.table, x_request_id: options.x_request_id })
-
-					// Validate Airtable-specific schema requirements
-					if (!result.columns?.length) {
-						throw new Error('Airtable schema must contain columns')
-					}
-
-					// Map Airtable field types to database schema types
-					result.columns = result.columns.map(column => {
-						let type = DatabaseColumnType.STRING // Default type
-
-						switch (column.type?.toLowerCase()) {
-							case 'number':
-								type = DatabaseColumnType.NUMBER
-								break
-							case 'checkbox':
-								type = DatabaseColumnType.BOOLEAN
-								break
-							case 'date':
-							case 'datetime':
-								type = DatabaseColumnType.DATE
-								break
-							case 'multipleselect':
-							case 'singleselect':
-							case 'multilinetext':
-								type = DatabaseColumnType.STRING
-								break
-							case 'json':
-								type = DatabaseColumnType.JSON
-								break
-						}
-
-						return {
-							...column,
-							type,
-						}
-					})
 					break
 				default:
 					this.logger.error(

@@ -542,7 +542,7 @@ export class Mongo {
 
 	async uniqueCheck(options: DatabaseUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		this.logger.debug(
-			`[${DATABASE_TYPE}] Unique Check not applicable on mongodb: ${JSON.stringify(options)}`,
+			`[${DATABASE_TYPE}] Unique Check not applicable: ${JSON.stringify(options)}`,
 			x_request_id,
 		)
 
@@ -660,7 +660,7 @@ export class Mongo {
 	 * Convert a typeof to Llana DatabaseColumnType
 	 */
 
-	fieldMapper(field: any): DatabaseColumnType {
+	private fieldMapper(field: any): DatabaseColumnType {
 		if (field === null) {
 			return DatabaseColumnType.UNKNOWN
 		}

@@ -3,9 +3,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { ScheduleModule } from '@nestjs/schedule'
-import Airtable from 'airtable'
 
-import { AirtableController } from './app.controller.airtable'
 import { AuthController } from './app.controller.auth'
 import { DeleteController } from './app.controller.delete'
 import { DocsController } from './app.controller.docs'
@@ -36,8 +34,8 @@ import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
-import { AirtableService } from './app.service.airtable'
 import { envValidationSchema } from './config/env.validation'
+import { Airtable } from './databases/airtable.database'
 
 @Module({
 	imports: [
@@ -53,7 +51,6 @@ import { envValidationSchema } from './config/env.validation'
 	],
 	controllers: [
 		AuthController,
-		AirtableController,
 		DocsController,
 		DeleteController,
 		GetController,
@@ -61,6 +58,7 @@ import { envValidationSchema } from './config/env.validation'
 		PutController,
 	],
 	providers: [
+		Airtable,
 		AppBootup,
 		AuthService,
 		Authentication,
@@ -80,13 +78,9 @@ import { envValidationSchema } from './config/env.validation'
 		TasksService,
 		Websocket,
 		Webhook,
-		AirtableService,
-		{
-			provide: 'Airtable',
-			useValue: Airtable,
-		},
 	],
 	exports: [
+		Airtable,
 		AppBootup,
 		AuthService,
 		Authentication,
@@ -105,7 +99,6 @@ import { envValidationSchema } from './config/env.validation'
 		Schema,
 		Websocket,
 		Webhook,
-		AirtableService,
 	],
 })
 export class AppModule implements NestModule {

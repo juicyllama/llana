@@ -1,4 +1,5 @@
 import * as Joi from 'joi'
+import { AuthPasswordEncryption } from '../types/auth.types'
 
 export const envValidationSchema = Joi.object({
 	NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
@@ -14,7 +15,7 @@ export const envValidationSchema = Joi.object({
 	AUTH_USER_IDENTITY_COLUMN: Joi.string().optional(),
 	AUTH_USER_TABLE_USERNAME_FIELD: Joi.string().default('email'),
 	AUTH_USER_TABLE_PASSWORD_FIELD: Joi.string().default('password'),
-	AUTH_USER_TABLE_PASSWORD_ENCRYPTION: Joi.string().default('bcrypt'),
+	AUTH_USER_TABLE_PASSWORD_ENCRYPTION: Joi.string().default(AuthPasswordEncryption.BCRYPT),
 	AUTH_USER_TABLE_PASSWORD_SALT: Joi.number().default(10),
 	DEFAULT_LIMIT: Joi.number().default(20),
 	DEFAULT_RELATIONS_LIMIT: Joi.number().default(20),
@@ -30,16 +31,4 @@ export const envValidationSchema = Joi.object({
 	DISABLE_WEBHOOKS: Joi.boolean().default(false),
 	DOCS_TITLE: Joi.string().default('API Documentation'),
 	HOSTS: Joi.string().optional(),
-	AIRTABLE_API_KEY: Joi.string()
-		.pattern(/^key[a-zA-Z0-9]+$/)
-		.required()
-		.messages({
-			'string.pattern.base': 'AIRTABLE_API_KEY must start with "key" followed by alphanumeric characters',
-		}),
-	AIRTABLE_BASE_ID: Joi.string()
-		.pattern(/^app[a-zA-Z0-9]+$/)
-		.required()
-		.messages({
-			'string.pattern.base': 'AIRTABLE_BASE_ID must start with "app" followed by alphanumeric characters',
-		}),
 })

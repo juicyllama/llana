@@ -419,7 +419,7 @@ export class Postgres {
 	 * Create table from schema object
 	 */
 
-	async createTable(schema: DatabaseSchema): Promise<boolean> {
+	async createTable(schema: DatabaseSchema, x_request_id?: string): Promise<boolean> {
 		try {
 			let command = `CREATE TABLE "${schema.table}" (`
 
@@ -481,7 +481,7 @@ export class Postgres {
 
 			return true
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table}`, { e })
+			this.logger.error(`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`, x_request_id)
 			return false
 		}
 	}

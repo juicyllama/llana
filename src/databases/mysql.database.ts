@@ -387,7 +387,7 @@ export class MySQL {
 	 * Create table from schema object
 	 */
 
-	async createTable(schema: DatabaseSchema): Promise<boolean> {
+	async createTable(schema: DatabaseSchema, x_request_id?: string): Promise<boolean> {
 		try {
 			const columns = schema.columns.map(column => {
 				let column_string = `\`${column.field}\` ${this.fieldMapperReverse(column.type)}`
@@ -436,7 +436,7 @@ export class MySQL {
 
 			return true
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table}`, { e })
+			this.logger.error(`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`, x_request_id)
 			return false
 		}
 	}
