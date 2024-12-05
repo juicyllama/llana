@@ -7,30 +7,45 @@ import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
 import { DatabaseSchema } from './types/database.types'
 import { SalesOrderTestingService } from './testing/salesorder.testing.service'
+import { EmployeeTestingService } from './testing/employee.testing.service'
+import { ShipperTestingService } from './testing/shipper.testing.service'
+import { UserTestingService } from './testing/user.testing.service'
+import { Logger } from './helpers/Logger'
+import { before } from 'node:test'
+import { TIMEOUT } from './testing/testing.const'
 
 describe('App > Controller > Put', () => {
 	let app: INestApplication
 
 	let authTestingService: AuthTestingService
 	let customerTestingService: CustomerTestingService
+	let employeeTestingService: EmployeeTestingService
+	let shipperTestingService: ShipperTestingService
 	let salesOrderTestingService: SalesOrderTestingService
+	let userTestingService: UserTestingService
 
 	let customerSchema: DatabaseSchema
+	let employeeSchema: DatabaseSchema
+	let shipperSchema: DatabaseSchema
 	let orderSchema: DatabaseSchema
+	let userSchema: DatabaseSchema
 
 	let customer1: any
 	let customer2: any
 	let customer3: any
-
+	let employee: any
+	let shipper: any
 	let order: any
+	let user: any
 
 	let jwt: string
+	let logger = new Logger()
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
-			providers: [AuthTestingService, CustomerTestingService, SalesOrderTestingService],
-			exports: [AuthTestingService, CustomerTestingService, SalesOrderTestingService],
+			providers: [AuthTestingService, CustomerTestingService, EmployeeTestingService, ShipperTestingService, SalesOrderTestingService, UserTestingService],
+			exports: [AuthTestingService, CustomerTestingService, EmployeeTestingService, ShipperTestingService, SalesOrderTestingService, UserTestingService],
 		}).compile()
 
 		app = moduleRef.createNestApplication()
@@ -38,24 +53,40 @@ describe('App > Controller > Put', () => {
 
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
+		employeeTestingService = app.get<EmployeeTestingService>(EmployeeTestingService)
+		shipperTestingService = app.get<ShipperTestingService>(ShipperTestingService)
 		salesOrderTestingService = app.get<SalesOrderTestingService>(SalesOrderTestingService)
+		userTestingService = app.get<UserTestingService>(UserTestingService)
 
 		customerSchema = await customerTestingService.getSchema()
+		employeeSchema = await employeeTestingService.getSchema()
+		shipperSchema = await shipperTestingService.getSchema()
 		orderSchema = await salesOrderTestingService.getSchema()
+		userSchema = await userTestingService.getSchema()
 
 		customer1 = await customerTestingService.createCustomer({})
 		customer2 = await customerTestingService.createCustomer({})
 		customer3 = await customerTestingService.createCustomer({})
+		employee = await employeeTestingService.createEmployee({})
+		shipper = await shipperTestingService.createShipper({})
 		order = await salesOrderTestingService.createOrder({
 			custId: customer1[customerSchema.primary_key],
-			employeeId: 1,
-			shipperId: 1,
+			employeeId: employee[employeeSchema.primary_key],
+			shipperId: shipper[shipperSchema.primary_key],
 		})
+		user = await userTestingService.createUser({})
+
 		jwt = await authTestingService.login()
+	}, TIMEOUT)
+
+	beforeEach(() => {
+		logger.debug('===========================================')
+		logger.log('🧪 '+expect.getState().currentTestName)
+		logger.debug('===========================================')
 	})
 
 	describe('Update', () => {
-		it('Update One', async function () {
+		it('One', async function () {
 			const result = await request(app.getHttpServer())
 				.put(`/Customer/${customer1[customerSchema.primary_key]}`)
 				.send({
@@ -73,7 +104,7 @@ describe('App > Controller > Put', () => {
 			expect(result.body.contactName).toEqual('Updated Contact Name')
 			customer1 = result.body
 		})
-		it('Update Many', async function () {
+		it('Many', async function () {
 			customer2.companyName = 'Customer2 Company Name'
 			customer3.companyName = 'Customer2 Company Name'
 
@@ -113,20 +144,38 @@ describe('App > Controller > Put', () => {
 			customer3 = result.body.data[1]
 		})
 
-		it('Update One - Integer', async function () {
+		it('One - Integer', async function () {
 			const result = await request(app.getHttpServer())
 				.put(`/SalesOrder/${order[orderSchema.primary_key]}`)
 				.send({
-					shipperId: order.shipperId + 1,
+					freight: 10.01,
 				})
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(200)
 
 			expect(result.body).toBeDefined()
 			expect(result.body[orderSchema.primary_key].toString()).toEqual(order[orderSchema.primary_key].toString())
-			expect(result.body.shipperId).toEqual(order.shipperId + 1)
+			expect(result.body.freight).toEqual(10.01)
 			order = result.body
 		})
+
+		describe('User', () => {
+			it('Did it encrypt the password?', async () => {
+				const result = await request(app.getHttpServer())
+				.put(`/User/${user[userSchema.primary_key]}`)
+				.send({
+					password: 'password',
+				})
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+
+			expect(result.body).toBeDefined()
+			expect(result.body[userSchema.primary_key].toString()).toEqual(user[userSchema.primary_key].toString())
+			expect(result.body.password.startsWith('$2')).toBeTruthy()
+			user = result.body
+			})
+		})
+
 	})
 
 	afterAll(async () => {
@@ -134,6 +183,9 @@ describe('App > Controller > Put', () => {
 		await customerTestingService.deleteCustomer(customer1[customerSchema.primary_key])
 		await customerTestingService.deleteCustomer(customer2[customerSchema.primary_key])
 		await customerTestingService.deleteCustomer(customer3[customerSchema.primary_key])
+		await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])
+		await shipperTestingService.deleteShipper(shipper[shipperSchema.primary_key])
+		await userTestingService.deleteUser(user[userSchema.primary_key])
 		await app.close()
 	})
 })

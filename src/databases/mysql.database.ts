@@ -542,6 +542,10 @@ export class MySQL {
 			return DatabaseColumnType.STRING
 		}
 
+		if(type.includes('decimal') || type.includes('float') || type.includes('double') || type.includes('numeric') || type.includes('real')) {
+			return DatabaseColumnType.NUMBER
+		}
+
 		switch (type) {
 			case MySQLColumnType.INT:
 			case MySQLColumnType.TINYINT:
@@ -666,6 +670,8 @@ export class MySQL {
 				return value === 1
 			case DatabaseColumnType.DATE:
 				return new Date(value).toISOString()
+			case DatabaseColumnType.NUMBER:
+				return Number(value)
 			default:
 				return value
 		}

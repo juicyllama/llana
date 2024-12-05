@@ -394,7 +394,7 @@ export class Postgres {
 	async uniqueCheck(options: DatabaseUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		for (const column of options.schema.columns) {
 			if (column.unique_key) {
-				const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE ${column.field} = $1`
+				const command = `SELECT COUNT(*) as total FROM "${options.schema.table}" WHERE ${column.field} = $1`
 				const result = await this.performQuery({
 					sql: command,
 					values: [options.data[column.field]],

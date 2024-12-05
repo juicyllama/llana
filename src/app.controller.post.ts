@@ -122,7 +122,9 @@ export class PostController {
 			const data: FindOneResponseObject[] = []
 
 			for (const item of body) {
+
 				const insertResult = await this.createOneRecord(options, item, auth.user_identifier, x_request_id)
+				
 				if (!insertResult.valid) {
 					errored++
 					errors.push({
@@ -131,6 +133,10 @@ export class PostController {
 					})
 					continue
 				}
+
+			
+
+
 				data.push(insertResult.result)
 				await this.websocket.publish(
 					options.schema,
@@ -156,6 +162,7 @@ export class PostController {
 		}
 
 		const insertResult = await this.createOneRecord(options, body, auth.user_identifier, x_request_id)
+
 		if (!insertResult.valid) {
 			return res.status(400).send(this.response.text(insertResult.message))
 		}
@@ -207,6 +214,7 @@ export class PostController {
 				options,
 				x_request_id,
 			)) as FindOneResponseObject
+
 			await this.websocket.publish(options.schema, PublishType.INSERT, result[options.schema.primary_key])
 			await this.webhook.publish(
 				options.schema,

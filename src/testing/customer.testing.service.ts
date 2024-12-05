@@ -17,6 +17,10 @@ export class CustomerTestingService {
 
 	mockCustomer(): any {
 		return {
+			custId: faker.number.int({
+				min: 1000,
+				max: 9999,
+			}),
 			companyName: faker.company.name(),
 			contactName: faker.person.firstName() + ', ' + faker.person.lastName(),
 			contactTitle: faker.person.prefix(),
@@ -25,6 +29,7 @@ export class CustomerTestingService {
 			region: faker.location.state(),
 			postalCode: faker.location.zipCode(),
 			country: faker.location.countryCode(),
+			email: faker.internet.email(),
 		}
 	}
 

@@ -768,11 +768,11 @@ const seed = async () => {
 
     logger.log('Seeding Airtable database', DOMAIN)
 
-    const userTable = await buildUsers()
+    await buildUsers()
     const customerTable = await buildCustomers()
     const employeeTable = await buildEmployees()
     const shipperTable = await buildShippers()
-    const salesOrders = await buildSalesOrders(shipperTable, customerTable, employeeTable)
+    await buildSalesOrders(shipperTable, customerTable, employeeTable)
 
  };
 

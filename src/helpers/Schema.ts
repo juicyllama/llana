@@ -183,6 +183,13 @@ export class Schema {
 	): Promise<object> {
 		const nestedObject = {}
 
+		//if Buffer convert to string
+		Object.keys(data).forEach(key => {
+			if (data[key] instanceof Buffer) {
+				data[key] = data[key].toString()
+			}
+		})
+
 		Object.keys(data).forEach(key => {
 			const keys = key.split('.')
 			keys.reduce((acc, currentKey, index) => {
@@ -261,9 +268,18 @@ export class Schema {
 		schema: DatabaseSchema,
 		data: { [key: string]: any },
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
+
 		try {
 			for (const key in data) {
+
 				const column = schema.columns.find(col => col.field === key)
+
+				if(!column){
+					return {
+						valid: false,
+						message: `Unknown column: ${key}`,
+					}
+				}
 
 				switch (column.type) {
 					case DatabaseColumnType.NUMBER:
@@ -278,7 +294,7 @@ export class Schema {
 							data[key] = data[key] ? 1 : 0
 						}
 
-						data[key] = parseInt(data[key])
+						data[key] = Number(data[key])
 						break
 					default:
 						break

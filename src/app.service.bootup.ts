@@ -39,6 +39,8 @@ export class AppBootup implements OnApplicationBootstrap {
 	async onApplicationBootstrap() {
 		this.logger.log('Bootstrapping Application', APP_BOOT_CONTEXT)
 
+		this.logger.log(`Datasource is ${this.configService.get<string>('database.type').toUpperCase()}`, APP_BOOT_CONTEXT)
+
 		this.logger.log('Resetting Cache', APP_BOOT_CONTEXT)
 		await this.cacheManager.reset()
 
@@ -431,7 +433,7 @@ export class AppBootup implements OnApplicationBootstrap {
 			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
 			if(!created) {
-				throw new Error('Failed to create _llana_relation table')
+				throw new Error(`Failed to create ${LLANA_RELATION_TABLE} table`)
 			}
 		}
 

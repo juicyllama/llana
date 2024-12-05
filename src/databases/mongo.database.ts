@@ -27,6 +27,7 @@ import {
 	DatabaseWhere,
 	WhereOperator,
 } from '../types/database.types'
+import { da } from '@faker-js/faker/.'
 
 const DATABASE_TYPE = DatabaseType.MONGODB
 
@@ -219,6 +220,8 @@ export class Mongo {
 
 		const mongo = await this.createConnection(options.schema.table)
 
+		options = this.pipeObjectToMongo(options) as DatabaseUpdateOneOptions
+
 		try {
 			const result = await mongo.collection.insertOne(options.data as any)
 			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${x_request_id}`)
@@ -404,6 +407,8 @@ export class Mongo {
 		if (options.data['_id']) {
 			delete options.data['_id']
 		}
+
+		options = this.pipeObjectToMongo(options) as DatabaseUpdateOneOptions
 
 		try {
 			this.logger.debug(
@@ -710,5 +715,25 @@ export class Mongo {
 			default:
 				return value
 		}
+	}
+
+	private pipeObjectToMongo(
+		options: DatabaseCreateOneOptions | DatabaseUpdateOneOptions,
+	): DatabaseCreateOneOptions | DatabaseUpdateOneOptions {
+		
+		// Convert Date to ISOString
+		for (const column of options.schema.columns) {
+			if (!options.data[column.field]) {
+				continue
+			}
+
+			if(options.data[column.field] instanceof Date) {
+				options.data[column.field] = options.data[column.field].toISOString()
+			}
+				
+		}
+
+		return options
+
 	}
 }

@@ -86,14 +86,12 @@ export class MSSQL {
 		const connection = await this.createConnection()
 
 		try {
-			this.logger.debug(
-				`[${DATABASE_TYPE}] ${replaceQ(options.sql, options.values)} ${options.x_request_id ?? ''}`,
-			)
-
 			if (options.values || options.values?.length) {
 				options.sql = replaceQ(options.sql, options.values)
 			}
 
+			this.logger.debug(`[${DATABASE_TYPE}] Query: ${options.sql} - ${options.x_request_id ?? ''}`)
+			
 			const result = await connection.query(options.sql)
 			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${options.x_request_id ?? ''}`)
 			connection.close()
@@ -139,6 +137,15 @@ export class MSSQL {
 	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
 		//get schema for MSSQL database
 
+		const identity_fields = `select COLUMN_NAME, TABLE_NAME from INFORMATION_SCHEMA.COLUMNS where COLUMNPROPERTY(object_id(TABLE_SCHEMA+'.'+TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1 AND TABLE_NAME = 'Customer' order by TABLE_NAME `
+
+		let identity_result = <any>(
+			await this.performQuery({
+				sql: identity_fields,
+				x_request_id: options.x_request_id,
+			})
+		).recordset
+
 		const query = `SELECT COLUMN_NAME as 'field', DATA_TYPE as 'type', IS_NULLABLE as 'nullable', COLUMN_DEFAULT as 'default' FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${options.table}';`
 
 		let columns_result = <any>(
@@ -161,7 +168,10 @@ export class MSSQL {
 			})
 		).recordset
 
+		
+
 		const columns = columns_result.map((column: any) => {
+
 			return <DatabaseSchemaColumn>{
 				field: column.field,
 				type: this.fieldMapper(column.type),
@@ -176,6 +186,12 @@ export class MSSQL {
 						? true
 						: false,
 				default: column.default,
+				extra: {
+					is_identity: identity_result.find((c: any) => c.COLUMN_NAME === column.field) ? true : false || constraints_result.find((c: any) => c.type === 'PRIMARY KEY' && c.field === column.field)
+					? true
+					: false,
+					convert: column.type === 'varbinary' ? 'varbinary' : false,
+				}
 			}
 		})
 
@@ -240,6 +256,7 @@ export class MSSQL {
 	 */
 
 	async createOne(options: DatabaseCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
+		
 		const table_name = options.schema.table
 		const values: any[] = []
 
@@ -258,11 +275,36 @@ export class MSSQL {
 			}
 		}
 
-		for (const c in columns) {
-			columns[c] = this.reserveWordFix(columns[c])
+		const has_identity = this.isIdentity(options, columns)
+
+		let command = ''
+
+		if(has_identity){
+			command += `SET IDENTITY_INSERT ${this.reserveWordFix(table_name)} ON; `
 		}
 
-		const command = `INSERT INTO ${this.reserveWordFix(table_name)} (${columns.join(', ')}) VALUES ( '?'${values.map(() => ``).join(`, '?'`)} ); SELECT SCOPE_IDENTITY() AS insertId;`
+		let valuesString = ''
+
+		for(const c in columns){
+
+			const schema_col = options.schema.columns.find((col) => col.field === columns[c])
+		
+			if(schema_col.extra?.convert){
+				valuesString += `CAST('?' AS ${schema_col.extra.convert}), `
+			}else{
+				valuesString += `'?', `
+			}
+
+			
+		}
+
+		valuesString = valuesString.slice(0, -2)
+
+		command += `INSERT INTO ${this.reserveWordFix(table_name)} (${columns.join(', ')}) VALUES ( ${valuesString} ); SELECT SCOPE_IDENTITY() AS insertId; `
+
+		if(has_identity){
+			command += `SET IDENTITY_INSERT ${this.reserveWordFix(table_name)} OFF; `
+		}
 
 		const result = <{ insertId: number }>(
 			(<any>(await this.performQuery({ sql: command, values, x_request_id })).recordset[0])
@@ -385,9 +427,17 @@ export class MSSQL {
 
 		options = this.pipeObjectToMSSQL(options) as DatabaseUpdateOneOptions
 
-		command += `${Object.keys(options.data)
-			.map(key => `${key} = '?'`)
-			.join(', ')} `
+		for(const key of Object.keys(options.data)){
+			const schema_col = options.schema.columns.find((col) => col.field === key)
+			
+			if(schema_col.extra?.convert){
+				command += `${key} = CAST('?' AS ${schema_col.extra.convert}), `
+			}else{
+				command += `${key} = '?', `
+			}
+		}
+
+		command = command.slice(0, -2)
 
 		command += `WHERE ${options.schema.primary_key} = ?`
 
@@ -572,7 +622,7 @@ export class MSSQL {
 
 		if (options.relations?.length) {
 			for (const relation of options.relations) {
-				command += `${relation.join.type ?? 'INNER JOIN'} ${this.reserveWordFix(relation.join.table)} ON ${this.reserveWordFix(relation.join.org_table)}.${this.reserveWordFix(relation.join.org_column)} = ${this.reserveWordFix(relation.join.table)}.${this.reserveWordFix(relation.join.column)} `
+				command += `${relation.join?.type ?? 'INNER JOIN'} ${this.reserveWordFix(relation.join.table)} ON ${this.reserveWordFix(relation.join.org_table)}.${this.reserveWordFix(relation.join.org_column)} = ${this.reserveWordFix(relation.join.table)}.${this.reserveWordFix(relation.join.column)} `
 			}
 		}
 
@@ -644,6 +694,8 @@ export class MSSQL {
 				command += `FETCH NEXT ${(options as DatabaseFindManyOptions).limit} ${row} `
 			}
 		}
+
+		command = command.trim()
 
 		command += `;`
 
@@ -740,6 +792,12 @@ export class MSSQL {
 					}
 					break
 
+				case DatabaseColumnType.NUMBER:
+					if (options.data[column.field]) {
+						options.data[column.field] = Number(options.data[column.field])
+					}
+					break
+
 				default:
 					continue
 			}
@@ -777,6 +835,8 @@ export class MSSQL {
 				return value === 1
 			case DatabaseColumnType.DATE:
 				return new Date(value).toISOString()
+			case DatabaseColumnType.NUMBER:
+				return Number(value)
 			default:
 				return value
 		}
@@ -784,5 +844,20 @@ export class MSSQL {
 
 	async truncate(table: string): Promise<void> {
 		await this.performQuery({ sql: 'TRUNCATE TABLE [' + table + ']' })
+	}
+
+
+	private isIdentity(options: DatabaseCreateOneOptions, columns: string[]): boolean{
+		let has_identity = false
+		const identity = options.schema.columns.filter(c => c.extra?.is_identity)
+
+		for (const c in columns) {
+			columns[c] = this.reserveWordFix(columns[c])
+			if (identity.length && identity[0].field === columns[c]) {
+				has_identity = true
+			}
+		}
+
+		return has_identity
 	}
 }

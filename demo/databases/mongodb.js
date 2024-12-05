@@ -1,7 +1,3 @@
-const Customers = require('./json/Customer.json');
-const Employees = require('./json/Employee.json');
-const Shippers = require('./json/Shipper.json');
-
 //seed
 db = db.getSiblingDB('llana');
 
@@ -14,12 +10,6 @@ db.User.insert({
     "createdAt": "2000-01-01 00:00:01",
     "updatedAt": "2000-01-01 00:00:01",
     "deletedAt": null,
-    "UserApiKey": {
-        "apiKey": "Ex@mp1eS$Cu7eAp!K3y",
-        "createdAt": "2000-01-01 00:00:01",
-        "updatedAt": "2000-01-01 00:00:01",
-        "deletedAt": null
-    }
 });
 
 //get last inserted id
@@ -49,6 +39,11 @@ db.getCollection("_llana_relation").insertMany([{
     "column": "_id",
     "org_table": "_llana_webhook",
     "org_column": "user_identifier"
+},{
+    "table": "User",
+    "column": "_id",
+    "org_table": "UserApiKey",
+    "org_column": "userId"
 }]);
 
 db.createCollection("_llana_webhook")
@@ -94,7 +89,147 @@ db.UserApiKey.insert({
 
 // Insert customers
 
-const customers = db.Customer.insertMany(Customers);
+const customers = db.Customer.insertMany([{
+    "custId": 1,
+    "fax": "030-0123456",
+    "city": "Berlin",
+    "email": null,
+    "phone": "030-3456789",
+    "mobile": null,
+    "region": null,
+    "address": "Obere Str. 0123",
+    "country": "Germany",
+    "postalCode": "10092",
+    "companyName": "Customer NRZBB",
+    "contactName": "Allen, Michael",
+    "contactTitle": "Sales Representative"
+}, {
+    "custId": 2,
+    "fax": "(5) 456-7890",
+    "city": "México D.F.",
+    "email": null,
+    "phone": "(5) 789-0123",
+    "mobile": null,
+    "region": null,
+    "address": "Avda. de la Constitución 5678",
+    "country": "Mexico",
+    "postalCode": "10077",
+    "companyName": "Customer MLTDN",
+    "contactName": "Hassall, Mark",
+    "contactTitle": "Owner"
+}, {
+    "custId": 3,
+    "fax": null,
+    "city": "México D.F.",
+    "email": null,
+    "phone": "(5) 123-4567",
+    "mobile": null,
+    "region": null,
+    "address": "Mataderos  7890",
+    "country": "Mexico",
+    "postalCode": "10097",
+    "companyName": "Customer KBUDE",
+    "contactName": "Peoples, John",
+    "contactTitle": "Owner"
+}, {
+    "custId": 4,
+    "fax": "(171) 456-7891",
+    "city": "London",
+    "email": null,
+    "phone": "(171) 456-7890",
+    "mobile": null,
+    "region": null,
+    "address": "7890 Hanover Sq.",
+    "country": "UK",
+    "postalCode": "10046",
+    "companyName": "Customer HFBZG",
+    "contactName": "Arndt, Torsten",
+    "contactTitle": "Sales Representative"
+}, {
+    "custId": 5,
+    "fax": "0921-23 45 67",
+    "city": "Luleå",
+    "email": null,
+    "phone": "0921-67 89 01",
+    "mobile": null,
+    "region": null,
+    "address": "Berguvsvägen  5678",
+    "country": "Sweden",
+    "postalCode": "10112",
+    "companyName": "Customer HGVLZ",
+    "contactName": "Higginbotham, Tom",
+    "contactTitle": "Order Administrator"
+}, {
+    "custId": 6,
+    "fax": "0621-12345",
+    "city": "Mannheim",
+    "email": null,
+    "phone": "0621-67890",
+    "mobile": null,
+    "region": null,
+    "address": "Forsterstr. 7890",
+    "country": "Germany",
+    "postalCode": "10117",
+    "companyName": "Customer XHXJV",
+    "contactName": "Poland, Carole",
+    "contactTitle": "Sales Representative"
+}, {
+    "custId": 7,
+    "fax": "67.89.01.24",
+    "city": "Strasbourg",
+    "email": null,
+    "phone": "67.89.01.23",
+    "mobile": null,
+    "region": null,
+    "address": "2345, place Kléber",
+    "country": "France",
+    "postalCode": "10089",
+    "companyName": "Customer QXVLA",
+    "contactName": "Bansal, Dushyant",
+    "contactTitle": "Marketing Manager"
+}, {
+    "custId": 8,
+    "fax": "(91) 012 34 56",
+    "city": "Madrid",
+    "email": null,
+    "phone": "(91) 345 67 89",
+    "mobile": null,
+    "region": null,
+    "address": "C/ Araquil, 0123",
+    "country": "Spain",
+    "postalCode": "10104",
+    "companyName": "Customer QUHWH",
+    "contactName": "Ilyina, Julia",
+    "contactTitle": "Owner"
+}, {
+    "custId": 9,
+    "fax": "23.45.67.80",
+    "city": "Marseille",
+    "email": null,
+    "phone": "23.45.67.89",
+    "mobile": null,
+    "region": null,
+    "address": "6789, rue des Bouchers",
+    "country": "France",
+    "postalCode": "10105",
+    "companyName": "Customer RTXGC",
+    "contactName": "Raghav, Amritansh",
+    "contactTitle": "Owner"
+}, {
+    "custId": 10,
+    "fax": "(604) 678-9012",
+    "city": "Tsawassen",
+    "email": null,
+    "phone": "(604) 901-2345",
+    "mobile": null,
+    "region": "BC",
+    "address": "8901 Tsawassen Blvd.",
+    "country": "Canada",
+    "postalCode": "10111",
+    "companyName": "Customer EEALV",
+    "contactName": "Bassols, Pilar Colome",
+    "contactTitle": "Accounting Manager"
+}]);
 
 const customer1 = db.Customer.findOne({companyName: "Customer NRZBB"});
 const customer2 = db.Customer.findOne({companyName: "Customer MLTDN"});
@@ -109,7 +244,107 @@ const customer10 = db.Customer.findOne({companyName: "Customer EEALV"});
 
 // Employees
 
-const employees = db.Employee.insertMany(Employees);
+const employees = db.Employee.insertMany([{
+    "employeeId": 1,
+    "city": "Seattle",
+    "email": null,
+    "notes": null,
+    "phone": "(206) 555-0101",
+    "photo": null,
+    "title": "CEO",
+    "mobile": null,
+    "region": "WA",
+    "address": "7890 - 20th Ave. E., Apt. 2A",
+    "country": "USA",
+    "hireDate": "2000-01-01 00:00:01",
+    "lastname": "Davis",
+    "birthDate": "2000-01-01 00:00:01",
+    "extension": null,
+    "firstname": "Sara",
+    "photoPath": null,
+    "postalCode": "10003",
+    "titleOfCourtesy": "Ms."
+}, {
+    "employeeId": 2,
+    "city": "Tacoma",
+    "email": null,
+    "notes": null,
+    "phone": "(206) 555-0100",
+    "photo": null,
+    "title": "Vice President, Sales",
+    "mobile": null,
+    "region": "WA",
+    "address": "9012 W. Capital Way",
+    "country": "USA",
+    "hireDate": "2000-01-01 00:00:01",
+    "lastname": "Funk",
+    "birthDate": "2000-01-01 00:00:01",
+    "extension": null,
+    "firstname": "Don",
+    "photoPath": null,
+    "postalCode": "10001",
+    "titleOfCourtesy": "Dr."
+}, {
+    "employeeId": 3,
+    "city": "Kirkland",
+    "email": null,
+    "notes": null,
+    "phone": "(206) 555-0103",
+    "photo": null,
+    "title": "Sales Manager",
+    "mobile": null,
+    "region": "WA",
+    "address": "2345 Moss Bay Blvd.",
+    "country": "USA",
+    "hireDate": "2000-01-01 00:00:01",
+    "lastname": "Lew",
+    "birthDate": "2000-01-01 00:00:01",
+    "extension": null,
+    "firstname": "Judy",
+    "photoPath": null,
+    "postalCode": "10007",
+    "titleOfCourtesy": "Ms."
+}, {
+    "employeeId": 4,
+    "city": "Redmond",
+    "email": null,
+    "notes": null,
+    "phone": "(206) 555-0104",
+    "photo": null,
+    "title": "Sales Representative",
+    "mobile": null,
+    "region": "WA",
+    "address": "5678 Old Redmond Rd.",
+    "country": "USA",
+    "hireDate": "2000-01-01 00:00:01",
+    "lastname": "Peled",
+    "birthDate": "2000-01-01 00:00:01",
+    "extension": null,
+    "firstname": "Yael",
+    "photoPath": null,
+    "postalCode": "10009",
+    "titleOfCourtesy": "Mrs."
+}, {
+    "employeeId": 5,
+    "city": "London",
+    "email": null,
+    "notes": null,
+    "phone": "(71) 234-5678",
+    "photo": null,
+    "title": "Sales Manager",
+    "mobile": null,
+    "region": null,
+    "address": "8901 Garrett Hill",
+    "country": "UK",
+    "hireDate": "2000-01-01 00:00:01",
+    "lastname": "Buck",
+    "birthDate": "2000-01-01 00:00:01",
+    "extension": null,
+    "firstname": "Sven",
+    "photoPath": null,
+    "postalCode": "10004",
+    "titleOfCourtesy": "Mr."
+}]);
 
 const employee1 = db.Employee.findOne({firstname: "Sara"});
 const employee2 = db.Employee.findOne({firstname: "Don"});
@@ -119,7 +354,19 @@ const employee5 = db.Employee.findOne({firstname: "Sven"});
 
 // Shippers
 
-const shippers = db.Shipper.insertMany(Shippers);
+const shippers = db.Shipper.insertMany([{
+    "shipperId": 1,
+    "phone": "(503) 555-0137",
+    "companyName": "Shipper GVSUA"
+}, {
+    "shipperId": 2,
+    "phone": "(425) 555-0136",
+    "companyName": "Shipper ETYNR"
+}, {
+    "shipperId": 3,
+    "phone": "(415) 555-0138",
+    "companyName": "Shipper ZHISN"
+}]);
 
 // Get Shipper Ids
 const shipper1 = db.Shipper.findOne({companyName: "Shipper GVSUA"});

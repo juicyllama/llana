@@ -48,7 +48,7 @@ export class Airtable {
 		if(!options.method){
 			options.method = 'GET'
 		}
-		
+
 		const [apiKey, baseId] = this.configService.get('database.host').split('://')[1].split('@')
 
 		const endpoint = options.endpoint.replace('BaseId', baseId)
@@ -293,12 +293,16 @@ export class Airtable {
 				x_request_id,
 			)
 
+			const fields = options.fields?.length > 0 ? options.fields : [
+				...options.schema.columns.map(c => c.field)
+			].filter(f => f !== 'id')
+
 			const id = options.where.find(w => w.column === options.schema.primary_key)?.value
 
 			if (!id) {
 				// Find Many and return first result
 				const results = await this.findMany({
-					fields: options.fields?.length > 0 ? options.fields : undefined,
+					fields,
 					schema: options.schema,
 					where: options.where,
 					limit: 1,
@@ -308,8 +312,10 @@ export class Airtable {
 				return results.data[0]
 			}
 
+			let endpoint =  `/BaseId/${options.schema.table}/${id}`
+
 			const result = await this.createRequest({
-				endpoint: `/BaseId/${options.schema.table}/${id}`,
+				endpoint,
 				x_request_id
 			})
 
@@ -341,6 +347,31 @@ export class Airtable {
 	 */
 
 	async findMany(options: DatabaseFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
+
+		//If primary key is passed in where clause, return single record
+		if(options.where.length === 1 && options.where[0].column === options.schema.primary_key){
+			return {
+				limit: options.limit,
+				offset: options.offset,
+				total: 1,
+				pagination: {
+					total: 1,
+					page: {
+						current: this.pagination.current(options.limit, options.offset),
+						prev: this.pagination.previous(options.limit, options.offset),
+						next: this.pagination.next(options.limit, options.offset, 1),
+						first: this.pagination.first(options.limit),
+						last: this.pagination.last(options.limit, 1),
+					},
+				},
+				data: [await this.findOne({
+					schema: options.schema,
+					where: options.where,
+					fields: options.fields
+				}, x_request_id)]
+			}
+		}	
+
 		const total = await this.findTotalRecords(options, x_request_id)
 
 		try {
@@ -365,28 +396,89 @@ export class Airtable {
 				options.limit = this.configService.get<number>('database.defaults.limit') ?? 20
 			}
 
-			if (!options.offset) {
-				options.offset = 0
+			let offset = undefined
+
+			if (options.offset) {
+				offset = options.offset
 			}
 
-			//BUG: Handle offset via code. Airtable API does not support offset
-
 			const filterByFormula = await this.whereToFilter(options.where, options.schema)
+
+			const fields = options.fields?.length > 0 ? options.fields : [
+				...options.schema.columns.map(c => c.field)
+			].filter(f => f !== 'id')
+
+
+			if(offset){
+				//Offset not supported by airtable. 
+				//Returning prior records, then use the offset provided by airtable, however if > 100, multiple calls will be needed
+
+				if(offset > 100){
+
+					let tempOffet = 0
+					let airtableoffset = null
+
+					while(tempOffet < offset){
+
+						const data = {
+							pageSize: 100,
+							fields,
+							filterByFormula,
+							sort,
+							offset: airtableoffset
+						}
+
+						//remove undefined values
+						Object.keys(data).forEach(key => data[key] === undefined || data[key] === null && delete data[key])
+
+						const result = await this.createRequest({
+							method: 'POST',
+							endpoint: `/BaseId/${options.schema.table}/listRecords`,
+							data, 
+							x_request_id
+						})
+
+						tempOffet += 100
+						airtableoffset = result.offset
+					}
+
+
+				}else{
+
+					const result = await this.createRequest({
+						method: 'POST',
+						endpoint: `/BaseId/${options.schema.table}/listRecords`,
+						data: {
+							pageSize: options.offset,
+							fields,
+							filterByFormula,
+							sort,
+						},
+						x_request_id
+					})
+					offset = result.offset
+				}
+			}
+
+			const data = {
+				fields,
+				filterByFormula,
+				sort,
+				maxRecords: options.limit > 100 ? 100 : options.limit,
+				pageSize: options.limit > 100 ? 100 : options.limit,
+				offset: offset ?? null,
+			}
+
+			//remove undefined values
+			Object.keys(data).forEach(key => data[key] === undefined || data[key] === null && delete data[key])
 
 			const findAllRequest = {
 				method: 'POST',
 				endpoint: `/BaseId/${options.schema.table}/listRecords`,
-				data: {
-					fields: options.fields?.length > 0 ? options.fields : undefined,
-					filterByFormula,
-					sort,
-					maxRecords: options.limit,
-					offset: options.offset > 0 ? options.offset : null,
-				},
+				data,
 				x_request_id
 			}
-			console.log(findAllRequest)
-
+			
 			const result = await this.createRequest(<any>findAllRequest)
 			
 			const results = <any>result.records.map((record: any) => {
@@ -437,23 +529,26 @@ export class Airtable {
 			)
 			const filterByFormula = await this.whereToFilter(options.where, options.schema)
 
-			let offset = 0
+			let offset = undefined
 			let total = 0
 			let finished = false
 
-			//BUG: Handle offset via code. Airtable API does not support offset
-
 			while (!finished) {
+
+				const data = {
+					pageSize: 100,
+					fields: [],
+					filterByFormula,
+					offset
+				}
+
+				//remove undefined values
+				Object.keys(data).forEach(key => data[key] === undefined || data[key] === null && delete data[key])
 
 				const result = await this.createRequest({
 					method: 'POST',
 					endpoint: `/BaseId/${options.schema.table}/listRecords`,
-					data: {
-						pageSize: 100,
-						offset: offset > 0 ? offset : null,
-						fields: [],
-						filterByFormula,
-					},
+					data,
 					x_request_id
 				})
 
@@ -461,9 +556,11 @@ export class Airtable {
 					finished = true
 				}else if(result.records.length < 100){
 					total += result.records.length
+					offset = result.offset
 					finished = true
 				}else{
 					offset += 100
+					offset = result.offset
 					total =+ result.records.length
 				}
 			}
@@ -496,6 +593,32 @@ export class Airtable {
 			this.logger.debug(
 				`[${DATABASE_TYPE}] Update Record on ${options.schema.table}: ${JSON.stringify(options.data)} ${x_request_id ?? ''}`
 			)
+
+			for(const col of options.schema.columns){
+				if(col.foreign_key){
+					if(options.data[col.field]){
+
+						if(!Array.isArray(options.data[col.field])){
+							options.data[col.field] = [options.data[col.field]]
+						}
+
+						const linkedTable = options.schema.relations.find(r => r.org_column === col.field)
+
+						for(const id of options.data[col.field]){
+							const linkedSchema = await this.getSchema({ table: linkedTable.table })
+							const linkedRecord = await this.findOne({
+								schema: linkedSchema,
+								where: [{ column: 'id', operator: WhereOperator.equals, value: id }]
+							}, x_request_id)
+
+							if(!linkedRecord){
+								throw new Error('Linked record not found')
+							}
+						}
+					}
+				}
+			}
+
 
 			const result = await this.createRequest({
 				endpoint: `/BaseId/${options.schema.table}/${options.id}`,
@@ -911,6 +1034,17 @@ export class Airtable {
 	}
 
 	private formatOutput(options: DatabaseFindOneOptions, data: { [key: string]: any }): object {
+
+		// You cannot specify fields for single records with airtable, so remove any fields that are not in the schema
+
+		if (options.fields && options.fields.length > 0) {
+			for (const key in data) {
+				if (key !== 'id' && !options.fields.includes(key)) {
+					delete data[key]
+				}
+			}
+		}
+
 		for (const key in data) {
 			const column = options.schema.columns.find(c => c.field === key)
 

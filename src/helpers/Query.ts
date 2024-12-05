@@ -97,6 +97,7 @@ export class Query {
 
 			switch (action) {
 				case QueryPerform.CREATE:
+
 					const createOptions = options as DatabaseCreateOneOptions
 					createOptions.data = await this.identityOperationCheck(createOptions)
 					result = await this.createOne(createOptions, x_request_id)
