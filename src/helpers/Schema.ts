@@ -11,6 +11,7 @@ import { Mongo } from '../databases/mongo.database'
 import { MSSQL } from '../databases/mssql.database'
 import { MySQL } from '../databases/mysql.database'
 import { Postgres } from '../databases/postgres.database'
+import { Airtable } from '../databases/airtable.database'
 import {
 	DatabaseColumnType,
 	DatabaseFindOneOptions,
@@ -40,6 +41,7 @@ export class Schema {
 		private readonly mongo: Mongo,
 		private readonly mysql: MySQL,
 		private readonly mssql: MSSQL,
+		private readonly airtable: Airtable,
 	) {}
 
 	/**
@@ -75,6 +77,9 @@ export class Schema {
 					break
 				case DatabaseType.MSSQL:
 					result = await this.mssql.getSchema({ table: options.table, x_request_id: options.x_request_id })
+					break
+				case DatabaseType.AIRTABLE:
+					result = await this.airtable.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
 				default:
 					this.logger.error(
@@ -178,6 +183,13 @@ export class Schema {
 	): Promise<object> {
 		const nestedObject = {}
 
+		//if Buffer convert to string
+		Object.keys(data).forEach(key => {
+			if (data[key] instanceof Buffer) {
+				data[key] = data[key].toString()
+			}
+		})
+
 		Object.keys(data).forEach(key => {
 			const keys = key.split('.')
 			keys.reduce((acc, currentKey, index) => {
@@ -256,9 +268,18 @@ export class Schema {
 		schema: DatabaseSchema,
 		data: { [key: string]: any },
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
+
 		try {
 			for (const key in data) {
+
 				const column = schema.columns.find(col => col.field === key)
+
+				if(!column){
+					return {
+						valid: false,
+						message: `Unknown column: ${key}`,
+					}
+				}
 
 				switch (column.type) {
 					case DatabaseColumnType.NUMBER:
@@ -273,7 +294,7 @@ export class Schema {
 							data[key] = data[key] ? 1 : 0
 						}
 
-						data[key] = parseInt(data[key])
+						data[key] = Number(data[key])
 						break
 					default:
 						break

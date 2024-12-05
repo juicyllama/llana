@@ -6,7 +6,7 @@ CREATE TABLE [User] (
   id int NOT NULL IDENTITY
   ,email varchar(255) NOT NULL
   ,password varchar(255) NOT NULL
-  ,role varchar(30) check (role in ('ADMIN','EDITOR','VIEWER')) DEFAULT 'VIEWER'
+  ,role varchar(30) check (role in ('ADMIN','USER')) DEFAULT 'USER'
   ,firstName varchar(255) DEFAULT NULL
   ,lastName varchar(255) DEFAULT NULL
   ,createdAt datetime2(0) DEFAULT GETDATE()
@@ -43,39 +43,6 @@ INSERT INTO UserApiKey (id, userId, apiKey, createdAt, updatedAt, deletedAt) VAL
 
 SET IDENTITY_INSERT UserApiKey OFF;
 
-
-CREATE TABLE Category (
-  categoryId INT IDENTITY NOT NULL
-  ,categoryName VARCHAR(15) NOT NULL
-  ,description VARCHAR(max) NULL
-  ,picture VARBINARY(max) NULL
-  ,createdAt datetime2(0) DEFAULT GETDATE()
-  ,updatedAt datetime2(0) DEFAULT GETDATE() /* ON UPDATE GETDATE() */
-  ,deletedAt datetime2(0) DEFAULT NULL
-  ,PRIMARY KEY (categoryId)
-  ) ;
-
-CREATE TABLE Region (
-  regionId INT IDENTITY NOT NULL
-  ,regionDescription VARCHAR(50) NOT NULL
-  ,createdAt datetime2(0) DEFAULT GETDATE()
-  ,updatedAt datetime2(0) DEFAULT GETDATE() /* ON UPDATE GETDATE() */
-  ,deletedAt datetime2(0) DEFAULT NULL
-  ,PRIMARY KEY (regionId)
-  ) ;
-
-
-CREATE TABLE Territory (
-  territoryId INT IDENTITY NOT NULL
-  ,territoryDescription VARCHAR(50) NOT NULL
-  ,regionId INT NOT NULL
-  ,createdAt datetime2(0) DEFAULT GETDATE()
-  ,updatedAt datetime2(0) DEFAULT GETDATE() /* ON UPDATE GETDATE() */
-  ,deletedAt datetime2(0) DEFAULT NULL
-  ,PRIMARY KEY (territoryId)
-  ,FOREIGN KEY (regionId)
-      REFERENCES Region(regionId)
-  ) ;
 
 CREATE TABLE Customer (
   custId INT IDENTITY NOT NULL
@@ -124,62 +91,6 @@ CREATE TABLE Employee (
   ,PRIMARY KEY (employeeId)
   ) ;
 
-CREATE TABLE EmployeeTerritory (
-  employeeId  INT IDENTITY NOT NULL
-  ,territoryId INT NOT NULL
-  ,createdAt datetime2(0) DEFAULT GETDATE()
-  ,updatedAt datetime2(0) DEFAULT GETDATE() /* ON UPDATE GETDATE() */
-  ,deletedAt datetime2(0) DEFAULT NULL
-  ,PRIMARY KEY (employeeId, territoryId)
-  ,FOREIGN KEY (employeeId)
-      REFERENCES Employee(employeeId)
-  ,FOREIGN KEY (territoryId)
-      REFERENCES Territory(territoryId)    
-  ) ;
-
-CREATE TABLE Supplier (
-  supplierId INT IDENTITY NOT NULL
-  ,companyName VARCHAR(40) NOT NULL
-  ,contactName VARCHAR(30) NULL
-  ,contactTitle VARCHAR(30) NULL
-  ,address VARCHAR(60) NULL
-  ,city VARCHAR(15) NULL
-  ,region VARCHAR(15) NULL
-  ,postalCode VARCHAR(10) NULL
-  ,country VARCHAR(15) NULL
-  ,phone VARCHAR(24) NULL
-  ,email VARCHAR(225) NULL
-  ,fax VARCHAR(24) NULL
-  ,HomePage VARCHAR(max) NULL
-  ,createdAt datetime2(0) DEFAULT GETDATE()
-  ,updatedAt datetime2(0) DEFAULT GETDATE() /* ON UPDATE GETDATE() */
-  ,deletedAt datetime2(0) DEFAULT NULL
-  ,PRIMARY KEY (supplierId)
-  ) ;
-
-
-
-CREATE TABLE Product (
-  productId INT IDENTITY NOT NULL
-  ,productName VARCHAR(40) NOT NULL
-  ,supplierId INT NULL
-  ,categoryId INT NULL
-  ,quantityPerUnit VARCHAR(20) NULL
-  ,unitPrice DECIMAL(10, 2) NULL
-  ,unitsInStock SMALLINT NULL
-  ,unitsOnOrder SMALLINT NULL
-  ,reorderLevel SMALLINT NULL
-  ,discontinued CHAR(1) NOT NULL
-  ,createdAt datetime2(0) DEFAULT GETDATE()
-  ,updatedAt datetime2(0) DEFAULT GETDATE() /* ON UPDATE GETDATE() */
-  ,deletedAt datetime2(0) DEFAULT NULL
-  ,PRIMARY KEY (ProductId)
-  ,FOREIGN KEY (supplierId)
-      REFERENCES Supplier(supplierId)
-  ,FOREIGN KEY (categoryId)
-      REFERENCES Category(categoryId)
-  ) ;
-
 
 
 CREATE TABLE Shipper (
@@ -220,24 +131,6 @@ CREATE TABLE SalesOrder (
   ) ;
 
 
-
-CREATE TABLE OrderDetail (
-   orderDetailId INT IDENTITY NOT NULL,
-   orderId INT NOT NULL
-  ,productId INT NOT NULL
-  ,unitPrice DECIMAL(10, 2) NOT NULL
-  ,quantity SMALLINT NOT NULL
-  ,discount DECIMAL(10, 2) NOT NULL
-  ,createdAt datetime2(0) DEFAULT GETDATE()
-  ,updatedAt datetime2(0) DEFAULT GETDATE() /* ON UPDATE GETDATE() */
-  ,deletedAt datetime2(0) DEFAULT NULL
-  ,PRIMARY KEY (orderDetailId)
-  ,FOREIGN KEY (orderId)
-      REFERENCES SalesOrder(orderId)
-       ,FOREIGN KEY (productId)
-      REFERENCES Product(productId) 
-  ) ;
-
 SET IDENTITY_INSERT Employee ON;
 
 INSERT  INTO Employee(employeeId, lastName, firstName, title, titleofcourtesy, birthdate, hiredate, address, city, region, postalCode, country, phone, mgrid)
@@ -261,16 +154,6 @@ INSERT  INTO Employee(employeeId, lastName, firstName, title, titleofcourtesy, b
 
 SET IDENTITY_INSERT Employee OFF;
 
-SET IDENTITY_INSERT Supplier ON;
-
-INSERT  INTO Supplier(supplierId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(1, N'Supplier SWRXU', N'Adolphi, Stephan', N'Purchasing Manager', N'2345 Gilbert St.', N'London', NULL, N'10023', N'UK', N'(171) 456-7890', NULL);
-INSERT  INTO Supplier(supplierId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(2, N'Supplier VHQZD', N'Hance, Jim', N'Order Administrator', N'P.O. Box 5678', N'New Orleans', N'LA', N'10013', N'USA', N'(100) 555-0111', NULL);
-INSERT  INTO Supplier(supplierId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(3, N'Supplier STUAZ', N'Parovszky, Alfons', N'Sales Representative', N'1234 Oxford Rd.', N'Ann Arbor', N'MI', N'10026', N'USA', N'(313) 555-0109', N'(313) 555-0112');
-
-SET IDENTITY_INSERT Supplier OFF;
 
 SET IDENTITY_INSERT Shipper ON;
 
@@ -309,80 +192,6 @@ INSERT  INTO Customer(custId, companyName, contactName, contactTitle, address, c
 
 SET IDENTITY_INSERT Customer OFF;
 
-SET IDENTITY_INSERT Category ON;
-
-INSERT  INTO Category(categoryId, categoryName, description)
-  VALUES(1, N'Beverages', N'Soft drinks, coffees, teas, beers, and ales');
-INSERT  INTO Category(categoryId, categoryName, description)
-  VALUES(2, N'Condiments', N'Sweet and savory sauces, relishes, spreads, and seasonings');
-INSERT  INTO Category(categoryId, categoryName, description)
-  VALUES(3, N'Confections', N'Desserts, candies, and sweet breads');
-INSERT  INTO Category(categoryId, categoryName, description)
-  VALUES(4, N'Dairy Products', N'Cheeses');
-INSERT  INTO Category(categoryId, categoryName, description)
-  VALUES(5, N'Grains/Cereals', N'Breads, crackers, pasta, and cereal');
-INSERT  INTO Category(categoryId, categoryName, description)
-  VALUES(6, N'Meat/Poultry', N'Prepared meats');
-INSERT  INTO Category(categoryId, categoryName, description)
-  VALUES(7, N'Produce', N'Dried fruit and bean curd');
-INSERT  INTO Category(categoryId, categoryName, description)
-  VALUES(8, N'Seafood', N'Seaweed and fish');
-
-SET IDENTITY_INSERT Category OFF;
-
-SET IDENTITY_INSERT Region ON;
-
-INSERT  INTO Region(regionId, regionDescription) VALUES (1,'Eastern');
-INSERT  INTO Region(regionId, regionDescription) VALUES (2,'Western');
-INSERT  INTO Region(regionId, regionDescription) VALUES (3,'Northern');
-INSERT  INTO Region(regionId, regionDescription) VALUES (4,'Southern');
-
-SET IDENTITY_INSERT Region OFF;
-
-SET IDENTITY_INSERT Territory ON;
-
-INSERT  INTO Territory(territoryId, territoryDescription, regionId) VALUES (1,'Westboro',1);
-INSERT  INTO Territory(territoryId, territoryDescription, regionId) VALUES (2,'Bedford',1);
-INSERT  INTO Territory(territoryId, territoryDescription, regionId) VALUES (3,'Georgetow',1);
-
-SET IDENTITY_INSERT Territory OFF;
-
-SET IDENTITY_INSERT EmployeeTerritory ON;
-
-INSERT  INTO EmployeeTerritory(employeeId, territoryId) VALUES (1,1);
-INSERT  INTO EmployeeTerritory(employeeId, territoryId) VALUES (1,2);
-INSERT  INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,1);
-INSERT  INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,2);
-INSERT  INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,3);
-INSERT  INTO EmployeeTerritory(employeeId, territoryId) VALUES (3,2);
-INSERT  INTO EmployeeTerritory(employeeId, territoryId) VALUES (4,3);
-
-SET IDENTITY_INSERT EmployeeTerritory OFF;
-
-SET IDENTITY_INSERT Product ON;
-
-INSERT  INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(1, N'Product HHYDP', 1, 1, 18.00, 0);
-INSERT  INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(2, N'Product RECZE', 1, 1, 19.00, 0);
-INSERT  INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(3, N'Product IMEHJ', 1, 2, 10.00, 0);
-INSERT  INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(4, N'Product KSBRM', 2, 2, 22.00, 0);
-INSERT  INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(5, N'Product EPEIM', 2, 2, 21.35, 1);
-INSERT  INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(6, N'Product VAIIV', 3, 2, 25.00, 0);
-INSERT  INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(7, N'Product HMLNI', 3, 7, 30.00, 0);
-INSERT  INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(8, N'Product WVJFP', 3, 2, 40.00, 0);
-INSERT  INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(9, N'Product AOZBW', 4, 6, 97.00, 1);
-INSERT  INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(10, N'Product YHXGE', 4, 8, 31.00, 0);
-
-SET IDENTITY_INSERT Product OFF;
 
 SET IDENTITY_INSERT SalesOrder ON;
 
@@ -438,46 +247,3 @@ INSERT  INTO SalesOrder(orderId, custId, employeeId, orderDate, requiredDate, sh
   VALUES(25, 5, 6, '2006-08-02 00:00:00.000', '2006-08-30 00:00:00.000', '2006-08-06 00:00:00.000', 2, 98.03, N'Ship to 65-A', N'7890 Milton Dr.', N'Albuquerque', N'NM', N'10285', N'USA');
 
 SET IDENTITY_INSERT SalesOrder OFF;
-
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(1, 1, 14.00, 12, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(1, 2, 9.80, 10, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(1, 2, 34.80, 5, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(2, 3, 18.60, 9, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(2, 1, 42.40, 40, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(2, 5, 7.70, 10, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(3, 5, 42.40, 35, 0.15);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(4, 7, 16.80, 15, 0.15);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(4, 1, 16.80, 6, 0.05);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(4, 6, 15.60, 15, 0.05);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(5, 1, 16.80, 20, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(5, 5, 64.80, 40, 0.05);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(6, 1, 2.00, 25, 0.05);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(7, 10, 27.20, 40, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(7, 9, 10.00, 20, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(8, 1, 14.40, 42, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(8, 2, 16.00, 40, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(8, 3, 3.60, 15, 0.15);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(9, 9, 19.20, 21, 0.15);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(10, 1, 8.00, 21, 0);
-INSERT  INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(10, 10, 15.20, 20, 0);

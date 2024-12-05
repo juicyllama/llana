@@ -13,14 +13,14 @@ import {
 	LLANA_WEBHOOK_TABLE,
 	WEBHOOK_LOG_DAYS,
 } from './app.constants'
-import { FindManyResponseObject } from './dtos/response.dto'
+import { FindManyResponseObject, ListTablesResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
 import { Documentation } from './helpers/Documentation'
 import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
 import { AuthType } from './types/auth.types'
-import { DatabaseColumnType, DatabaseSchema, PublishType, QueryPerform, WhereOperator } from './types/database.types'
+import { ColumnExtraNumber, DatabaseColumnType, DatabaseSchema, PublishType, QueryPerform, WhereOperator } from './types/database.types'
 import { Method } from './types/response.types'
 import { CustomRole, DefaultRole, RolePermission } from './types/roles.types'
 
@@ -39,6 +39,8 @@ export class AppBootup implements OnApplicationBootstrap {
 	async onApplicationBootstrap() {
 		this.logger.log('Bootstrapping Application', APP_BOOT_CONTEXT)
 
+		this.logger.log(`Datasource is ${this.configService.get<string>('database.type').toUpperCase()}`, APP_BOOT_CONTEXT)
+
 		this.logger.log('Resetting Cache', APP_BOOT_CONTEXT)
 		await this.cacheManager.reset()
 
@@ -50,12 +52,11 @@ export class AppBootup implements OnApplicationBootstrap {
 			throw new Error('Database Connection Error')
 		}
 
-		this.logger.log('Checking for _llana_auth and _llana_roles tables', APP_BOOT_CONTEXT)
+		const database = await this.query.perform(QueryPerform.LIST_TABLES, {include_system: true}, APP_BOOT_CONTEXT) as ListTablesResponseObject
 
-		try {
-			await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: APP_BOOT_CONTEXT })
-		} catch (e) {
-			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist - ${e.message}`, APP_BOOT_CONTEXT)
+		if(!database.tables.includes(LLANA_AUTH_TABLE)) {
+
+			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
 
 			/**
 			 * Create the _llana_auth schema
@@ -81,6 +82,9 @@ export class AppBootup implements OnApplicationBootstrap {
 						unique_key: true,
 						foreign_key: false,
 						auto_increment: true,
+						extra: <ColumnExtraNumber>{
+							decimal: 0,
+						}
 					},
 					{
 						field: 'auth',
@@ -124,7 +128,11 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
-			await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+
+			if(!created) {
+				throw new Error(`Failed to create ${LLANA_AUTH_TABLE} table`)
+			}
 
 			// Example Auth Table - For example allowing external API access to see Employee data
 
@@ -157,11 +165,9 @@ export class AppBootup implements OnApplicationBootstrap {
 			}
 		}
 
-		try {
-			await this.schema.getSchema({ table: LLANA_ROLES_TABLE, x_request_id: APP_BOOT_CONTEXT })
-		} catch (e) {
+		if(!database.tables.includes(LLANA_ROLES_TABLE)) {
 			this.logger.log(
-				`Creating ${LLANA_ROLES_TABLE} schema as it does not exist - ${e.message}`,
+				`Creating ${LLANA_ROLES_TABLE} schema as it does not exist`,
 				APP_BOOT_CONTEXT,
 			)
 
@@ -191,6 +197,9 @@ export class AppBootup implements OnApplicationBootstrap {
 						unique_key: true,
 						foreign_key: false,
 						auto_increment: true,
+						extra: <ColumnExtraNumber>{
+							decimal: 0,
+						}
 					},
 					{
 						field: 'custom',
@@ -251,7 +260,11 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
-			await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+
+			if(!created) {
+				throw new Error('Failed to create _llana_roles table')
+			}
 
 			if (!this.authentication.skipAuth()) {
 				const default_roles: DefaultRole[] = [
@@ -346,10 +359,9 @@ export class AppBootup implements OnApplicationBootstrap {
 			}
 		}
 
-		try {
-			await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: APP_BOOT_CONTEXT })
-		} catch (e) {
-			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist - ${e.message}`, APP_BOOT_CONTEXT)
+
+		if(!database.tables.includes(LLANA_AUTH_TABLE)) {
+			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
 
 			/**
 			 * Create the _llana_auth schema
@@ -375,6 +387,9 @@ export class AppBootup implements OnApplicationBootstrap {
 						unique_key: true,
 						foreign_key: false,
 						auto_increment: true,
+						extra: <ColumnExtraNumber>{
+							decimal: 0,
+						} 
 					},
 					{
 						field: 'table',
@@ -415,17 +430,19 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
-			await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+
+			if(!created) {
+				throw new Error(`Failed to create ${LLANA_RELATION_TABLE} table`)
+			}
 		}
 
 		// Check if _llana_webhook table exists
 
 		if (!this.configService.get<boolean>('DISABLE_WEBHOOKS')) {
-			try {
-				await this.schema.getSchema({ table: LLANA_WEBHOOK_TABLE, x_request_id: APP_BOOT_CONTEXT })
-			} catch (e) {
+			if(!database.tables.includes(LLANA_WEBHOOK_TABLE)) {
 				this.logger.log(
-					`Creating ${LLANA_WEBHOOK_TABLE} schema as it does not exist - ${e.message}`,
+					`Creating ${LLANA_WEBHOOK_TABLE} schema as it does not exist`,
 					APP_BOOT_CONTEXT,
 				)
 
@@ -446,6 +463,9 @@ export class AppBootup implements OnApplicationBootstrap {
 							unique_key: true,
 							foreign_key: false,
 							auto_increment: true,
+							extra: <ColumnExtraNumber>{
+								decimal: 0,
+							}
 						},
 						{
 							field: 'type',
@@ -531,7 +551,11 @@ export class AppBootup implements OnApplicationBootstrap {
 					})
 				}
 
-				await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+				const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+
+				if(!created) {
+					throw new Error('Failed to create _llana_webhook table')
+				}
 			}
 
 			// Check if _llana_webhook_log table exists
@@ -589,6 +613,9 @@ export class AppBootup implements OnApplicationBootstrap {
 							unique_key: true,
 							foreign_key: false,
 							auto_increment: true,
+							extra: <ColumnExtraNumber>{
+								decimal: 0,
+							}
 						},
 						{
 							field: 'webhook_id',
@@ -599,6 +626,9 @@ export class AppBootup implements OnApplicationBootstrap {
 							unique_key: false,
 							foreign_key: true,
 							auto_increment: false,
+							extra: <ColumnExtraNumber>{
+								decimal: 0,
+							}
 						},
 						{
 							field: 'type',
@@ -646,6 +676,9 @@ export class AppBootup implements OnApplicationBootstrap {
 							unique_key: false,
 							foreign_key: false,
 							default: 1,
+							extra: <ColumnExtraNumber>{
+								decimal: 0,
+							}
 						},
 						{
 							field: 'delivered',
@@ -666,6 +699,9 @@ export class AppBootup implements OnApplicationBootstrap {
 							unique_key: false,
 							foreign_key: false,
 							default: null,
+							extra: <ColumnExtraNumber>{
+								decimal: 0,
+							}
 						},
 						{
 							field: 'response_message',
@@ -718,7 +754,12 @@ export class AppBootup implements OnApplicationBootstrap {
 					],
 				}
 
-				await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+				const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+
+				if(!created) {
+					throw new Error('Failed to create _llana_webhook_log table')
+				}
+
 			}
 		} else {
 			this.logger.warn('Skipping webhooks as DISABLE_WEBHOOKS is set to true', APP_BOOT_CONTEXT)

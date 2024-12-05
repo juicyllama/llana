@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS `User` (
   id int NOT NULL AUTO_INCREMENT
   ,email varchar(255) NOT NULL
   ,password varchar(255) NOT NULL
-  ,role enum('ADMIN','EDITOR','VIEWER') DEFAULT 'VIEWER'
+  ,role enum('ADMIN','USER') DEFAULT 'USER'
   ,firstName varchar(255) DEFAULT NULL
   ,lastName varchar(255) DEFAULT NULL
   ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
@@ -44,27 +44,6 @@ CREATE TABLE IF NOT EXISTS Category (
   ,PRIMARY KEY (categoryId)
   ) ENGINE=INNODB;
 
-CREATE TABLE IF NOT EXISTS Region (
-  regionId INT NOT NULL
-  ,regionDescription VARCHAR(50) NOT NULL
-  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
-  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  ,deletedAt datetime DEFAULT NULL
-  ,PRIMARY KEY (regionId)
-  ) ENGINE=INNODB;
-
-
-CREATE TABLE IF NOT EXISTS Territory (
-  territoryId VARCHAR(20) NOT NULL
-  ,territoryDescription VARCHAR(50) NOT NULL
-  ,regionId INT NOT NULL
-  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
-  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  ,deletedAt datetime DEFAULT NULL
-  ,PRIMARY KEY (territoryId)
-  ,FOREIGN KEY (regionId)
-      REFERENCES Region(regionId)
-  ) ENGINE=INNODB;
 
 CREATE TABLE IF NOT EXISTS Customer (
   custId INT AUTO_INCREMENT NOT NULL
@@ -105,70 +84,13 @@ CREATE TABLE IF NOT EXISTS Employee (
   ,email VARCHAR(225) NULL
   ,photo BLOB NULL
   ,notes BLOB NULL
-  ,mgrId INT NULL
   ,photoPath VARCHAR(255) NULL
+  ,mgrid INT NULL
   ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
   ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ,deletedAt datetime DEFAULT NULL
   ,PRIMARY KEY (employeeId)
   ) ENGINE=INNODB;
-
-CREATE TABLE IF NOT EXISTS EmployeeTerritory (
-  employeeId  INT AUTO_INCREMENT NOT NULL
-  ,territoryId VARCHAR(20) NOT NULL
-  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
-  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  ,deletedAt datetime DEFAULT NULL
-  ,PRIMARY KEY (employeeId, territoryId)
-  ,FOREIGN KEY (employeeId)
-      REFERENCES Employee(employeeId)
-  ,FOREIGN KEY (territoryId)
-      REFERENCES Territory(territoryId)    
-  ) ENGINE=INNODB;
-
-CREATE TABLE IF NOT EXISTS Supplier (
-  supplierId INT AUTO_INCREMENT NOT NULL
-  ,companyName VARCHAR(40) NOT NULL
-  ,contactName VARCHAR(30) NULL
-  ,contactTitle VARCHAR(30) NULL
-  ,address VARCHAR(60) NULL
-  ,city VARCHAR(15) NULL
-  ,region VARCHAR(15) NULL
-  ,postalCode VARCHAR(10) NULL
-  ,country VARCHAR(15) NULL
-  ,phone VARCHAR(24) NULL
-  ,email VARCHAR(225) NULL
-  ,fax VARCHAR(24) NULL
-  ,HomePage TEXT NULL
-  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
-  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  ,deletedAt datetime DEFAULT NULL
-  ,PRIMARY KEY (supplierId)
-  ) ENGINE=INNODB;
-
-
-
-CREATE TABLE IF NOT EXISTS Product (
-  productId INT AUTO_INCREMENT NOT NULL
-  ,productName VARCHAR(40) NOT NULL
-  ,supplierId INT NULL
-  ,categoryId INT NULL
-  ,quantityPerUnit VARCHAR(20) NULL
-  ,unitPrice DECIMAL(10, 2) NULL
-  ,unitsInStock SMALLINT NULL
-  ,unitsOnOrder SMALLINT NULL
-  ,reorderLevel SMALLINT NULL
-  ,discontinued CHAR(1) NOT NULL
-  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
-  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  ,deletedAt datetime DEFAULT NULL
-  ,PRIMARY KEY (ProductId)
-  ,FOREIGN KEY (supplierId)
-      REFERENCES Supplier(supplierId)
-  ,FOREIGN KEY (categoryId)
-      REFERENCES Category(categoryId)
-  ) ENGINE=INNODB;
-
 
 
 CREATE TABLE IF NOT EXISTS Shipper (
@@ -210,24 +132,6 @@ CREATE TABLE IF NOT EXISTS SalesOrder (
 
 
 
-CREATE TABLE IF NOT EXISTS OrderDetail (
-   orderDetailId INT AUTO_INCREMENT NOT NULL,
-   orderId INT NOT NULL
-  ,productId INT NOT NULL
-  ,unitPrice DECIMAL(10, 2) NOT NULL
-  ,quantity SMALLINT NOT NULL
-  ,discount DECIMAL(10, 2) NOT NULL
-  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
-  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  ,deletedAt datetime DEFAULT NULL
-  ,PRIMARY KEY (orderDetailId)
-  ,FOREIGN KEY (orderId)
-      REFERENCES SalesOrder(orderId)
-       ,FOREIGN KEY (productId)
-      REFERENCES Product(productId) 
-  ) ENGINE=INNODB;
-
-
 -- Populate Employess table 
 
 INSERT IGNORE INTO Employee(employeeId, lastName, firstName, title, titleofcourtesy, birthdate, hiredate, address, city, region, postalCode, country, phone, mgrid)
@@ -250,57 +154,6 @@ INSERT IGNORE INTO Employee(employeeId, lastName, firstName, title, titleofcourt
   VALUES(9, N'Dolgopyatova', N'Zoya', N'Sales Representative', N'Ms.', '1976-01-27 00:00:00.000', '2004-11-15 00:00:00.000', N'1234 Houndstooth Rd.', N'London', NULL, N'10008', N'UK', N'(71) 456-7890', 5);
 
 -- ---  
-
-
-INSERT IGNORE INTO Supplier(supplierId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(1, N'Supplier SWRXU', N'Adolphi, Stephan', N'Purchasing Manager', N'2345 Gilbert St.', N'London', NULL, N'10023', N'UK', N'(171) 456-7890', NULL);
-INSERT IGNORE INTO Supplier(supplierId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(2, N'Supplier VHQZD', N'Hance, Jim', N'Order Administrator', N'P.O. Box 5678', N'New Orleans', N'LA', N'10013', N'USA', N'(100) 555-0111', NULL);
-INSERT IGNORE INTO Supplier(supplierId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(3, N'Supplier STUAZ', N'Parovszky, Alfons', N'Sales Representative', N'1234 Oxford Rd.', N'Ann Arbor', N'MI', N'10026', N'USA', N'(313) 555-0109', N'(313) 555-0112');
-
--- Category table
-
-INSERT IGNORE INTO Category(categoryId, categoryName, description)
-  VALUES(1, N'Beverages', N'Soft drinks, coffees, teas, beers, and ales');
-INSERT IGNORE INTO Category(categoryId, categoryName, description)
-  VALUES(2, N'Condiments', N'Sweet and savory sauces, relishes, spreads, and seasonings');
-INSERT IGNORE INTO Category(categoryId, categoryName, description)
-  VALUES(3, N'Confections', N'Desserts, candies, and sweet breads');
-INSERT IGNORE INTO Category(categoryId, categoryName, description)
-  VALUES(4, N'Dairy Products', N'Cheeses');
-INSERT IGNORE INTO Category(categoryId, categoryName, description)
-  VALUES(5, N'Grains/Cereals', N'Breads, crackers, pasta, and cereal');
-INSERT IGNORE INTO Category(categoryId, categoryName, description)
-  VALUES(6, N'Meat/Poultry', N'Prepared meats');
-INSERT IGNORE INTO Category(categoryId, categoryName, description)
-  VALUES(7, N'Produce', N'Dried fruit and bean curd');
-INSERT IGNORE INTO Category(categoryId, categoryName, description)
-  VALUES(8, N'Seafood', N'Seaweed and fish');
-
-
--- Populate table Products
-
-INSERT IGNORE INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(1, N'Product HHYDP', 1, 1, 18.00, 0);
-INSERT IGNORE INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(2, N'Product RECZE', 1, 1, 19.00, 0);
-INSERT IGNORE INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(3, N'Product IMEHJ', 1, 2, 10.00, 0);
-INSERT IGNORE INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(4, N'Product KSBRM', 2, 2, 22.00, 0);
-INSERT IGNORE INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(5, N'Product EPEIM', 2, 2, 21.35, 1);
-INSERT IGNORE INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(6, N'Product VAIIV', 3, 2, 25.00, 0);
-INSERT IGNORE INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(7, N'Product HMLNI', 3, 7, 30.00, 0);
-INSERT IGNORE INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(8, N'Product WVJFP', 3, 2, 40.00, 0);
-INSERT IGNORE INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(9, N'Product AOZBW', 4, 6, 97.00, 1);
-INSERT IGNORE INTO Product(productId, productName, supplierId, categoryId, unitPrice, discontinued)
-  VALUES(10, N'Product YHXGE', 4, 8, 31.00, 0);
 
 INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
   VALUES(1, N'Customer NRZBB', N'Allen, Michael', N'Sales Representative', N'Obere Str. 0123', N'Berlin', NULL, N'10092', N'Germany', N'030-3456789', N'030-0123456');
@@ -381,163 +234,3 @@ INSERT IGNORE INTO SalesOrder(orderId, custId, employeeId, orderDate, requiredDa
   VALUES(24, 4, 6, '2006-08-01 00:00:00.000', '2006-08-29 00:00:00.000', '2006-08-30 00:00:00.000', 2, 4.54, N'Ship to 75-C', N'P.O. Box 7890', N'Lander', N'WY', N'10316', N'USA');
 INSERT IGNORE INTO SalesOrder(orderId, custId, employeeId, orderDate, requiredDate, shippedDate, shipperId, freight, shipName, shipAddress, shipCity, shipRegion, shipPostalCode, shipCountry)
   VALUES(25, 5, 6, '2006-08-02 00:00:00.000', '2006-08-30 00:00:00.000', '2006-08-06 00:00:00.000', 2, 98.03, N'Ship to 65-A', N'7890 Milton Dr.', N'Albuquerque', N'NM', N'10285', N'USA');
-
-
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(1, 1, 14.00, 12, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(1, 2, 9.80, 10, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(1, 2, 34.80, 5, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(2, 3, 18.60, 9, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(2, 1, 42.40, 40, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(2, 5, 7.70, 10, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(3, 5, 42.40, 35, 0.15);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(4, 7, 16.80, 15, 0.15);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(4, 1, 16.80, 6, 0.05);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(4, 6, 15.60, 15, 0.05);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(5, 1, 16.80, 20, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(5, 5, 64.80, 40, 0.05);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(6, 1, 2.00, 25, 0.05);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(7, 10, 27.20, 40, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(7, 9, 10.00, 20, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(8, 1, 14.40, 42, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(8, 2, 16.00, 40, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(8, 3, 3.60, 15, 0.15);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(9, 9, 19.20, 21, 0.15);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(10, 1, 8.00, 21, 0);
-INSERT IGNORE INTO OrderDetail(orderId, productId, unitPrice, quantity, discount)
-  VALUES(10, 10, 15.20, 20, 0);
-
-
--- Region 
-
-INSERT IGNORE INTO Region(regionId, regionDescription) VALUES (1,'Eastern');
-INSERT IGNORE INTO Region(regionId, regionDescription) VALUES (2,'Western');
-INSERT IGNORE INTO Region(regionId, regionDescription) VALUES (3,'Northern');
-INSERT IGNORE INTO Region(regionId, regionDescription) VALUES (4,'Southern');
-
--- Territory 
-
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('01581','Westboro',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('01730','Bedford',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('01833','Georgetow',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('02116','Boston',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('02139','Cambridge',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('02184','Braintree',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('02903','Providence',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('03049','Hollis',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('03801','Portsmouth',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('06897','Wilton',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('07960','Morristown',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('08837','Edison',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('10019','New York',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('10038','New York',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('11747','Mellvile',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('14450','Fairport',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('19428','Philadelphia',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('19713','Neward',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('20852','Rockville',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('27403','Greensboro',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('27511','Cary',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('29202','Columbia',4);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('30346','Atlanta',4);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('31406','Savannah',4);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('32859','Orlando',4);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('33607','Tampa',4);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('40222','Louisville',1);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('44122','Beachwood',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('45839','Findlay',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('48075','Southfield',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('48084','Troy',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('48304','Bloomfield Hills',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('53404','Racine',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('55113','Roseville',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('55439','Minneapolis',3);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('60179','Hoffman Estates',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('60601','Chicago',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('72716','Bentonville',4);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('75234','Dallas',4);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('78759','Austin',4);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('80202','Denver',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('80909','Colorado Springs',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('85014','Phoenix',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('85251','Scottsdale',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('90405','Santa Monica',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('94025','Menlo Park',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('94105','San Francisco',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('95008','Campbell',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('95054','Santa Clara',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('95060','Santa Cruz',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('98004','Bellevue',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('98052','Redmond',2);
-INSERT IGNORE INTO Territory(territoryId, territoryDescription, regionId) VALUES ('98104','Seattle',2);
-
--- EmployeeTerritory
-
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (1,'06897');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (1,'19713');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'01581');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'01730');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'01833');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'02116');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'02139');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'02184');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (2,'40222');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (3,'30346');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (3,'31406');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (3,'32859');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (3,'33607');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (4,'20852');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (4,'27403');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (4,'27511');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'02903');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'07960');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'08837');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'10019');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'10038');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'11747');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (5,'14450');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (6,'85014');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (6,'85251');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (6,'98004');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (6,'98052');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (6,'98104');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'60179');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'60601');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'80202');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'80909');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'90405');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'94025');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'94105');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'95008');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'95054');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (7,'95060');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (8,'19428');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (8,'44122');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (8,'45839');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (8,'53404');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'03049');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'03801');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'48075');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'48084');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'48304');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'55113');
-INSERT IGNORE INTO EmployeeTerritory(employeeId, territoryId) VALUES (9,'55439');

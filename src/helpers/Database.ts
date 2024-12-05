@@ -12,6 +12,19 @@ export function deconstructConnectionString(connectionString: string): {
 	password: string
 	database: string
 } {
+	// Special case for Airtable
+	if (connectionString.includes('airtable')) {
+		const [baseId, apiKey] = connectionString.split('://')[1].split('@')
+		return {
+			type: DatabaseType.AIRTABLE,
+			host: 'api.airtable.com',
+			port: 443,
+			username: 'apikey',
+			password: apiKey,
+			database: baseId,
+		}
+	}
+
 	const regex = /^(?<type>.*?):\/\/(?<username>.*?):(?<password>.*?)@(?<host>.*?):(?<port>\d+)\/(?<database>.*?)$/
 	const match = connectionString.match(regex)
 
@@ -55,6 +68,8 @@ export function getDatabaseType(uri: string): DatabaseType {
 		return DatabaseType.MONGODB
 	} else if (uri.includes('mssql')) {
 		return DatabaseType.MSSQL
+	} else if (uri.includes('airtable')) {
+		return DatabaseType.AIRTABLE
 	} else {
 		throw new Error('Database type not supported')
 	}

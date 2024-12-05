@@ -5,6 +5,7 @@ export enum DatabaseType {
 	POSTGRES = 'postgres',
 	MONGODB = 'mongodb',
 	MSSQL = 'mssql',
+	AIRTABLE = 'airtable',
 }
 
 export enum DatabaseNaming {
@@ -106,6 +107,10 @@ export interface DatabaseWhere {
 	value?: any
 }
 
+export interface ColumnExtraNumber {
+	decimal: number // Number of decimal places
+}
+
 export interface DatabaseSchemaColumn {
 	field: string
 	type: DatabaseColumnType
@@ -116,7 +121,7 @@ export interface DatabaseSchemaColumn {
 	foreign_key: boolean
 	auto_increment?: boolean
 	default?: any
-	extra?: any
+	extra?: any | ColumnExtraNumber
 	enums?: string[]
 }
 
@@ -196,4 +201,23 @@ export interface DatabaseUniqueCheckOptions {
 		[key: string]: string | number | boolean
 	}
 	id?: string
+}
+
+export interface DatabaseListTablesOptions {
+	include_system?: boolean // tables like _llana_*
+	include_known_db_orchestration?: boolean // like atlas_schema_revisions
+}
+
+
+export interface DatabaseInterface {
+	createTable(schema: DatabaseSchema): Promise<void>
+	findOne(options: DatabaseFindOneOptions): Promise<any>
+	findMany(options: DatabaseFindManyOptions): Promise<any[]>
+	createOne(options: DatabaseCreateOneOptions): Promise<any>
+	updateOne(options: DatabaseUpdateOneOptions): Promise<any>
+	deleteOne(options: DatabaseDeleteOneOptions): Promise<void>
+	uniqueCheck(options: DatabaseUniqueCheckOptions): Promise<boolean>
+	truncate(schema: DatabaseSchema): Promise<void>
+	checkConnection(): Promise<boolean>
+	listTables(): Promise<string[]>
 }

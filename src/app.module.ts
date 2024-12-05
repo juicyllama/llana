@@ -34,11 +34,14 @@ import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
+import { envValidationSchema } from './config/env.validation'
+import { Airtable } from './databases/airtable.database'
 
 @Module({
 	imports: [
 		ConfigModule.forRoot({
 			load: [auth, database, hosts, jwt, roles],
+			validationSchema: envValidationSchema,
 		}),
 		JwtModule.register(jwt()),
 		CacheModule.register({
@@ -46,8 +49,16 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		}),
 		ScheduleModule.forRoot(),
 	],
-	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
+	controllers: [
+		AuthController,
+		DocsController,
+		DeleteController,
+		GetController,
+		PostController,
+		PutController,
+	],
 	providers: [
+		Airtable,
 		AppBootup,
 		AuthService,
 		Authentication,
@@ -69,6 +80,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Webhook,
 	],
 	exports: [
+		Airtable,
 		AppBootup,
 		AuthService,
 		Authentication,

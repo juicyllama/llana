@@ -15,14 +15,12 @@ export class SalesOrderTestingService {
 		private readonly schema: Schema,
 	) {}
 
-	async getSchema(): Promise<any> {
-		return await this.schema.getSchema({ table })
-	}
-
-	async createOrder(order: { custId; employeeId; shipperId }): Promise<any> {
-		const salesOrderTableSchema = await this.schema.getSchema({ table, x_request_id: 'testing' })
-
-		const ORDER = {
+	mockOrder(): any {
+		return {
+			orderId: faker.number.int({
+				min: 1000,
+				max: 9999,
+			}),
 			orderDate: faker.date.past().toISOString(),
 			requiredDate: faker.date.past().toISOString(),
 			shippedDate: faker.date.past().toISOString(),
@@ -33,6 +31,16 @@ export class SalesOrderTestingService {
 			shipPostalCode: faker.location.zipCode(),
 			shipCountry: faker.location.countryCode(),
 		}
+	}
+
+	async getSchema(): Promise<any> {
+		return await this.schema.getSchema({ table })
+	}
+
+	async createOrder(order: { custId; employeeId; shipperId; orderId? }): Promise<any> {
+		const salesOrderTableSchema = await this.schema.getSchema({ table, x_request_id: 'testing' })
+
+		const ORDER = this.mockOrder()
 
 		return (await this.query.perform(
 			QueryPerform.CREATE,

@@ -15,7 +15,7 @@ export class Encryption {
 	 * Compare a string with an encrypted string
 	 */
 
-	async compare(raw: string, encrypted: string, type: AuthPasswordEncryption, salt?: string): Promise<boolean> {
+	async compare(raw: string, encrypted: string, type: AuthPasswordEncryption, salt?: any): Promise<boolean> {
 		switch (type) {
 			case AuthPasswordEncryption.BCRYPT:
 				return await bcrypt.compare(raw, encrypted)
@@ -35,13 +35,14 @@ export class Encryption {
 	 * Encrypt a string
 	 */
 
-	async encrypt(type: AuthPasswordEncryption, string: string, salt?: string): Promise<string> {
+	async encrypt(type: AuthPasswordEncryption, string: string, salt?: any): Promise<string> {
 		switch (type) {
 			case AuthPasswordEncryption.BCRYPT:
 				if (!salt) {
 					throw new Error(`Encryption type ${type} requires a salt`)
 				}
-				return await bcrypt.hash(string, salt)
+
+				return await bcrypt.hash(string, Number(salt))
 			case AuthPasswordEncryption.SHA1:
 				if (salt) {
 					return createHmac('sha1', salt).update(string).digest('hex')

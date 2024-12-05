@@ -4,11 +4,12 @@ import { Test } from '@nestjs/testing'
 import { AppModule } from './app.module'
 import { AuthService } from './app.service.auth'
 import { Logger } from './helpers/Logger'
+import { TIMEOUT } from './testing/testing.const'
 
 describe('Login Service', () => {
 	let app: INestApplication
 	let service: AuthService
-	let logger: Logger
+	let logger = new Logger()
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
@@ -18,7 +19,12 @@ describe('Login Service', () => {
 		app = moduleRef.createNestApplication()
 
 		service = app.get<AuthService>(AuthService)
-		logger = app.get<Logger>(Logger)
+	}, TIMEOUT)
+
+	beforeEach(() => {
+		logger.debug('===========================================')
+		logger.log('🧪 '+expect.getState().currentTestName)
+		logger.debug('===========================================')
 	})
 
 	describe('Failed Login', () => {

@@ -6,26 +6,33 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
 import { DatabaseSchema } from './types/database.types'
+import { UserTestingService } from './testing/user.testing.service'
+import { Logger } from './helpers/Logger'
+import { TIMEOUT } from './testing/testing.const'
 
 describe('App > Controller > Post', () => {
 	let app: INestApplication
 
 	let authTestingService: AuthTestingService
 	let customerTestingService: CustomerTestingService
+	let userTestingService: UserTestingService
 
 	let customerSchema: DatabaseSchema
+	let userSchema: DatabaseSchema
 
 	let customer1: any
 	let customer2: any
 	let customer3: any
+	let user: any
 
 	let jwt: string
+	let logger = new Logger()
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
-			providers: [AuthTestingService, CustomerTestingService],
-			exports: [AuthTestingService, CustomerTestingService],
+			providers: [AuthTestingService, CustomerTestingService, UserTestingService],
+			exports: [AuthTestingService, CustomerTestingService, UserTestingService],
 		}).compile()
 
 		app = moduleRef.createNestApplication()
@@ -33,8 +40,18 @@ describe('App > Controller > Post', () => {
 
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
+		userTestingService = app.get<UserTestingService>(UserTestingService)
+		
 		customerSchema = await customerTestingService.getSchema()
+		userSchema = await userTestingService.getSchema()
+
 		jwt = await authTestingService.login()
+	}, TIMEOUT)
+
+	beforeEach(() => {
+		logger.debug('===========================================')
+		logger.log('🧪 '+expect.getState().currentTestName)
+		logger.debug('===========================================')
 	})
 
 	describe('Create', () => {
@@ -72,12 +89,29 @@ describe('App > Controller > Post', () => {
 			customer2 = result.body.data[0]
 			customer3 = result.body.data[1]
 		})
+		it('Create User', async function () {
+
+			user = await userTestingService.mockUser()
+
+			const result = await request(app.getHttpServer())
+				.post(`/User/`)
+				.send(user)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(201)
+				
+			expect(result.body).toBeDefined()
+			expect(result.body.email).toBeDefined()
+			expect(result.body.password).toBeDefined()
+			expect(result.body.password.startsWith('$2')).toBeTruthy()
+			user = result.body
+		})
 	})
 
 	afterAll(async () => {
-		await customerTestingService.deleteCustomer(customer1.custId)
-		await customerTestingService.deleteCustomer(customer2.custId)
-		await customerTestingService.deleteCustomer(customer3.custId)
+		await customerTestingService.deleteCustomer(customer1[customerSchema.primary_key])
+		await customerTestingService.deleteCustomer(customer2[customerSchema.primary_key])
+		await customerTestingService.deleteCustomer(customer3[customerSchema.primary_key])
+		await userTestingService.deleteUser(user[userSchema.primary_key])
 		await app.close()
 	})
 })

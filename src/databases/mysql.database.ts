@@ -387,7 +387,7 @@ export class MySQL {
 	 * Create table from schema object
 	 */
 
-	async createTable(schema: DatabaseSchema): Promise<boolean> {
+	async createTable(schema: DatabaseSchema, x_request_id?: string): Promise<boolean> {
 		try {
 			const columns = schema.columns.map(column => {
 				let column_string = `\`${column.field}\` ${this.fieldMapperReverse(column.type)}`
@@ -436,7 +436,7 @@ export class MySQL {
 
 			return true
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table}`, { e })
+			this.logger.error(`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`, x_request_id)
 			return false
 		}
 	}
@@ -540,6 +540,10 @@ export class MySQL {
 
 		if (type.includes('text') || type.includes('blob') || type.includes('binary') || type.includes('varchar')) {
 			return DatabaseColumnType.STRING
+		}
+
+		if(type.includes('decimal') || type.includes('float') || type.includes('double') || type.includes('numeric') || type.includes('real')) {
+			return DatabaseColumnType.NUMBER
 		}
 
 		switch (type) {
@@ -666,6 +670,8 @@ export class MySQL {
 				return value === 1
 			case DatabaseColumnType.DATE:
 				return new Date(value).toISOString()
+			case DatabaseColumnType.NUMBER:
+				return Number(value)
 			default:
 				return value
 		}

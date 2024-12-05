@@ -20,20 +20,19 @@ volumes:
         driver: local
 
 services:
-
     llana-mysql:
         image: mysql
         restart: always
         container_name: llana-mysql
         ports:
-            - "3306:3306"
+            - '3306:3306'
         environment:
             MYSQL_ROOT_PASSWORD: pass
             MYSQL_USER: user
             MYSQL_PASSWORD: pass
             MYSQL_DATABASE: llana
             MYSQL_ROOT_HOST: '%'
-        command: ["--init-file", "/docker-entrypoint-initdb.d/init.sql"]
+        command: ['--init-file', '/docker-entrypoint-initdb.d/init.sql']
         volumes:
             - llana-mysql-data:/var/lib/mysql
             - ../demo/databases/mysql.sql:/docker-entrypoint-initdb.d/init.sql
@@ -45,7 +44,7 @@ services:
         restart: always
         container_name: llana-postgres
         ports:
-            - "5432:5432"
+            - '5432:5432'
         environment:
             POSTGRES_DB: llana
             POSTGRES_USER: user
@@ -56,13 +55,13 @@ services:
             - ../demo/databases/postgres.sql:/docker-entrypoint-initdb.d/init.sql
         networks:
             - llana-network
-    
+
     llana-mongodb:
         image: mongo
         restart: always
         container_name: llana-mongodb
         ports:
-            - "27017:27017"
+            - '27017:27017'
         environment:
             MONGO_INITDB_ROOT_USERNAME: user
             MONGO_INITDB_ROOT_PASSWORD: pass
@@ -78,10 +77,10 @@ services:
         restart: always
         container_name: llana-mssql
         ports:
-            - "1433:1433"
+            - '1433:1433'
         environment:
             ACCEPT_EULA: Y
-            MSSQL_SA_PASSWORD: "S7!0nGpAw0rD"
+            MSSQL_SA_PASSWORD: 'S7!0nGpAw0rD'
         volumes:
             - llana-mssql-data:/var/opt/mssql
             - ../demo/databases/mssql.sql:/docker-entrypoint-initdb.d/mssql.sql
@@ -94,29 +93,29 @@ services:
             retries: 10
             start_period: 10s
         command:
-        - /bin/bash
-        - -c
-        - |
-            /opt/mssql/bin/sqlservr &
-            pid=$$!
+            - /bin/bash
+            - -c
+            - |
+                /opt/mssql/bin/sqlservr &
+                pid=$$!
 
-            echo "Waiting for MS SQL to be available ⏳"
+                echo "Waiting for MS SQL to be available ⏳"
 
-            /opt/mssql-tools18/bin/sqlcmd -C  -l 30 -S localhost -h-1 -V1 -U sa -P $$MSSQL_SA_PASSWORD -Q "SET NOCOUNT ON SELECT \"YAY WE ARE UP\" , @@servername"
-            is_up=$$?
-            while [ $$is_up -ne 0 ] ; do
-            echo -e $$(date)
-            /opt/mssql-tools18/bin/sqlcmd -C -l 30 -S localhost -h-1 -V1 -U sa -P $$MSSQL_SA_PASSWORD -Q "SET NOCOUNT ON SELECT \"YAY WE ARE UP\" , @@servername"
-            is_up=$$?
-            sleep 5
-            done
+                /opt/mssql-tools18/bin/sqlcmd -C  -l 30 -S localhost -h-1 -V1 -U sa -P $$MSSQL_SA_PASSWORD -Q "SET NOCOUNT ON SELECT \"YAY WE ARE UP\" , @@servername"
+                is_up=$$?
+                while [ $$is_up -ne 0 ] ; do
+                echo -e $$(date)
+                /opt/mssql-tools18/bin/sqlcmd -C -l 30 -S localhost -h-1 -V1 -U sa -P $$MSSQL_SA_PASSWORD -Q "SET NOCOUNT ON SELECT \"YAY WE ARE UP\" , @@servername"
+                is_up=$$?
+                sleep 5
+                done
 
-            echo "MS SQL is up and running 🚀"
+                echo "MS SQL is up and running 🚀"
 
-            
-            /opt/mssql-tools18/bin/sqlcmd -C -U sa -P $$MSSQL_SA_PASSWORD -Q "CREATE DATABASE llana;"
-            /opt/mssql-tools18/bin/sqlcmd -C -U sa -P $$MSSQL_SA_PASSWORD -l 30 -e -i /docker-entrypoint-initdb.d/mssql.sql
 
-            echo "Script Execution is complete. Waiting for MS SQL Process to terminate 🎉"
+                /opt/mssql-tools18/bin/sqlcmd -C -U sa -P $$MSSQL_SA_PASSWORD -Q "CREATE DATABASE llana;"
+                /opt/mssql-tools18/bin/sqlcmd -C -U sa -P $$MSSQL_SA_PASSWORD -l 30 -e -i /docker-entrypoint-initdb.d/mssql.sql
 
-            wait $$pid
+                echo "Script Execution is complete. Waiting for MS SQL Process to terminate 🎉"
+
+                wait $$pid

@@ -5,6 +5,7 @@ import { Mongo } from '../databases/mongo.database'
 import { MSSQL } from '../databases/mssql.database'
 import { MySQL } from '../databases/mysql.database'
 import { Postgres } from '../databases/postgres.database'
+import { Airtable } from '../databases/airtable.database'
 import {
 	DeleteResponseObject,
 	FindManyResponseObject,
@@ -18,6 +19,7 @@ import {
 	DatabaseDeleteOneOptions,
 	DatabaseFindManyOptions,
 	DatabaseFindOneOptions,
+	DatabaseListTablesOptions,
 	DatabaseSchema,
 	DatabaseType,
 	DatabaseUniqueCheckOptions,
@@ -42,6 +44,7 @@ export class Query {
 		private readonly mssql: MSSQL,
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
+		private readonly airtable: Airtable,
 	) {}
 
 	async perform(
@@ -52,7 +55,8 @@ export class Query {
 			| DatabaseFindManyOptions
 			| DatabaseUpdateOneOptions
 			| DatabaseDeleteOneOptions
-			| DatabaseUniqueCheckOptions,
+			| DatabaseUniqueCheckOptions
+			| DatabaseListTablesOptions,
 		x_request_id?: string,
 	): Promise<
 		| FindOneResponseObject
@@ -77,14 +81,15 @@ export class Query {
 				QueryPerform.UPDATE,
 			].includes(action)
 		) {
-			if (!options.schema?.table) {
+
+			if (!(options as any).schema?.table) {
 				this.logger.warn(
-					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)} ${x_request_id ?? ''}`,
+					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)}`, x_request_id
 				)
 				throw new Error('Table not defined')
 			}
 
-			table_name = options.schema.table
+			table_name = (options as any).schema.table
 		}
 
 		try {
@@ -92,10 +97,11 @@ export class Query {
 
 			switch (action) {
 				case QueryPerform.CREATE:
+
 					const createOptions = options as DatabaseCreateOneOptions
 					createOptions.data = await this.identityOperationCheck(createOptions)
 					result = await this.createOne(createOptions, x_request_id)
-					return await this.schema.pipeResponse(options, result)
+					return await this.schema.pipeResponse(createOptions, result)
 
 				case QueryPerform.FIND_ONE:
 					const findOptions = options as DatabaseFindOneOptions
@@ -120,7 +126,7 @@ export class Query {
 					const updateOptions = options as DatabaseUpdateOneOptions
 					updateOptions.data = await this.identityOperationCheck(updateOptions)
 					result = await this.updateOne(updateOptions, x_request_id)
-					return await this.schema.pipeResponse(options, result)
+					return await this.schema.pipeResponse(updateOptions, result)
 
 				case QueryPerform.DELETE:
 					return await this.deleteOne(options as DatabaseDeleteOneOptions, x_request_id)
@@ -129,23 +135,23 @@ export class Query {
 					return await this.isUnique(options as DatabaseUniqueCheckOptions, x_request_id)
 
 				case QueryPerform.TRUNCATE:
-					return await this.truncate(options.schema.table, x_request_id)
+					return await this.truncate((options as any).schema.table, x_request_id)
 
 				case QueryPerform.CREATE_TABLE:
-					return await this.createTable(options.schema)
+					return await this.createTable((options as any).schema, x_request_id)
 
 				case QueryPerform.CHECK_CONNECTION:
 					return await this.checkConnection({ x_request_id })
 
 				case QueryPerform.LIST_TABLES:
-					return await this.listTables({ x_request_id })
+					return await this.listTables(options as DatabaseListTablesOptions, x_request_id)
 
 				default:
-					this.logger.error(`[Query] Action ${action} not supported - ${x_request_id ?? ''}`)
+					this.logger.error(`[Query] Action ${action} not supported`, x_request_id)
 					throw new Error(`Action ${action} not supported`)
 			}
 		} catch (e) {
-			this.logger.error(`[Query][${action.toUpperCase()}][${table_name}] ${e.message} ${x_request_id ?? ''}`)
+			this.logger.error(`[Query][${action.toUpperCase()}][${table_name}] ${e.message}`, x_request_id)
 
 			let pluralAction
 
@@ -183,16 +189,18 @@ export class Query {
 	 * * Used as part of the setup process
 	 */
 
-	private async createTable(schema: DatabaseSchema): Promise<boolean> {
+	private async createTable(schema: DatabaseSchema, x_request_id: string): Promise<boolean> {
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
-				return await this.mysql.createTable(schema)
+				return await this.mysql.createTable(schema, x_request_id)
 			case DatabaseType.POSTGRES:
-				return await this.postgres.createTable(schema)
+				return await this.postgres.createTable(schema, x_request_id)
 			case DatabaseType.MONGODB:
-				return await this.mongo.createTable(schema)
+				return await this.mongo.createTable(schema, x_request_id)
 			case DatabaseType.MSSQL:
-				return await this.mssql.createTable(schema)
+				return await this.mssql.createTable(schema, x_request_id)
+			case DatabaseType.AIRTABLE:
+				return await this.airtable.createTable(schema, x_request_id)
 			default:
 				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
@@ -218,6 +226,9 @@ export class Query {
 				break
 			case DatabaseType.MSSQL:
 				result = await this.mssql.createOne(options, x_request_id)
+				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.createOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -251,6 +262,9 @@ export class Query {
 				break
 			case DatabaseType.MSSQL:
 				result = await this.mssql.findOne(options, x_request_id)
+				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.findOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -289,6 +303,9 @@ export class Query {
 			case DatabaseType.MSSQL:
 				result = await this.mssql.findMany(options, x_request_id)
 				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.findMany(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -322,6 +339,9 @@ export class Query {
 			case DatabaseType.MSSQL:
 				result = await this.mssql.updateOne(options, x_request_id)
 				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.updateOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
@@ -354,6 +374,9 @@ export class Query {
 				break
 			case DatabaseType.MSSQL:
 				result = await this.mssql.deleteOne(options, x_request_id)
+				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.deleteOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -389,6 +412,9 @@ export class Query {
 			case DatabaseType.MSSQL:
 				result = await this.mssql.uniqueCheck(options, x_request_id)
 				break
+			case DatabaseType.AIRTABLE:
+				result = await this.airtable.uniqueCheck(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
@@ -420,6 +446,8 @@ export class Query {
 				return await this.mongo.truncate(table_name)
 			case DatabaseType.MSSQL:
 				return await this.mssql.truncate(table_name)
+			case DatabaseType.AIRTABLE:
+				return await this.airtable.truncate(table_name)
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -462,6 +490,8 @@ export class Query {
 				return await this.mongo.checkConnection({ x_request_id: options.x_request_id })
 			case DatabaseType.MSSQL:
 				return await this.mssql.checkConnection({ x_request_id: options.x_request_id })
+			case DatabaseType.AIRTABLE:
+				return await this.airtable.checkConnection({ x_request_id: options.x_request_id })
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`,
@@ -474,35 +504,45 @@ export class Query {
 	 * List tables in the database
 	 */
 
-	private async listTables(options: { x_request_id?: string }): Promise<ListTablesResponseObject> {
+	private async listTables(options: DatabaseListTablesOptions, x_request_id?: string): Promise<ListTablesResponseObject> {
 		let tables: string[]
 
 		switch (this.configService.get<string>('database.type')) {
 			case DatabaseType.MYSQL:
-				tables = await this.mysql.listTables({ x_request_id: options.x_request_id })
+				tables = await this.mysql.listTables({ x_request_id })
 				break
 			case DatabaseType.POSTGRES:
-				tables = await this.postgres.listTables({ x_request_id: options.x_request_id })
+				tables = await this.postgres.listTables({ x_request_id })
 				break
 			case DatabaseType.MONGODB:
-				tables = await this.mongo.listTables({ x_request_id: options.x_request_id })
+				tables = await this.mongo.listTables({ x_request_id })
 				break
 			case DatabaseType.MSSQL:
-				tables = await this.mssql.listTables({ x_request_id: options.x_request_id })
+				tables = await this.mssql.listTables({ x_request_id })
+				break
+			case DatabaseType.AIRTABLE:
+				tables = await this.airtable.listTables({ x_request_id })
 				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`,
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`, x_request_id
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
 
-		let tables_filtered = tables.filter(table => !table.startsWith('_llana_'))
-		tables_filtered = tables_filtered.filter(table => table !== 'atlas_schema_revisions')
+		let tables_filtered = tables
+
+		if(!options?.include_system) {
+			tables_filtered = tables_filtered.filter(table => !table.startsWith('_llana_'))
+		}
+
+		if(!options?.include_known_db_orchestration) {
+			tables_filtered = tables_filtered.filter(table => table !== 'atlas_schema_revisions')
+		}
 
 		return {
 			tables: tables_filtered,
-			_x_request_id: options.x_request_id,
+			_x_request_id: x_request_id
 		}
 	}
 
@@ -519,6 +559,11 @@ export class Query {
 		}
 
 		for (const relation of options.relations) {
+
+			if(Array.isArray(result[relation.join.org_column])){
+				result[relation.join.org_column] = result[relation.join.org_column][0]
+			}
+
 			const where: DatabaseWhere[] = [
 				{
 					column: relation.join.column,

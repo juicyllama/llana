@@ -6,6 +6,8 @@ import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/database.types'
 
+const table = 'User'
+
 @Injectable()
 export class UserTestingService {
 	constructor(
@@ -13,23 +15,29 @@ export class UserTestingService {
 		private readonly schema: Schema,
 	) {}
 
-	async createUser(user: any): Promise<any> {
-		const userTableSchema = await this.schema.getSchema({ table: 'User', x_request_id: 'testing' })
-
-		const USER = {
+	mockUser(): any {
+		return {
 			email: faker.internet.email(),
 			password: faker.internet.password(),
-			role: 'VIEWER',
+			role: 'USER',
 			firstName: faker.person.firstName(),
 			lastName: faker.person.lastName(),
-			createdAt: faker.date.past().toISOString(),
-			updatedAt: faker.date.past().toISOString(),
 		}
+	}
+
+	async getSchema(): Promise<any> {
+		return await this.schema.getSchema({ table })
+	}
+
+	async createUser(user: any): Promise<any> {
+		const userSchema = await this.schema.getSchema({ table })
+
+		const USER = this.mockUser()
 
 		return (await this.query.perform(
 			QueryPerform.CREATE,
 			{
-				schema: userTableSchema,
+				schema: userSchema,
 				data: {
 					...USER,
 					...user,
@@ -38,4 +46,17 @@ export class UserTestingService {
 			'testing',
 		)) as FindOneResponseObject
 	}
+
+	async deleteUser(user_id: any): Promise<void> {
+		const userSchema = await this.schema.getSchema({ table })
+		await this.query.perform(
+			QueryPerform.DELETE,
+			{
+				schema: userSchema,
+				id: user_id,
+			},
+			'testing',
+		)
+	}
+
 }
