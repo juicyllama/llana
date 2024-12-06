@@ -7,11 +7,11 @@ import { IsBoolean, IsDateString, IsNumber, IsOptional, IsString, validate } fro
 import { isDate, isObject } from 'lodash'
 
 import { CACHE_DEFAULT_TABLE_SCHEMA_TTL, NON_FIELD_PARAMS } from '../app.constants'
+import { Airtable } from '../datasources/airtable.datasource'
 import { Mongo } from '../datasources/mongo.datasource'
 import { MSSQL } from '../datasources/mssql.datasource'
 import { MySQL } from '../datasources/mysql.datasource'
 import { Postgres } from '../datasources/postgres.datasource'
-import { Airtable } from '../datasources/airtable.datasource'
 import {
 	DataSourceColumnType,
 	DataSourceFindOneOptions,
@@ -268,13 +268,11 @@ export class Schema {
 		schema: DataSourceSchema,
 		data: { [key: string]: any },
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
-
 		try {
 			for (const key in data) {
-
 				const column = schema.columns.find(col => col.field === key)
 
-				if(!column){
+				if (!column) {
 					return {
 						valid: false,
 						message: `Unknown column: ${key}`,

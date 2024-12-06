@@ -1,4 +1,5 @@
 import * as Joi from 'joi'
+
 import { AuthPasswordEncryption } from '../types/auth.types'
 
 export const envValidationSchema = Joi.object({

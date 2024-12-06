@@ -27,7 +27,6 @@ import {
 	DataSourceWhere,
 	WhereOperator,
 } from '../types/datasource.types'
-import { da } from '@faker-js/faker/.'
 
 const DATABASE_TYPE = DataSourceType.MONGODB
 
@@ -546,10 +545,7 @@ export class Mongo {
 	}
 
 	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
-		this.logger.debug(
-			`[${DATABASE_TYPE}] Unique Check not applicable: ${JSON.stringify(options)}`,
-			x_request_id,
-		)
+		this.logger.debug(`[${DATABASE_TYPE}] Unique Check not applicable: ${JSON.stringify(options)}`, x_request_id)
 
 		return {
 			valid: true,
@@ -720,20 +716,17 @@ export class Mongo {
 	private pipeObjectToMongo(
 		options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions,
 	): DataSourceCreateOneOptions | DataSourceUpdateOneOptions {
-		
 		// Convert Date to ISOString
 		for (const column of options.schema.columns) {
 			if (!options.data[column.field]) {
 				continue
 			}
 
-			if(options.data[column.field] instanceof Date) {
+			if (options.data[column.field] instanceof Date) {
 				options.data[column.field] = options.data[column.field].toISOString()
 			}
-				
 		}
 
 		return options
-
 	}
 }

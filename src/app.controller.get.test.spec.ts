@@ -38,8 +38,20 @@ describe('App > Controller > Get', () => {
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
-			providers: [AuthTestingService, CustomerTestingService, EmployeeTestingService, ShipperTestingService, SalesOrderTestingService],
-			exports: [AuthTestingService, CustomerTestingService, EmployeeTestingService, ShipperTestingService, SalesOrderTestingService],
+			providers: [
+				AuthTestingService,
+				CustomerTestingService,
+				EmployeeTestingService,
+				ShipperTestingService,
+				SalesOrderTestingService,
+			],
+			exports: [
+				AuthTestingService,
+				CustomerTestingService,
+				EmployeeTestingService,
+				ShipperTestingService,
+				SalesOrderTestingService,
+			],
 		}).compile()
 
 		app = moduleRef.createNestApplication()
@@ -63,12 +75,14 @@ describe('App > Controller > Get', () => {
 		shipper = await shipperTestingService.createShipper({})
 
 		for (let i = 0; i < 10; i++) {
-			orders.push(await salesOrderTestingService.createOrder({
-				orderId: i + 1000,
-				custId: customer[customerSchema.primary_key],
-				employeeId: employee[employeeSchema.primary_key],
-				shipperId: shipper[shipperSchema.primary_key],
-			}))
+			orders.push(
+				await salesOrderTestingService.createOrder({
+					orderId: i + 1000,
+					custId: customer[customerSchema.primary_key],
+					employeeId: employee[employeeSchema.primary_key],
+					shipperId: shipper[shipperSchema.primary_key],
+				}),
+			)
 		}
 
 		jwt = await authTestingService.login()
@@ -76,7 +90,7 @@ describe('App > Controller > Get', () => {
 
 	beforeEach(() => {
 		logger.debug('===========================================')
-		logger.log('🧪 '+expect.getState().currentTestName)
+		logger.log('🧪 ' + expect.getState().currentTestName)
 		logger.debug('===========================================')
 	})
 
@@ -112,11 +126,12 @@ describe('App > Controller > Get', () => {
 		})
 
 		it('One - With Fields', async function () {
-
-			const result = <any>await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+			const result = <any>(
+				await request(app.getHttpServer())
+					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName`)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+			)
 
 			expect(result.body).toBeDefined()
 			expect(result.body.shipName).toBeDefined()
@@ -127,7 +142,9 @@ describe('App > Controller > Get', () => {
 
 		it('One - With Filters', async function () {
 			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName&shipName=${orders[0].shipName}`)
+				.get(
+					`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName&shipName=${orders[0].shipName}`,
+				)
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(200)
 
@@ -220,15 +237,14 @@ describe('App > Controller > Get', () => {
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(200)
 
-				expect(results.body.data.length).toBeGreaterThan(0)
+			expect(results.body.data.length).toBeGreaterThan(0)
 
-		const results2 = await request(app.getHttpServer())
+			const results2 = await request(app.getHttpServer())
 				.get(`/SalesOrder/?offset=${results.body.total - 2}`)
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(200)
-				expect(results2.body.data.length).toEqual(2)
+			expect(results2.body.data.length).toEqual(2)
 		})
-
 	})
 
 	afterAll(async () => {

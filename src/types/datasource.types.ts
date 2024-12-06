@@ -200,7 +200,7 @@ export interface DataSourceUniqueCheckOptions {
 	data: {
 		[key: string]: string | number | boolean
 	}
-	id?: string,
+	id?: string
 	x_request_id?: string
 }
 
@@ -208,7 +208,6 @@ export interface DataSourceListTablesOptions {
 	include_system?: boolean // tables like _llana_*
 	include_known_db_orchestration?: boolean // like atlas_schema_revisions
 }
-
 
 export interface DataSourceInterface {
 	createTable(schema: DataSourceSchema): Promise<void>

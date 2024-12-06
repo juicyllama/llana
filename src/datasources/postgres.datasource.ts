@@ -481,12 +481,18 @@ export class Postgres {
 
 			return true
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`, x_request_id)
+			this.logger.error(
+				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`,
+				x_request_id,
+			)
 			return false
 		}
 	}
 
-	private find(options: DataSourceFindOneOptions | DataSourceFindManyOptions, count: boolean = false): [string, any[]] {
+	private find(
+		options: DataSourceFindOneOptions | DataSourceFindManyOptions,
+		count: boolean = false,
+	): [string, any[]] {
 		const table_name = options.schema.table
 		let values: any[] = []
 		let index = 1

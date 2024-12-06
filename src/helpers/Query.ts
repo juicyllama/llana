@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
+import { Airtable } from '../datasources/airtable.datasource'
 import { Mongo } from '../datasources/mongo.datasource'
 import { MSSQL } from '../datasources/mssql.datasource'
 import { MySQL } from '../datasources/mysql.datasource'
 import { Postgres } from '../datasources/postgres.datasource'
-import { Airtable } from '../datasources/airtable.datasource'
 import {
 	DeleteResponseObject,
 	FindManyResponseObject,
@@ -81,10 +81,10 @@ export class Query {
 				QueryPerform.UPDATE,
 			].includes(action)
 		) {
-
 			if (!(options as any).schema?.table) {
 				this.logger.warn(
-					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)}`, x_request_id
+					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)}`,
+					x_request_id,
 				)
 				throw new Error('Table not defined')
 			}
@@ -97,7 +97,6 @@ export class Query {
 
 			switch (action) {
 				case QueryPerform.CREATE:
-
 					const createOptions = options as DataSourceCreateOneOptions
 					createOptions.data = await this.identityOperationCheck(createOptions)
 					result = await this.createOne(createOptions, x_request_id)
@@ -460,7 +459,9 @@ export class Query {
 	 * If the table is the user identity table, hash the password
 	 */
 
-	private async identityOperationCheck(options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions): Promise<any> {
+	private async identityOperationCheck(
+		options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions,
+	): Promise<any> {
 		const jwt_config = this.configService.get<any>('auth').find(auth => auth.type === AuthType.JWT)
 
 		if (options.data[jwt_config.table.columns.password]) {
@@ -504,7 +505,10 @@ export class Query {
 	 * List tables in the database
 	 */
 
-	private async listTables(options: DataSourceListTablesOptions, x_request_id?: string): Promise<ListTablesResponseObject> {
+	private async listTables(
+		options: DataSourceListTablesOptions,
+		x_request_id?: string,
+	): Promise<ListTablesResponseObject> {
 		let tables: string[]
 
 		switch (this.configService.get<string>('database.type')) {
@@ -525,24 +529,25 @@ export class Query {
 				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`, x_request_id
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					x_request_id,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
 
 		let tables_filtered = tables
 
-		if(!options?.include_system) {
+		if (!options?.include_system) {
 			tables_filtered = tables_filtered.filter(table => !table.startsWith('_llana_'))
 		}
 
-		if(!options?.include_known_db_orchestration) {
+		if (!options?.include_known_db_orchestration) {
 			tables_filtered = tables_filtered.filter(table => table !== 'atlas_schema_revisions')
 		}
 
 		return {
 			tables: tables_filtered,
-			_x_request_id: x_request_id
+			_x_request_id: x_request_id,
 		}
 	}
 
@@ -559,8 +564,7 @@ export class Query {
 		}
 
 		for (const relation of options.relations) {
-
-			if(Array.isArray(result[relation.join.org_column])){
+			if (Array.isArray(result[relation.join.org_column])) {
 				result[relation.join.org_column] = result[relation.join.org_column][0]
 			}
 

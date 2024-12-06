@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common'
 import { faker } from '@faker-js/faker'
+import { Injectable } from '@nestjs/common'
+
 import { FindOneResponseObject } from '../dtos/response.dto'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'

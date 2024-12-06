@@ -91,7 +91,7 @@ export class MSSQL {
 			}
 
 			this.logger.debug(`[${DATABASE_TYPE}] Query: ${options.sql} - ${options.x_request_id ?? ''}`)
-			
+
 			const result = await connection.query(options.sql)
 			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${options.x_request_id ?? ''}`)
 			connection.close()
@@ -168,10 +168,7 @@ export class MSSQL {
 			})
 		).recordset
 
-		
-
 		const columns = columns_result.map((column: any) => {
-
 			return <DataSourceSchemaColumn>{
 				field: column.field,
 				type: this.fieldMapper(column.type),
@@ -187,11 +184,14 @@ export class MSSQL {
 						: false,
 				default: column.default,
 				extra: {
-					is_identity: identity_result.find((c: any) => c.COLUMN_NAME === column.field) ? true : false || constraints_result.find((c: any) => c.type === 'PRIMARY KEY' && c.field === column.field)
-					? true
-					: false,
+					is_identity: identity_result.find((c: any) => c.COLUMN_NAME === column.field)
+						? true
+						: false ||
+							  constraints_result.find((c: any) => c.type === 'PRIMARY KEY' && c.field === column.field)
+							? true
+							: false,
 					convert: column.type === 'varbinary' ? 'varbinary' : false,
-				}
+				},
 			}
 		})
 
@@ -256,7 +256,6 @@ export class MSSQL {
 	 */
 
 	async createOne(options: DataSourceCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
-		
 		const table_name = options.schema.table
 		const values: any[] = []
 
@@ -279,30 +278,27 @@ export class MSSQL {
 
 		let command = ''
 
-		if(has_identity){
+		if (has_identity) {
 			command += `SET IDENTITY_INSERT ${this.reserveWordFix(table_name)} ON; `
 		}
 
 		let valuesString = ''
 
-		for(const c in columns){
+		for (const c in columns) {
+			const schema_col = options.schema.columns.find(col => col.field === columns[c])
 
-			const schema_col = options.schema.columns.find((col) => col.field === columns[c])
-		
-			if(schema_col.extra?.convert){
+			if (schema_col.extra?.convert) {
 				valuesString += `CAST('?' AS ${schema_col.extra.convert}), `
-			}else{
+			} else {
 				valuesString += `'?', `
 			}
-
-			
 		}
 
 		valuesString = valuesString.slice(0, -2)
 
 		command += `INSERT INTO ${this.reserveWordFix(table_name)} (${columns.join(', ')}) VALUES ( ${valuesString} ); SELECT SCOPE_IDENTITY() AS insertId; `
 
-		if(has_identity){
+		if (has_identity) {
 			command += `SET IDENTITY_INSERT ${this.reserveWordFix(table_name)} OFF; `
 		}
 
@@ -427,12 +423,12 @@ export class MSSQL {
 
 		options = this.pipeObjectToMSSQL(options) as DataSourceUpdateOneOptions
 
-		for(const key of Object.keys(options.data)){
-			const schema_col = options.schema.columns.find((col) => col.field === key)
-			
-			if(schema_col.extra?.convert){
+		for (const key of Object.keys(options.data)) {
+			const schema_col = options.schema.columns.find(col => col.field === key)
+
+			if (schema_col.extra?.convert) {
 				command += `${key} = CAST('?' AS ${schema_col.extra.convert}), `
-			}else{
+			} else {
 				command += `${key} = '?', `
 			}
 		}
@@ -579,7 +575,10 @@ export class MSSQL {
 
 			return true
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`, x_request_id)
+			this.logger.error(
+				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`,
+				x_request_id,
+			)
 			return false
 		}
 	}
@@ -846,8 +845,7 @@ export class MSSQL {
 		await this.performQuery({ sql: 'TRUNCATE TABLE [' + table + ']' })
 	}
 
-
-	private isIdentity(options: DataSourceCreateOneOptions, columns: string[]): boolean{
+	private isIdentity(options: DataSourceCreateOneOptions, columns: string[]): boolean {
 		let has_identity = false
 		const identity = options.schema.columns.filter(c => c.extra?.is_identity)
 

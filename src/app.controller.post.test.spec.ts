@@ -41,7 +41,7 @@ describe('App > Controller > Post', () => {
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
 		userTestingService = app.get<UserTestingService>(UserTestingService)
-		
+
 		customerSchema = await customerTestingService.getSchema()
 		userSchema = await userTestingService.getSchema()
 
@@ -50,7 +50,7 @@ describe('App > Controller > Post', () => {
 
 	beforeEach(() => {
 		logger.debug('===========================================')
-		logger.log('🧪 '+expect.getState().currentTestName)
+		logger.log('🧪 ' + expect.getState().currentTestName)
 		logger.debug('===========================================')
 	})
 
@@ -90,7 +90,6 @@ describe('App > Controller > Post', () => {
 			customer3 = result.body.data[1]
 		})
 		it('Create User', async function () {
-
 			user = await userTestingService.mockUser()
 
 			const result = await request(app.getHttpServer())
@@ -98,7 +97,7 @@ describe('App > Controller > Post', () => {
 				.send(user)
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(201)
-				
+
 			expect(result.body).toBeDefined()
 			expect(result.body.email).toBeDefined()
 			expect(result.body.password).toBeDefined()

@@ -44,8 +44,22 @@ describe('App > Controller > Put', () => {
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
-			providers: [AuthTestingService, CustomerTestingService, EmployeeTestingService, ShipperTestingService, SalesOrderTestingService, UserTestingService],
-			exports: [AuthTestingService, CustomerTestingService, EmployeeTestingService, ShipperTestingService, SalesOrderTestingService, UserTestingService],
+			providers: [
+				AuthTestingService,
+				CustomerTestingService,
+				EmployeeTestingService,
+				ShipperTestingService,
+				SalesOrderTestingService,
+				UserTestingService,
+			],
+			exports: [
+				AuthTestingService,
+				CustomerTestingService,
+				EmployeeTestingService,
+				ShipperTestingService,
+				SalesOrderTestingService,
+				UserTestingService,
+			],
 		}).compile()
 
 		app = moduleRef.createNestApplication()
@@ -81,7 +95,7 @@ describe('App > Controller > Put', () => {
 
 	beforeEach(() => {
 		logger.debug('===========================================')
-		logger.log('🧪 '+expect.getState().currentTestName)
+		logger.log('🧪 ' + expect.getState().currentTestName)
 		logger.debug('===========================================')
 	})
 
@@ -162,20 +176,19 @@ describe('App > Controller > Put', () => {
 		describe('User', () => {
 			it('Did it encrypt the password?', async () => {
 				const result = await request(app.getHttpServer())
-				.put(`/User/${user[userSchema.primary_key]}`)
-				.send({
-					password: 'password',
-				})
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+					.put(`/User/${user[userSchema.primary_key]}`)
+					.send({
+						password: 'password',
+					})
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
 
-			expect(result.body).toBeDefined()
-			expect(result.body[userSchema.primary_key].toString()).toEqual(user[userSchema.primary_key].toString())
-			expect(result.body.password.startsWith('$2')).toBeTruthy()
-			user = result.body
+				expect(result.body).toBeDefined()
+				expect(result.body[userSchema.primary_key].toString()).toEqual(user[userSchema.primary_key].toString())
+				expect(result.body.password.startsWith('$2')).toBeTruthy()
+				user = result.body
 			})
 		})
-
 	})
 
 	afterAll(async () => {

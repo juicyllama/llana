@@ -42,7 +42,7 @@ export class MySQL {
 
 	/**
 	 * Check if the data source is available
-	 */	
+	 */
 
 	async checkDataSource(options: { x_request_id?: string }): Promise<boolean> {
 		try {
@@ -129,7 +129,6 @@ export class MySQL {
 		}
 	}
 
-
 	/**
 	 * Get Table Schema
 	 */
@@ -186,7 +185,6 @@ export class MySQL {
 		}
 	}
 
-
 	/**
 	 * Create table from schema object
 	 */
@@ -240,11 +238,13 @@ export class MySQL {
 
 			return true
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`, x_request_id)
+			this.logger.error(
+				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`,
+				x_request_id,
+			)
 			return false
 		}
 	}
-
 
 	/**
 	 * List all tables in the database
@@ -261,8 +261,6 @@ export class MySQL {
 			throw new Error(e)
 		}
 	}
-
-
 
 	/**
 	 * Insert a record
@@ -479,7 +477,13 @@ export class MySQL {
 			return DataSourceColumnType.STRING
 		}
 
-		if(type.includes('decimal') || type.includes('float') || type.includes('double') || type.includes('numeric') || type.includes('real')) {
+		if (
+			type.includes('decimal') ||
+			type.includes('float') ||
+			type.includes('double') ||
+			type.includes('numeric') ||
+			type.includes('real')
+		) {
 			return DataSourceColumnType.NUMBER
 		}
 
@@ -591,9 +595,7 @@ export class MySQL {
 	 */
 
 	private pipeObjectFromDataSource(options: DataSourceFindOneOptions, data: { [key: string]: any }): object {
-		
 		for (const key in data) {
-
 			let column
 
 			if (key.includes('.')) {
@@ -603,7 +605,7 @@ export class MySQL {
 			} else {
 				column = options.schema.columns.find(c => c.field === key)
 			}
-	
+
 			switch (column.type) {
 				case DataSourceColumnType.BOOLEAN:
 					data[key] = data[key] === 1
@@ -616,7 +618,6 @@ export class MySQL {
 
 		return data
 	}
-
 
 	/**
 	 * Mysql speicific helper function to build the find query
@@ -709,6 +710,4 @@ export class MySQL {
 
 		return [command.trim(), values]
 	}
-
-
 }

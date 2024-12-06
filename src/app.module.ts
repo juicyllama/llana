@@ -15,9 +15,11 @@ import { AppBootup } from './app.service.bootup'
 import { TasksService } from './app.service.tasks'
 import auth from './config/auth.config'
 import database from './config/database.config'
+import { envValidationSchema } from './config/env.validation'
 import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
+import { Airtable } from './datasources/airtable.datasource'
 import { Mongo } from './datasources/mongo.datasource'
 import { MSSQL } from './datasources/mssql.datasource'
 import { MySQL } from './datasources/mysql.datasource'
@@ -34,8 +36,6 @@ import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
-import { envValidationSchema } from './config/env.validation'
-import { Airtable } from './datasources/airtable.datasource'
 
 @Module({
 	imports: [
@@ -49,14 +49,7 @@ import { Airtable } from './datasources/airtable.datasource'
 		}),
 		ScheduleModule.forRoot(),
 	],
-	controllers: [
-		AuthController,
-		DocsController,
-		DeleteController,
-		GetController,
-		PostController,
-		PutController,
-	],
+	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
 	providers: [
 		Airtable,
 		AppBootup,
