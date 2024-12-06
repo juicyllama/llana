@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common'
 import { faker } from '@faker-js/faker'
+import { Injectable } from '@nestjs/common'
+
 import { FindOneResponseObject } from '../dtos/response.dto'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
-import { QueryPerform } from '../types/database.types'
+import { QueryPerform } from '../types/datasource.types'
 
 const table = 'Shipper'
 @Injectable()
@@ -20,7 +21,7 @@ export class ShipperTestingService {
 				max: 9999,
 			}),
 			phone: faker.phone.number(),
-			companyName: faker.company.name()
+			companyName: faker.company.name(),
 		}
 	}
 

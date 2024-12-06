@@ -23,7 +23,7 @@ describe('Login Service', () => {
 
 	beforeEach(() => {
 		logger.debug('===========================================')
-		logger.log('🧪 '+expect.getState().currentTestName)
+		logger.log('🧪 ' + expect.getState().currentTestName)
 		logger.debug('===========================================')
 	})
 

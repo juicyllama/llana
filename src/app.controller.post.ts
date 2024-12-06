@@ -12,7 +12,7 @@ import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { AuthTablePermissionFailResponse } from './types/auth.types'
-import { DatabaseCreateOneOptions, PublishType, QueryPerform } from './types/database.types'
+import { DataSourceCreateOneOptions, PublishType, QueryPerform } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller()
@@ -77,7 +77,7 @@ export class PostController {
 
 		const body = req.body
 
-		const options: DatabaseCreateOneOptions = {
+		const options: DataSourceCreateOneOptions = {
 			schema: null,
 			data: {},
 		}
@@ -122,9 +122,8 @@ export class PostController {
 			const data: FindOneResponseObject[] = []
 
 			for (const item of body) {
-
 				const insertResult = await this.createOneRecord(options, item, auth.user_identifier, x_request_id)
-				
+
 				if (!insertResult.valid) {
 					errored++
 					errors.push({
@@ -133,9 +132,6 @@ export class PostController {
 					})
 					continue
 				}
-
-			
-
 
 				data.push(insertResult.result)
 				await this.websocket.publish(

@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
-import { Mongo } from '../databases/mongo.database'
-import { MSSQL } from '../databases/mssql.database'
-import { MySQL } from '../databases/mysql.database'
-import { Postgres } from '../databases/postgres.database'
-import { Airtable } from '../databases/airtable.database'
+import { Airtable } from '../datasources/airtable.datasource'
+import { Mongo } from '../datasources/mongo.datasource'
+import { MSSQL } from '../datasources/mssql.datasource'
+import { MySQL } from '../datasources/mysql.datasource'
+import { Postgres } from '../datasources/postgres.datasource'
 import {
 	DeleteResponseObject,
 	FindManyResponseObject,
@@ -15,19 +15,19 @@ import {
 } from '../dtos/response.dto'
 import { AuthType } from '../types/auth.types'
 import {
-	DatabaseCreateOneOptions,
-	DatabaseDeleteOneOptions,
-	DatabaseFindManyOptions,
-	DatabaseFindOneOptions,
-	DatabaseListTablesOptions,
-	DatabaseSchema,
-	DatabaseType,
-	DatabaseUniqueCheckOptions,
-	DatabaseUpdateOneOptions,
-	DatabaseWhere,
+	DataSourceCreateOneOptions,
+	DataSourceDeleteOneOptions,
+	DataSourceFindManyOptions,
+	DataSourceFindOneOptions,
+	DataSourceListTablesOptions,
+	DataSourceSchema,
+	DataSourceType,
+	DataSourceUniqueCheckOptions,
+	DataSourceUpdateOneOptions,
+	DataSourceWhere,
 	QueryPerform,
 	WhereOperator,
-} from '../types/database.types'
+} from '../types/datasource.types'
 import { Env } from '../utils/Env'
 import { Encryption } from './Encryption'
 import { Logger } from './Logger'
@@ -50,13 +50,13 @@ export class Query {
 	async perform(
 		action: QueryPerform,
 		options?:
-			| DatabaseCreateOneOptions
-			| DatabaseFindOneOptions
-			| DatabaseFindManyOptions
-			| DatabaseUpdateOneOptions
-			| DatabaseDeleteOneOptions
-			| DatabaseUniqueCheckOptions
-			| DatabaseListTablesOptions,
+			| DataSourceCreateOneOptions
+			| DataSourceFindOneOptions
+			| DataSourceFindManyOptions
+			| DataSourceUpdateOneOptions
+			| DataSourceDeleteOneOptions
+			| DataSourceUniqueCheckOptions
+			| DataSourceListTablesOptions,
 		x_request_id?: string,
 	): Promise<
 		| FindOneResponseObject
@@ -81,10 +81,10 @@ export class Query {
 				QueryPerform.UPDATE,
 			].includes(action)
 		) {
-
 			if (!(options as any).schema?.table) {
 				this.logger.warn(
-					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)}`, x_request_id
+					`[Query][${action.toUpperCase()}] Table not defined in schema: ${JSON.stringify(options)}`,
+					x_request_id,
 				)
 				throw new Error('Table not defined')
 			}
@@ -97,24 +97,23 @@ export class Query {
 
 			switch (action) {
 				case QueryPerform.CREATE:
-
-					const createOptions = options as DatabaseCreateOneOptions
+					const createOptions = options as DataSourceCreateOneOptions
 					createOptions.data = await this.identityOperationCheck(createOptions)
 					result = await this.createOne(createOptions, x_request_id)
 					return await this.schema.pipeResponse(createOptions, result)
 
 				case QueryPerform.FIND_ONE:
-					const findOptions = options as DatabaseFindOneOptions
+					const findOptions = options as DataSourceFindOneOptions
 					result = await this.findOne(findOptions, x_request_id)
 					if (!result) {
 						return null
 					}
 
-					result = await this.schema.pipeResponse(options as DatabaseFindOneOptions, result)
+					result = await this.schema.pipeResponse(options as DataSourceFindOneOptions, result)
 					return result
 
 				case QueryPerform.FIND_MANY:
-					const findManyOptions = options as DatabaseFindManyOptions
+					const findManyOptions = options as DataSourceFindManyOptions
 					result = await this.findMany(findManyOptions, x_request_id)
 
 					for (let i = 0; i < result.data.length; i++) {
@@ -123,16 +122,16 @@ export class Query {
 					return result
 
 				case QueryPerform.UPDATE:
-					const updateOptions = options as DatabaseUpdateOneOptions
+					const updateOptions = options as DataSourceUpdateOneOptions
 					updateOptions.data = await this.identityOperationCheck(updateOptions)
 					result = await this.updateOne(updateOptions, x_request_id)
 					return await this.schema.pipeResponse(updateOptions, result)
 
 				case QueryPerform.DELETE:
-					return await this.deleteOne(options as DatabaseDeleteOneOptions, x_request_id)
+					return await this.deleteOne(options as DataSourceDeleteOneOptions, x_request_id)
 
 				case QueryPerform.UNIQUE:
-					return await this.isUnique(options as DatabaseUniqueCheckOptions, x_request_id)
+					return await this.isUnique(options as DataSourceUniqueCheckOptions, x_request_id)
 
 				case QueryPerform.TRUNCATE:
 					return await this.truncate((options as any).schema.table, x_request_id)
@@ -144,7 +143,7 @@ export class Query {
 					return await this.checkConnection({ x_request_id })
 
 				case QueryPerform.LIST_TABLES:
-					return await this.listTables(options as DatabaseListTablesOptions, x_request_id)
+					return await this.listTables(options as DataSourceListTablesOptions, x_request_id)
 
 				default:
 					this.logger.error(`[Query] Action ${action} not supported`, x_request_id)
@@ -189,17 +188,17 @@ export class Query {
 	 * * Used as part of the setup process
 	 */
 
-	private async createTable(schema: DatabaseSchema, x_request_id: string): Promise<boolean> {
+	private async createTable(schema: DataSourceSchema, x_request_id: string): Promise<boolean> {
 		switch (this.configService.get<string>('database.type')) {
-			case DatabaseType.MYSQL:
+			case DataSourceType.MYSQL:
 				return await this.mysql.createTable(schema, x_request_id)
-			case DatabaseType.POSTGRES:
+			case DataSourceType.POSTGRES:
 				return await this.postgres.createTable(schema, x_request_id)
-			case DatabaseType.MONGODB:
+			case DataSourceType.MONGODB:
 				return await this.mongo.createTable(schema, x_request_id)
-			case DatabaseType.MSSQL:
+			case DataSourceType.MSSQL:
 				return await this.mssql.createTable(schema, x_request_id)
-			case DatabaseType.AIRTABLE:
+			case DataSourceType.AIRTABLE:
 				return await this.airtable.createTable(schema, x_request_id)
 			default:
 				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
@@ -211,23 +210,23 @@ export class Query {
 	 * Insert a record
 	 */
 
-	private async createOne(options: DatabaseCreateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
+	private async createOne(options: DataSourceCreateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		let result: FindOneResponseObject
 
-		switch (this.configService.get<DatabaseType>('database.type')) {
-			case DatabaseType.MYSQL:
+		switch (this.configService.get<DataSourceType>('database.type')) {
+			case DataSourceType.MYSQL:
 				result = await this.mysql.createOne(options, x_request_id)
 				break
-			case DatabaseType.POSTGRES:
+			case DataSourceType.POSTGRES:
 				result = await this.postgres.createOne(options, x_request_id)
 				break
-			case DatabaseType.MONGODB:
+			case DataSourceType.MONGODB:
 				result = await this.mongo.createOne(options, x_request_id)
 				break
-			case DatabaseType.MSSQL:
+			case DataSourceType.MSSQL:
 				result = await this.mssql.createOne(options, x_request_id)
 				break
-			case DatabaseType.AIRTABLE:
+			case DataSourceType.AIRTABLE:
 				result = await this.airtable.createOne(options, x_request_id)
 				break
 			default:
@@ -247,23 +246,23 @@ export class Query {
 	 * Find single record
 	 */
 
-	private async findOne(options: DatabaseFindOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
+	private async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		let result: FindOneResponseObject
 
 		switch (this.configService.get<string>('database.type')) {
-			case DatabaseType.MYSQL:
+			case DataSourceType.MYSQL:
 				result = await this.mysql.findOne(options, x_request_id)
 				break
-			case DatabaseType.POSTGRES:
+			case DataSourceType.POSTGRES:
 				result = await this.postgres.findOne(options, x_request_id)
 				break
-			case DatabaseType.MONGODB:
+			case DataSourceType.MONGODB:
 				result = await this.mongo.findOne(options, x_request_id)
 				break
-			case DatabaseType.MSSQL:
+			case DataSourceType.MSSQL:
 				result = await this.mssql.findOne(options, x_request_id)
 				break
-			case DatabaseType.AIRTABLE:
+			case DataSourceType.AIRTABLE:
 				result = await this.airtable.findOne(options, x_request_id)
 				break
 			default:
@@ -287,23 +286,23 @@ export class Query {
 	 * Find multiple records
 	 */
 
-	private async findMany(options: DatabaseFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
+	private async findMany(options: DataSourceFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
 		let result: FindManyResponseObject
 
 		switch (this.configService.get<string>('database.type')) {
-			case DatabaseType.MYSQL:
+			case DataSourceType.MYSQL:
 				result = await this.mysql.findMany(options, x_request_id)
 				break
-			case DatabaseType.POSTGRES:
+			case DataSourceType.POSTGRES:
 				result = await this.postgres.findMany(options, x_request_id)
 				break
-			case DatabaseType.MONGODB:
+			case DataSourceType.MONGODB:
 				result = await this.mongo.findMany(options, x_request_id)
 				break
-			case DatabaseType.MSSQL:
+			case DataSourceType.MSSQL:
 				result = await this.mssql.findMany(options, x_request_id)
 				break
-			case DatabaseType.AIRTABLE:
+			case DataSourceType.AIRTABLE:
 				result = await this.airtable.findMany(options, x_request_id)
 				break
 			default:
@@ -323,23 +322,23 @@ export class Query {
 	 * Update a record
 	 */
 
-	private async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
+	private async updateOne(options: DataSourceUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		let result: FindOneResponseObject
 
 		switch (this.configService.get<string>('database.type')) {
-			case DatabaseType.MYSQL:
+			case DataSourceType.MYSQL:
 				result = await this.mysql.updateOne(options, x_request_id)
 				break
-			case DatabaseType.POSTGRES:
+			case DataSourceType.POSTGRES:
 				result = await this.postgres.updateOne(options, x_request_id)
 				break
-			case DatabaseType.MONGODB:
+			case DataSourceType.MONGODB:
 				result = await this.mongo.updateOne(options, x_request_id)
 				break
-			case DatabaseType.MSSQL:
+			case DataSourceType.MSSQL:
 				result = await this.mssql.updateOne(options, x_request_id)
 				break
-			case DatabaseType.AIRTABLE:
+			case DataSourceType.AIRTABLE:
 				result = await this.airtable.updateOne(options, x_request_id)
 				break
 			default:
@@ -359,23 +358,23 @@ export class Query {
 	 * Delete a record
 	 */
 
-	private async deleteOne(options: DatabaseDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
+	private async deleteOne(options: DataSourceDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
 		let result: DeleteResponseObject
 
 		switch (this.configService.get<string>('database.type')) {
-			case DatabaseType.MYSQL:
+			case DataSourceType.MYSQL:
 				result = await this.mysql.deleteOne(options, x_request_id)
 				break
-			case DatabaseType.POSTGRES:
+			case DataSourceType.POSTGRES:
 				result = await this.postgres.deleteOne(options, x_request_id)
 				break
-			case DatabaseType.MONGODB:
+			case DataSourceType.MONGODB:
 				result = await this.mongo.deleteOne(options, x_request_id)
 				break
-			case DatabaseType.MSSQL:
+			case DataSourceType.MSSQL:
 				result = await this.mssql.deleteOne(options, x_request_id)
 				break
-			case DatabaseType.AIRTABLE:
+			case DataSourceType.AIRTABLE:
 				result = await this.airtable.deleteOne(options, x_request_id)
 				break
 			default:
@@ -396,23 +395,23 @@ export class Query {
 	 * Check uniqueness of record
 	 */
 
-	private async isUnique(options: DatabaseUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
+	private async isUnique(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		let result: IsUniqueResponse
 
 		switch (this.configService.get<string>('database.type')) {
-			case DatabaseType.MYSQL:
+			case DataSourceType.MYSQL:
 				result = await this.mysql.uniqueCheck(options, x_request_id)
 				break
-			case DatabaseType.POSTGRES:
+			case DataSourceType.POSTGRES:
 				result = await this.postgres.uniqueCheck(options, x_request_id)
 				break
-			case DatabaseType.MONGODB:
+			case DataSourceType.MONGODB:
 				result = await this.mongo.uniqueCheck(options, x_request_id)
 				break
-			case DatabaseType.MSSQL:
+			case DataSourceType.MSSQL:
 				result = await this.mssql.uniqueCheck(options, x_request_id)
 				break
-			case DatabaseType.AIRTABLE:
+			case DataSourceType.AIRTABLE:
 				result = await this.airtable.uniqueCheck(options, x_request_id)
 				break
 			default:
@@ -438,15 +437,15 @@ export class Query {
 		}
 
 		switch (this.configService.get<string>('database.type')) {
-			case DatabaseType.MYSQL:
+			case DataSourceType.MYSQL:
 				return await this.mysql.truncate(table_name)
-			case DatabaseType.POSTGRES:
+			case DataSourceType.POSTGRES:
 				return await this.postgres.truncate(table_name)
-			case DatabaseType.MONGODB:
+			case DataSourceType.MONGODB:
 				return await this.mongo.truncate(table_name)
-			case DatabaseType.MSSQL:
+			case DataSourceType.MSSQL:
 				return await this.mssql.truncate(table_name)
-			case DatabaseType.AIRTABLE:
+			case DataSourceType.AIRTABLE:
 				return await this.airtable.truncate(table_name)
 			default:
 				this.logger.error(
@@ -460,7 +459,9 @@ export class Query {
 	 * If the table is the user identity table, hash the password
 	 */
 
-	private async identityOperationCheck(options: DatabaseCreateOneOptions | DatabaseUpdateOneOptions): Promise<any> {
+	private async identityOperationCheck(
+		options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions,
+	): Promise<any> {
 		const jwt_config = this.configService.get<any>('auth').find(auth => auth.type === AuthType.JWT)
 
 		if (options.data[jwt_config.table.columns.password]) {
@@ -482,15 +483,15 @@ export class Query {
 
 	private async checkConnection(options: { x_request_id?: string }): Promise<boolean> {
 		switch (this.configService.get<string>('database.type')) {
-			case DatabaseType.MYSQL:
-				return await this.mysql.checkConnection({ x_request_id: options.x_request_id })
-			case DatabaseType.POSTGRES:
+			case DataSourceType.MYSQL:
+				return await this.mysql.checkDataSource({ x_request_id: options.x_request_id })
+			case DataSourceType.POSTGRES:
 				return await this.postgres.checkConnection({ x_request_id: options.x_request_id })
-			case DatabaseType.MONGODB:
+			case DataSourceType.MONGODB:
 				return await this.mongo.checkConnection({ x_request_id: options.x_request_id })
-			case DatabaseType.MSSQL:
+			case DataSourceType.MSSQL:
 				return await this.mssql.checkConnection({ x_request_id: options.x_request_id })
-			case DatabaseType.AIRTABLE:
+			case DataSourceType.AIRTABLE:
 				return await this.airtable.checkConnection({ x_request_id: options.x_request_id })
 			default:
 				this.logger.error(
@@ -504,45 +505,49 @@ export class Query {
 	 * List tables in the database
 	 */
 
-	private async listTables(options: DatabaseListTablesOptions, x_request_id?: string): Promise<ListTablesResponseObject> {
+	private async listTables(
+		options: DataSourceListTablesOptions,
+		x_request_id?: string,
+	): Promise<ListTablesResponseObject> {
 		let tables: string[]
 
 		switch (this.configService.get<string>('database.type')) {
-			case DatabaseType.MYSQL:
+			case DataSourceType.MYSQL:
 				tables = await this.mysql.listTables({ x_request_id })
 				break
-			case DatabaseType.POSTGRES:
+			case DataSourceType.POSTGRES:
 				tables = await this.postgres.listTables({ x_request_id })
 				break
-			case DatabaseType.MONGODB:
+			case DataSourceType.MONGODB:
 				tables = await this.mongo.listTables({ x_request_id })
 				break
-			case DatabaseType.MSSQL:
+			case DataSourceType.MSSQL:
 				tables = await this.mssql.listTables({ x_request_id })
 				break
-			case DatabaseType.AIRTABLE:
+			case DataSourceType.AIRTABLE:
 				tables = await this.airtable.listTables({ x_request_id })
 				break
 			default:
 				this.logger.error(
-					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`, x_request_id
+					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+					x_request_id,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
 
 		let tables_filtered = tables
 
-		if(!options?.include_system) {
+		if (!options?.include_system) {
 			tables_filtered = tables_filtered.filter(table => !table.startsWith('_llana_'))
 		}
 
-		if(!options?.include_known_db_orchestration) {
+		if (!options?.include_known_db_orchestration) {
 			tables_filtered = tables_filtered.filter(table => table !== 'atlas_schema_revisions')
 		}
 
 		return {
 			tables: tables_filtered,
-			_x_request_id: x_request_id
+			_x_request_id: x_request_id,
 		}
 	}
 
@@ -550,7 +555,7 @@ export class Query {
 	 * Build relations
 	 */
 	async buildRelations(
-		options: DatabaseFindOneOptions,
+		options: DataSourceFindOneOptions,
 		result: FindOneResponseObject,
 		x_request_id: string,
 	): Promise<FindOneResponseObject> {
@@ -559,12 +564,11 @@ export class Query {
 		}
 
 		for (const relation of options.relations) {
-
-			if(Array.isArray(result[relation.join.org_column])){
+			if (Array.isArray(result[relation.join.org_column])) {
 				result[relation.join.org_column] = result[relation.join.org_column][0]
 			}
 
-			const where: DatabaseWhere[] = [
+			const where: DataSourceWhere[] = [
 				{
 					column: relation.join.column,
 					operator: WhereOperator.equals,
@@ -583,7 +587,7 @@ export class Query {
 				})
 			}
 
-			const relationOptions = <DatabaseFindManyOptions>{
+			const relationOptions = <DataSourceFindManyOptions>{
 				schema: relation.schema,
 				fields: relation.columns,
 				where: where,

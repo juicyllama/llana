@@ -11,24 +11,24 @@ import {
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
 import {
-	DatabaseColumnType,
-	DatabaseCreateOneOptions,
-	DatabaseDeleteOneOptions,
-	DatabaseFindManyOptions,
-	DatabaseFindOneOptions,
-	DatabaseFindTotalRecords,
-	DatabaseSchema,
-	DatabaseSchemaColumn,
-	DatabaseSchemaRelation,
-	DatabaseType,
-	DatabaseUniqueCheckOptions,
-	DatabaseUpdateOneOptions,
+	DataSourceColumnType,
+	DataSourceCreateOneOptions,
+	DataSourceDeleteOneOptions,
+	DataSourceFindManyOptions,
+	DataSourceFindOneOptions,
+	DataSourceFindTotalRecords,
+	DataSourceSchema,
+	DataSourceSchemaColumn,
+	DataSourceSchemaRelation,
+	DataSourceType,
+	DataSourceUniqueCheckOptions,
+	DataSourceUpdateOneOptions,
 	WhereOperator,
-} from '../types/database.types'
-import { PostgreSQLColumnType } from '../types/databases/postgres.types'
+} from '../types/datasource.types'
+import { PostgreSQLColumnType } from '../types/datasources/postgres.types'
 import { SortCondition } from '../types/schema.types'
 
-const DATABASE_TYPE = DatabaseType.POSTGRES
+const DATABASE_TYPE = DataSourceType.POSTGRES
 
 @Injectable()
 export class Postgres {
@@ -134,7 +134,7 @@ export class Postgres {
 	 * @param table_name
 	 */
 
-	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
+	async getSchema(options: { table: string; x_request_id?: string }): Promise<DataSourceSchema> {
 		let sql = `SELECT column_name AS "Field", data_type AS "Type", is_nullable AS "Null", column_default AS "Default",
 			CASE
 				WHEN column_name = ANY (SELECT kcu.column_name
@@ -176,7 +176,7 @@ export class Postgres {
 		}
 
 		const columns = columns_result.map((column: any) => {
-			return <DatabaseSchemaColumn>{
+			return <DataSourceSchemaColumn>{
 				field: column.Field,
 				type: this.fieldMapper(column.Type),
 				nullable: column.Null === 'YES',
@@ -198,8 +198,8 @@ export class Postgres {
 		const relations_result = await this.performQuery({ sql: relations_query, x_request_id: options.x_request_id })
 
 		const relations = relations_result
-			.filter((row: DatabaseSchemaRelation) => row.table !== null)
-			.map((row: DatabaseSchemaRelation) => row)
+			.filter((row: DataSourceSchemaRelation) => row.table !== null)
+			.map((row: DataSourceSchemaRelation) => row)
 
 		for (const relation of relations) {
 			const existingRelation = relations.find(
@@ -227,11 +227,11 @@ export class Postgres {
 	 * Insert a record
 	 */
 
-	async createOne(options: DatabaseCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
+	async createOne(options: DataSourceCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
 		const values: any[] = []
 
-		options = this.pipeObjectToPostgres(options) as DatabaseCreateOneOptions
+		options = this.pipeObjectToPostgres(options) as DataSourceCreateOneOptions
 
 		const columns = Object.keys(options.data)
 		const dataValues = Object.values(options.data)
@@ -249,7 +249,7 @@ export class Postgres {
 	 * Find single record
 	 */
 
-	async findOne(options: DatabaseFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
+	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
 		let [command, values] = this.find(options)
 		command += ` LIMIT 1`
 
@@ -266,7 +266,7 @@ export class Postgres {
 	 * Find multiple records
 	 */
 
-	async findMany(options: DatabaseFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
+	async findMany(options: DataSourceFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
 		const total = await this.findTotalRecords(options, x_request_id)
 
 		let results: any[] = []
@@ -322,7 +322,7 @@ export class Postgres {
 	 * Get total records with where conditions
 	 */
 
-	async findTotalRecords(options: DatabaseFindTotalRecords, x_request_id: string): Promise<number> {
+	async findTotalRecords(options: DataSourceFindTotalRecords, x_request_id: string): Promise<number> {
 		let [command, values] = this.find(options, true)
 		const results = await this.performQuery({ sql: command, values, x_request_id })
 		return Number(results[0].total)
@@ -332,14 +332,14 @@ export class Postgres {
 	 * Update one records
 	 */
 
-	async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
+	async updateOne(options: DataSourceUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
 		let index = 1
 
 		const values = [...Object.values(options.data), options.id.toString()]
 		let command = `UPDATE "${table_name}" SET `
 
-		options = this.pipeObjectToPostgres(options) as DatabaseUpdateOneOptions
+		options = this.pipeObjectToPostgres(options) as DataSourceUpdateOneOptions
 
 		for (const column in options.data) {
 			command += `"${column}" = $${index}, `
@@ -359,7 +359,7 @@ export class Postgres {
 	 * Delete single record
 	 */
 
-	async deleteOne(options: DatabaseDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
+	async deleteOne(options: DataSourceDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
 		if (options.softDelete) {
 			const result = await this.updateOne(
 				{
@@ -391,7 +391,7 @@ export class Postgres {
 		}
 	}
 
-	async uniqueCheck(options: DatabaseUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
+	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		for (const column of options.schema.columns) {
 			if (column.unique_key) {
 				const command = `SELECT COUNT(*) as total FROM "${options.schema.table}" WHERE ${column.field} = $1`
@@ -419,7 +419,7 @@ export class Postgres {
 	 * Create table from schema object
 	 */
 
-	async createTable(schema: DatabaseSchema, x_request_id?: string): Promise<boolean> {
+	async createTable(schema: DataSourceSchema, x_request_id?: string): Promise<boolean> {
 		try {
 			let command = `CREATE TABLE "${schema.table}" (`
 
@@ -427,11 +427,11 @@ export class Postgres {
 				command += ` "${column.field}" `
 
 				switch (column.type) {
-					case DatabaseColumnType.STRING:
+					case DataSourceColumnType.STRING:
 						command += `${this.fieldMapperReverse(column.type)}(${column.extra?.length ?? 255})`
 						break
 
-					case DatabaseColumnType.ENUM:
+					case DataSourceColumnType.ENUM:
 						await this.performQuery({ sql: `DROP TYPE IF EXISTS ${schema.table}_${column.field}_enum` })
 						await this.performQuery({
 							sql: `CREATE TYPE ${schema.table}_${column.field}_enum AS ENUM (${column.enums.map(e => `'${e}'`).join(', ')})`,
@@ -481,12 +481,18 @@ export class Postgres {
 
 			return true
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`, x_request_id)
+			this.logger.error(
+				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`,
+				x_request_id,
+			)
 			return false
 		}
 	}
 
-	private find(options: DatabaseFindOneOptions | DatabaseFindManyOptions, count: boolean = false): [string, any[]] {
+	private find(
+		options: DataSourceFindOneOptions | DataSourceFindManyOptions,
+		count: boolean = false,
+	): [string, any[]] {
 		const table_name = options.schema.table
 		let values: any[] = []
 		let index = 1
@@ -588,9 +594,9 @@ export class Postgres {
 		return [command.trim(), values]
 	}
 
-	private fieldMapper(type: PostgreSQLColumnType): DatabaseColumnType {
+	private fieldMapper(type: PostgreSQLColumnType): DataSourceColumnType {
 		if (type.includes('enum')) {
-			return DatabaseColumnType.ENUM
+			return DataSourceColumnType.ENUM
 		}
 
 		switch (type) {
@@ -600,39 +606,39 @@ export class Postgres {
 			case PostgreSQLColumnType.REAL:
 			case PostgreSQLColumnType.TIMESTAMP:
 			case PostgreSQLColumnType.YEAR:
-				return DatabaseColumnType.NUMBER
+				return DataSourceColumnType.NUMBER
 			case PostgreSQLColumnType.CHAR:
 			case PostgreSQLColumnType.VARCHAR:
 			case PostgreSQLColumnType.TEXT:
 			case PostgreSQLColumnType.ENUM:
-				return DatabaseColumnType.STRING
+				return DataSourceColumnType.STRING
 			case PostgreSQLColumnType.DATE:
 			case PostgreSQLColumnType.DATETIME:
 			case PostgreSQLColumnType.TIME:
-				return DatabaseColumnType.DATE
+				return DataSourceColumnType.DATE
 			case PostgreSQLColumnType.BOOLEAN:
-				return DatabaseColumnType.BOOLEAN
+				return DataSourceColumnType.BOOLEAN
 			case PostgreSQLColumnType.JSON:
-				return DatabaseColumnType.JSON
+				return DataSourceColumnType.JSON
 			case PostgreSQLColumnType.BINARY:
 			default:
-				return DatabaseColumnType.UNKNOWN
+				return DataSourceColumnType.UNKNOWN
 		}
 	}
 
-	private fieldMapperReverse(type: DatabaseColumnType): PostgreSQLColumnType {
+	private fieldMapperReverse(type: DataSourceColumnType): PostgreSQLColumnType {
 		switch (type) {
-			case DatabaseColumnType.STRING:
+			case DataSourceColumnType.STRING:
 				return PostgreSQLColumnType.VARCHAR
-			case DatabaseColumnType.NUMBER:
+			case DataSourceColumnType.NUMBER:
 				return PostgreSQLColumnType.INT
-			case DatabaseColumnType.BOOLEAN:
+			case DataSourceColumnType.BOOLEAN:
 				return PostgreSQLColumnType.BOOLEAN
-			case DatabaseColumnType.DATE:
+			case DataSourceColumnType.DATE:
 				return PostgreSQLColumnType.DATETIME
-			case DatabaseColumnType.JSON:
+			case DataSourceColumnType.JSON:
 				return PostgreSQLColumnType.JSON
-			case DatabaseColumnType.ENUM:
+			case DataSourceColumnType.ENUM:
 				return PostgreSQLColumnType.ENUM
 			default:
 				return PostgreSQLColumnType.VARCHAR
@@ -640,22 +646,22 @@ export class Postgres {
 	}
 
 	private pipeObjectToPostgres(
-		options: DatabaseCreateOneOptions | DatabaseUpdateOneOptions,
-	): DatabaseCreateOneOptions | DatabaseUpdateOneOptions {
+		options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions,
+	): DataSourceCreateOneOptions | DataSourceUpdateOneOptions {
 		for (const column of options.schema.columns) {
 			if (!options.data[column.field]) {
 				continue
 			}
 
 			switch (column.type) {
-				case DatabaseColumnType.BOOLEAN:
+				case DataSourceColumnType.BOOLEAN:
 					if (options.data[column.field] === true) {
 						options.data[column.field] = 1
 					} else if (options.data[column.field] === false) {
 						options.data[column.field] = 0
 					}
 					break
-				case DatabaseColumnType.DATE:
+				case DataSourceColumnType.DATE:
 					if (options.data[column.field]) {
 						options.data[column.field] = new Date(options.data[column.field])
 							.toISOString()
@@ -672,7 +678,7 @@ export class Postgres {
 		return options
 	}
 
-	private formatOutput(options: DatabaseFindOneOptions, data: { [key: string]: any }): object {
+	private formatOutput(options: DataSourceFindOneOptions, data: { [key: string]: any }): object {
 		for (const key in data) {
 			if (key.includes('.')) {
 				const [table, field] = key.split('.')
@@ -691,17 +697,17 @@ export class Postgres {
 	 *
 	 */
 
-	private formatField(type: DatabaseColumnType, value: any): any {
+	private formatField(type: DataSourceColumnType, value: any): any {
 		if (value === null) {
 			return null
 		}
 
 		switch (type) {
-			case DatabaseColumnType.BOOLEAN:
+			case DataSourceColumnType.BOOLEAN:
 				return value === 1
-			case DatabaseColumnType.DATE:
+			case DataSourceColumnType.DATE:
 				return new Date(value).toISOString()
-			case DatabaseColumnType.NUMBER:
+			case DataSourceColumnType.NUMBER:
 				return Number(value)
 			default:
 				return value

@@ -8,7 +8,7 @@ import { CACHE_DEFAULT_WEBHOOK_TTL, LLANA_WEBHOOK_LOG_TABLE, LLANA_WEBHOOK_TABLE
 import { FindManyResponseObject, FindOneResponseObject } from '../dtos/response.dto'
 import { WebhookLog } from '../dtos/webhook.dto'
 import { Webhook as WebhookType } from '../dtos/webhook.dto'
-import { DatabaseSchema, PublishType, QueryPerform, WhereOperator } from '../types/database.types'
+import { DataSourceSchema, PublishType, QueryPerform, WhereOperator } from '../types/datasource.types'
 import { RolePermission } from '../types/roles.types'
 import { Authentication } from './Authentication'
 import { Logger } from './Logger'
@@ -27,7 +27,7 @@ export class Webhook {
 	) {}
 
 	async publish(
-		schema: DatabaseSchema,
+		schema: DataSourceSchema,
 		type: PublishType,
 		id: string | number,
 		user_identifier?: string | number,

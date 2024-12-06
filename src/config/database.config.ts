@@ -3,12 +3,12 @@ import 'dotenv/config'
 import { registerAs } from '@nestjs/config'
 
 import { getDatabaseType } from '../helpers/Database'
-import { DatabaseConfig } from '../types/database.types'
+import { DataSourceConfig } from '../types/datasource.types'
 
 export default registerAs(
 	'database',
 	() =>
-		<DatabaseConfig>{
+		<DataSourceConfig>{
 			type: getDatabaseType(process.env.DATABASE_URI),
 			host: process.env.DATABASE_URI,
 			defaults: {

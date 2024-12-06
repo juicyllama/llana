@@ -8,7 +8,7 @@ import { isUndefined } from 'lodash'
 import { CACHE_DEFAULT_IDENTITY_DATA_TTL, LLANA_AUTH_TABLE } from '../app.constants'
 import { FindManyResponseObject } from '../dtos/response.dto'
 import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
-import { DatabaseFindOneOptions, DatabaseSchema, QueryPerform, WhereOperator } from '../types/database.types'
+import { DataSourceFindOneOptions, DataSourceSchema, QueryPerform, WhereOperator } from '../types/datasource.types'
 import { RolePermission } from '../types/roles.types'
 import { Env } from '../utils/Env'
 import { findDotNotation } from '../utils/Find'
@@ -146,7 +146,7 @@ export class Authentication {
 			}
 
 			let identity_column
-			let schema: DatabaseSchema
+			let schema: DataSourceSchema
 
 			try {
 				schema = await this.schema.getSchema({ table: auth.table.name, x_request_id: options.x_request_id })
@@ -264,7 +264,7 @@ export class Authentication {
 					let auth_result = await this.cacheManager.get(`auth:${auth.type}:${req_api_key}`)
 
 					if (!auth_result || !auth_result[identity_column]) {
-						const db_options: DatabaseFindOneOptions = {
+						const db_options: DataSourceFindOneOptions = {
 							schema,
 							fields: [identity_column],
 							where: [
