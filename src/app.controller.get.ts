@@ -13,12 +13,12 @@ import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import {
-	DatabaseFindManyOptions,
-	DatabaseFindOneOptions,
-	DatabaseSchema,
+	DataSourceFindManyOptions,
+	DataSourceFindOneOptions,
+	DataSourceSchema,
 	QueryPerform,
 	WhereOperator,
-} from './types/database.types'
+} from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller()
@@ -39,7 +39,7 @@ export class GetController {
 
 		const table_name = UrlToTable(req.originalUrl, 1)
 
-		let schema: DatabaseSchema
+		let schema: DataSourceSchema
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -77,7 +77,7 @@ export class GetController {
 	}
 
 	@Get('/tables')
-	async listTables(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DatabaseSchema> {
+	async listTables(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DataSourceSchema> {
 		const x_request_id = headers['x-request-id']
 
 		const auth = await this.authentication.auth({
@@ -115,7 +115,7 @@ export class GetController {
 
 		let primary_key
 
-		const options: DatabaseFindOneOptions = {
+		const options: DataSourceFindOneOptions = {
 			schema: null,
 			fields: [],
 			where: [],
@@ -258,7 +258,7 @@ export class GetController {
 
 			if (postQueryRelations?.length) {
 				options.relations = postQueryRelations
-				result = await this.query.buildRelations(options as DatabaseFindOneOptions, result, x_request_id)
+				result = await this.query.buildRelations(options as DataSourceFindOneOptions, result, x_request_id)
 			}
 
 			return res.status(200).send(result)
@@ -287,7 +287,7 @@ export class GetController {
 			table_name = LLANA_WEBHOOK_TABLE
 		}
 
-		const options: DatabaseFindManyOptions = {
+		const options: DataSourceFindManyOptions = {
 			schema: null,
 			fields: [],
 			where: [],
@@ -435,7 +435,7 @@ export class GetController {
 				options.relations = postQueryRelations
 				for (const i in result.data) {
 					result.data[i] = await this.query.buildRelations(
-						options as DatabaseFindOneOptions,
+						options as DataSourceFindOneOptions,
 						result.data[i],
 						x_request_id,
 					)

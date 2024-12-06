@@ -12,24 +12,24 @@ import {
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
 import {
-	DatabaseColumnType,
-	DatabaseCreateOneOptions,
-	DatabaseDeleteOneOptions,
-	DatabaseFindManyOptions,
-	DatabaseFindOneOptions,
-	DatabaseFindTotalRecords,
-	DatabaseSchema,
-	DatabaseSchemaColumn,
-	DatabaseSchemaRelation,
-	DatabaseType,
-	DatabaseUniqueCheckOptions,
-	DatabaseUpdateOneOptions,
-	DatabaseWhere,
+	DataSourceColumnType,
+	DataSourceCreateOneOptions,
+	DataSourceDeleteOneOptions,
+	DataSourceFindManyOptions,
+	DataSourceFindOneOptions,
+	DataSourceFindTotalRecords,
+	DataSourceSchema,
+	DataSourceSchemaColumn,
+	DataSourceSchemaRelation,
+	DataSourceType,
+	DataSourceUniqueCheckOptions,
+	DataSourceUpdateOneOptions,
+	DataSourceWhere,
 	WhereOperator,
-} from '../types/database.types'
+} from '../types/datasource.types'
 import { da } from '@faker-js/faker/.'
 
-const DATABASE_TYPE = DatabaseType.MONGODB
+const DATABASE_TYPE = DataSourceType.MONGODB
 
 @Injectable()
 export class Mongo {
@@ -114,7 +114,7 @@ export class Mongo {
 	 * @param table_name
 	 */
 
-	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
+	async getSchema(options: { table: string; x_request_id?: string }): Promise<DataSourceSchema> {
 		const mongo = await this.createConnection(options.table)
 
 		try {
@@ -126,9 +126,9 @@ export class Mongo {
 				throw new Error(`No record in collection ${options.table} to build schema`)
 			}
 
-			const relations: DatabaseSchemaRelation[] = []
+			const relations: DataSourceSchemaRelation[] = []
 			const columns = Object.keys(record).map(column => {
-				return <DatabaseSchemaColumn>{
+				return <DataSourceSchemaColumn>{
 					field: column,
 					type: this.fieldMapper(record[column]),
 					nullable: true,
@@ -212,7 +212,7 @@ export class Mongo {
 	 * Insert a record
 	 */
 
-	async createOne(options: DatabaseCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
+	async createOne(options: DataSourceCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
 		this.logger.debug(
 			`[${DATABASE_TYPE}] Create Record on for collection ${options.schema.table}: ${JSON.stringify(options.data)}`,
 			x_request_id,
@@ -220,7 +220,7 @@ export class Mongo {
 
 		const mongo = await this.createConnection(options.schema.table)
 
-		options = this.pipeObjectToMongo(options) as DatabaseUpdateOneOptions
+		options = this.pipeObjectToMongo(options) as DataSourceUpdateOneOptions
 
 		try {
 			const result = await mongo.collection.insertOne(options.data as any)
@@ -250,7 +250,7 @@ export class Mongo {
 	 * Find single record
 	 */
 
-	async findOne(options: DatabaseFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
+	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
 		const mongo = await this.createConnection(options.schema.table)
 
 		try {
@@ -289,7 +289,7 @@ export class Mongo {
 	 * Find multiple records
 	 */
 
-	async findMany(options: DatabaseFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
+	async findMany(options: DataSourceFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
 		const total = await this.findTotalRecords(options, x_request_id)
 
 		const mongo = await this.createConnection(options.schema.table)
@@ -371,7 +371,7 @@ export class Mongo {
 	 * Get total records with where conditions
 	 */
 
-	async findTotalRecords(options: DatabaseFindTotalRecords, x_request_id: string): Promise<number> {
+	async findTotalRecords(options: DataSourceFindTotalRecords, x_request_id: string): Promise<number> {
 		const mongo = await this.createConnection(options.schema.table)
 
 		try {
@@ -401,14 +401,14 @@ export class Mongo {
 	 * Update one records
 	 */
 
-	async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
+	async updateOne(options: DataSourceUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		const mongo = await this.createConnection(options.schema.table)
 
 		if (options.data['_id']) {
 			delete options.data['_id']
 		}
 
-		options = this.pipeObjectToMongo(options) as DatabaseUpdateOneOptions
+		options = this.pipeObjectToMongo(options) as DataSourceUpdateOneOptions
 
 		try {
 			this.logger.debug(
@@ -446,7 +446,7 @@ export class Mongo {
 	 * Delete single record
 	 */
 
-	async deleteOne(options: DatabaseDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
+	async deleteOne(options: DataSourceDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
 		const mongo = await this.createConnection(options.schema.table)
 
 		try {
@@ -499,7 +499,7 @@ export class Mongo {
 	 * Create table from schema object
 	 */
 
-	async createTable(schema: DatabaseSchema, x_request_id?: string): Promise<boolean> {
+	async createTable(schema: DataSourceSchema, x_request_id?: string): Promise<boolean> {
 		const mongo = await this.createConnection(schema.table)
 
 		try {
@@ -545,7 +545,7 @@ export class Mongo {
 		}
 	}
 
-	async uniqueCheck(options: DatabaseUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
+	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		this.logger.debug(
 			`[${DATABASE_TYPE}] Unique Check not applicable: ${JSON.stringify(options)}`,
 			x_request_id,
@@ -559,7 +559,7 @@ export class Mongo {
 	/**
 	 * Convert a Llana DatabaseWhere to a Mongo FilterOperations object
 	 */
-	async whereToFilter(where: DatabaseWhere[]): Promise<any> {
+	async whereToFilter(where: DataSourceWhere[]): Promise<any> {
 		const filter = {}
 
 		if (!where || where.length === 0) {
@@ -665,32 +665,32 @@ export class Mongo {
 	 * Convert a typeof to Llana DatabaseColumnType
 	 */
 
-	private fieldMapper(field: any): DatabaseColumnType {
+	private fieldMapper(field: any): DataSourceColumnType {
 		if (field === null) {
-			return DatabaseColumnType.UNKNOWN
+			return DataSourceColumnType.UNKNOWN
 		}
 
 		if (field instanceof Date) {
-			return DatabaseColumnType.DATE
+			return DataSourceColumnType.DATE
 		}
 
 		const type = typeof field
 
 		switch (type) {
 			case 'string':
-				return DatabaseColumnType.STRING
+				return DataSourceColumnType.STRING
 			case 'number':
-				return DatabaseColumnType.NUMBER
+				return DataSourceColumnType.NUMBER
 			case 'boolean':
-				return DatabaseColumnType.BOOLEAN
+				return DataSourceColumnType.BOOLEAN
 			case 'object':
-				return DatabaseColumnType.JSON
+				return DataSourceColumnType.JSON
 			default:
-				return DatabaseColumnType.UNKNOWN
+				return DataSourceColumnType.UNKNOWN
 		}
 	}
 
-	private formatOutput(options: DatabaseFindOneOptions, data: { [key: string]: any }): object {
+	private formatOutput(options: DataSourceFindOneOptions, data: { [key: string]: any }): object {
 		for (const key in data) {
 			const column = options.schema.columns.find(c => c.field === key)
 
@@ -704,13 +704,13 @@ export class Mongo {
 		return data
 	}
 
-	private formatField(type: DatabaseColumnType, value: any): any {
+	private formatField(type: DataSourceColumnType, value: any): any {
 		if (value === null) {
 			return null
 		}
 
 		switch (type) {
-			case DatabaseColumnType.DATE:
+			case DataSourceColumnType.DATE:
 				return new Date(value).toISOString()
 			default:
 				return value
@@ -718,8 +718,8 @@ export class Mongo {
 	}
 
 	private pipeObjectToMongo(
-		options: DatabaseCreateOneOptions | DatabaseUpdateOneOptions,
-	): DatabaseCreateOneOptions | DatabaseUpdateOneOptions {
+		options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions,
+	): DataSourceCreateOneOptions | DataSourceUpdateOneOptions {
 		
 		// Convert Date to ISOString
 		for (const column of options.schema.columns) {

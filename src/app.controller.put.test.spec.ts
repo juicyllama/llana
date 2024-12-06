@@ -5,7 +5,7 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
-import { DatabaseSchema } from './types/database.types'
+import { DataSourceSchema } from './types/datasource.types'
 import { SalesOrderTestingService } from './testing/salesorder.testing.service'
 import { EmployeeTestingService } from './testing/employee.testing.service'
 import { ShipperTestingService } from './testing/shipper.testing.service'
@@ -24,11 +24,11 @@ describe('App > Controller > Put', () => {
 	let salesOrderTestingService: SalesOrderTestingService
 	let userTestingService: UserTestingService
 
-	let customerSchema: DatabaseSchema
-	let employeeSchema: DatabaseSchema
-	let shipperSchema: DatabaseSchema
-	let orderSchema: DatabaseSchema
-	let userSchema: DatabaseSchema
+	let customerSchema: DataSourceSchema
+	let employeeSchema: DataSourceSchema
+	let shipperSchema: DataSourceSchema
+	let orderSchema: DataSourceSchema
+	let userSchema: DataSourceSchema
 
 	let customer1: any
 	let customer2: any

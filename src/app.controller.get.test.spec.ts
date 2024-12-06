@@ -6,7 +6,7 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
 import { SalesOrderTestingService } from './testing/salesorder.testing.service'
-import { DatabaseSchema } from './types/database.types'
+import { DataSourceSchema } from './types/datasource.types'
 import { EmployeeTestingService } from './testing/employee.testing.service'
 import { ShipperTestingService } from './testing/shipper.testing.service'
 import { TIMEOUT } from './testing/testing.const'
@@ -22,10 +22,10 @@ describe('App > Controller > Get', () => {
 
 	let salesOrderTestingService: SalesOrderTestingService
 
-	let customerSchema: DatabaseSchema
-	let employeeSchema: DatabaseSchema
-	let shipperSchema: DatabaseSchema
-	let salesOrderSchema: DatabaseSchema
+	let customerSchema: DataSourceSchema
+	let employeeSchema: DataSourceSchema
+	let shipperSchema: DataSourceSchema
+	let salesOrderSchema: DataSourceSchema
 
 	let customer: any
 	let employee: any

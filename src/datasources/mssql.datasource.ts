@@ -12,25 +12,25 @@ import { deconstructConnectionString, getDatabaseName } from '../helpers/Databas
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
 import {
-	DatabaseColumnType,
-	DatabaseCreateOneOptions,
-	DatabaseDeleteOneOptions,
-	DatabaseFindManyOptions,
-	DatabaseFindOneOptions,
-	DatabaseFindTotalRecords,
-	DatabaseSchema,
-	DatabaseSchemaColumn,
-	DatabaseSchemaRelation,
-	DatabaseType,
-	DatabaseUniqueCheckOptions,
-	DatabaseUpdateOneOptions,
+	DataSourceColumnType,
+	DataSourceCreateOneOptions,
+	DataSourceDeleteOneOptions,
+	DataSourceFindManyOptions,
+	DataSourceFindOneOptions,
+	DataSourceFindTotalRecords,
+	DataSourceSchema,
+	DataSourceSchemaColumn,
+	DataSourceSchemaRelation,
+	DataSourceType,
+	DataSourceUniqueCheckOptions,
+	DataSourceUpdateOneOptions,
 	WhereOperator,
-} from '../types/database.types'
-import { MSSQLColumnType } from '../types/databases/mssql.types'
+} from '../types/datasource.types'
+import { MSSQLColumnType } from '../types/datasources/mssql.types'
 import { SortCondition } from '../types/schema.types'
 import { replaceQ } from '../utils/String'
 
-const DATABASE_TYPE = DatabaseType.MSSQL
+const DATABASE_TYPE = DataSourceType.MSSQL
 const RESERVED_WORDS = ['USER', 'TABLE']
 
 @Injectable()
@@ -134,7 +134,7 @@ export class MSSQL {
 	 * @param table_name
 	 */
 
-	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
+	async getSchema(options: { table: string; x_request_id?: string }): Promise<DataSourceSchema> {
 		//get schema for MSSQL database
 
 		const identity_fields = `select COLUMN_NAME, TABLE_NAME from INFORMATION_SCHEMA.COLUMNS where COLUMNPROPERTY(object_id(TABLE_SCHEMA+'.'+TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1 AND TABLE_NAME = 'Customer' order by TABLE_NAME `
@@ -172,7 +172,7 @@ export class MSSQL {
 
 		const columns = columns_result.map((column: any) => {
 
-			return <DatabaseSchemaColumn>{
+			return <DataSourceSchemaColumn>{
 				field: column.field,
 				type: this.fieldMapper(column.type),
 				required: column.nullable === 'NO',
@@ -195,7 +195,7 @@ export class MSSQL {
 			}
 		})
 
-		const relations: DatabaseSchemaRelation[] = []
+		const relations: DataSourceSchemaRelation[] = []
 
 		const relation_query = `select tab.name as [table],
 			col.name as [column],
@@ -224,7 +224,7 @@ export class MSSQL {
 		).recordset
 
 		for (const r of relation_result) {
-			const relation: DatabaseSchemaRelation = {
+			const relation: DataSourceSchemaRelation = {
 				table: r.table,
 				column: r.column,
 				org_table: r.org_table,
@@ -233,7 +233,7 @@ export class MSSQL {
 
 			relations.push(relation)
 
-			const relation_back: DatabaseSchemaRelation = {
+			const relation_back: DataSourceSchemaRelation = {
 				table: r.org_table,
 				column: r.org_column,
 				org_table: r.table,
@@ -255,12 +255,12 @@ export class MSSQL {
 	 * Insert a record
 	 */
 
-	async createOne(options: DatabaseCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
+	async createOne(options: DataSourceCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
 		
 		const table_name = options.schema.table
 		const values: any[] = []
 
-		options = this.pipeObjectToMSSQL(options) as DatabaseCreateOneOptions
+		options = this.pipeObjectToMSSQL(options) as DataSourceCreateOneOptions
 
 		const columns = Object.keys(options.data)
 		const dataValues = Object.values(options.data)
@@ -329,7 +329,7 @@ export class MSSQL {
 	 * Find single record
 	 */
 
-	async findOne(options: DatabaseFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
+	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
 		let [command, values] = this.find(options)
 
 		const results = (await this.performQuery({ sql: command, values, x_request_id })).recordset
@@ -344,7 +344,7 @@ export class MSSQL {
 	 * Find multiple records
 	 */
 
-	async findMany(options: DatabaseFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
+	async findMany(options: DataSourceFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
 		if (!options.sort?.length) {
 			if (options.schema.primary_key) {
 				options.sort = [
@@ -405,7 +405,7 @@ export class MSSQL {
 	 * Get total records with where conditions
 	 */
 
-	async findTotalRecords(options: DatabaseFindTotalRecords, x_request_id: string): Promise<number> {
+	async findTotalRecords(options: DataSourceFindTotalRecords, x_request_id: string): Promise<number> {
 		let [command, values] = this.find(options, true)
 		const results = (await this.performQuery({ sql: command, values, x_request_id })).recordset
 		return Number(results[0].total)
@@ -415,7 +415,7 @@ export class MSSQL {
 	 * Update one records
 	 */
 
-	async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
+	async updateOne(options: DataSourceUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
 
 		if (options.data[options.schema.primary_key]) {
@@ -425,7 +425,7 @@ export class MSSQL {
 		const values = [...Object.values(options.data), options.id.toString()]
 		let command = `UPDATE ${this.reserveWordFix(table_name)} SET `
 
-		options = this.pipeObjectToMSSQL(options) as DatabaseUpdateOneOptions
+		options = this.pipeObjectToMSSQL(options) as DataSourceUpdateOneOptions
 
 		for(const key of Object.keys(options.data)){
 			const schema_col = options.schema.columns.find((col) => col.field === key)
@@ -470,7 +470,7 @@ export class MSSQL {
 	 * Delete single record
 	 */
 
-	async deleteOne(options: DatabaseDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
+	async deleteOne(options: DataSourceDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
 		if (options.softDelete) {
 			const result = await this.updateOne(
 				{
@@ -504,7 +504,7 @@ export class MSSQL {
 		}
 	}
 
-	async uniqueCheck(options: DatabaseUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
+	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		for (const column of options.schema.columns) {
 			if (column.unique_key) {
 				const command = `SELECT COUNT(*) as total FROM ${this.reserveWordFix(options.schema.table)} WHERE ${column.field} = ?`
@@ -532,12 +532,12 @@ export class MSSQL {
 	 * Create table from schema object
 	 */
 
-	async createTable(schema: DatabaseSchema, x_request_id?: string): Promise<boolean> {
+	async createTable(schema: DataSourceSchema, x_request_id?: string): Promise<boolean> {
 		try {
 			const columns = schema.columns.map(column => {
 				let column_string = `${this.reserveWordFix(column.field)} ${this.fieldMapperReverse(column.type)}`
 
-				if (column.type === DatabaseColumnType.STRING || column.type === DatabaseColumnType.ENUM) {
+				if (column.type === DataSourceColumnType.STRING || column.type === DataSourceColumnType.ENUM) {
 					column_string += `(${column.extra?.length ?? 255})`
 				}
 
@@ -550,7 +550,7 @@ export class MSSQL {
 				}
 
 				if (column.default) {
-					if (column.type === DatabaseColumnType.BOOLEAN) {
+					if (column.type === DataSourceColumnType.BOOLEAN) {
 						column_string += ` DEFAULT ${column.default === true ? 1 : 0}`
 					} else {
 						column_string += ` DEFAULT ${column.default}`
@@ -585,7 +585,7 @@ export class MSSQL {
 	}
 
 	private find(
-		options: DatabaseFindOneOptions | DatabaseFindManyOptions,
+		options: DataSourceFindOneOptions | DataSourceFindManyOptions,
 		count: boolean = false,
 	): [string, string[]] {
 		const table_name = options.schema.table
@@ -672,26 +672,26 @@ export class MSSQL {
 		if (!count) {
 			let sort: SortCondition[] = []
 
-			if ((options as DatabaseFindManyOptions).sort) {
-				sort = (options as DatabaseFindManyOptions).sort?.filter(sort => !sort.column.includes('.'))
+			if ((options as DataSourceFindManyOptions).sort) {
+				sort = (options as DataSourceFindManyOptions).sort?.filter(sort => !sort.column.includes('.'))
 			}
 
 			if (sort?.length) {
 				command += ` ORDER BY ${sort.map(sort => `${sort.column} ${sort.operator}`).join(', ')} `
 			}
 
-			if ((options as DatabaseFindManyOptions).offset || (options as DatabaseFindManyOptions).limit) {
-				command += ` OFFSET ${(options as DatabaseFindManyOptions).offset} ROWS `
+			if ((options as DataSourceFindManyOptions).offset || (options as DataSourceFindManyOptions).limit) {
+				command += ` OFFSET ${(options as DataSourceFindManyOptions).offset} ROWS `
 			}
 
-			if ((options as DatabaseFindManyOptions).limit) {
+			if ((options as DataSourceFindManyOptions).limit) {
 				let row = 'ROW ONLY'
 
-				if ((options as DatabaseFindManyOptions).limit > 1) {
+				if ((options as DataSourceFindManyOptions).limit > 1) {
 					row = 'ROWS ONLY'
 				}
 
-				command += `FETCH NEXT ${(options as DatabaseFindManyOptions).limit} ${row} `
+				command += `FETCH NEXT ${(options as DataSourceFindManyOptions).limit} ${row} `
 			}
 		}
 
@@ -702,9 +702,9 @@ export class MSSQL {
 		return [command.trim(), values]
 	}
 
-	private fieldMapper(type: MSSQLColumnType): DatabaseColumnType {
+	private fieldMapper(type: MSSQLColumnType): DataSourceColumnType {
 		if (type.includes('decimal') || type.includes('numeric') || type.includes('float')) {
-			return DatabaseColumnType.NUMBER
+			return DataSourceColumnType.NUMBER
 		}
 
 		if (
@@ -714,7 +714,7 @@ export class MSSQL {
 			type.includes('binary') ||
 			type.includes('varbinary')
 		) {
-			return DatabaseColumnType.STRING
+			return DataSourceColumnType.STRING
 		}
 
 		switch (type) {
@@ -728,39 +728,39 @@ export class MSSQL {
 			case MSSQLColumnType.REAL:
 			case MSSQLColumnType.TIMESTAMP:
 			case MSSQLColumnType.BIT:
-				return DatabaseColumnType.NUMBER
+				return DataSourceColumnType.NUMBER
 			case MSSQLColumnType.CHAR:
 			case MSSQLColumnType.VARCHAR:
 			case MSSQLColumnType.TEXT:
 			case MSSQLColumnType.NTEXT:
 			case MSSQLColumnType.NCHAR:
 			case MSSQLColumnType.NVARCHAR:
-				return DatabaseColumnType.STRING
+				return DataSourceColumnType.STRING
 			case MSSQLColumnType.DATE:
 			case MSSQLColumnType.DATETIME:
 			case MSSQLColumnType.DATETIME2:
 			case MSSQLColumnType.SMALLDATETIME:
 			case MSSQLColumnType.DATETIMEOFFSET:
 			case MSSQLColumnType.TIME:
-				return DatabaseColumnType.DATE
+				return DataSourceColumnType.DATE
 			case MSSQLColumnType.SQL_VARIANT:
 			case MSSQLColumnType.UNIQUEIDENTIFIER:
 			case MSSQLColumnType.TABLE:
 			case MSSQLColumnType.XML:
 			default:
-				return DatabaseColumnType.UNKNOWN
+				return DataSourceColumnType.UNKNOWN
 		}
 	}
 
-	private fieldMapperReverse(type: DatabaseColumnType): MSSQLColumnType {
+	private fieldMapperReverse(type: DataSourceColumnType): MSSQLColumnType {
 		switch (type) {
-			case DatabaseColumnType.STRING:
+			case DataSourceColumnType.STRING:
 				return MSSQLColumnType.VARCHAR
-			case DatabaseColumnType.NUMBER:
+			case DataSourceColumnType.NUMBER:
 				return MSSQLColumnType.INT
-			case DatabaseColumnType.BOOLEAN:
+			case DataSourceColumnType.BOOLEAN:
 				return MSSQLColumnType.BIT
-			case DatabaseColumnType.DATE:
+			case DataSourceColumnType.DATE:
 				return MSSQLColumnType.DATETIME
 			default:
 				return MSSQLColumnType.VARCHAR
@@ -768,22 +768,22 @@ export class MSSQL {
 	}
 
 	private pipeObjectToMSSQL(
-		options: DatabaseCreateOneOptions | DatabaseUpdateOneOptions,
-	): DatabaseCreateOneOptions | DatabaseUpdateOneOptions {
+		options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions,
+	): DataSourceCreateOneOptions | DataSourceUpdateOneOptions {
 		for (const column of options.schema.columns) {
 			if (!options.data[column.field]) {
 				continue
 			}
 
 			switch (column.type) {
-				case DatabaseColumnType.BOOLEAN:
+				case DataSourceColumnType.BOOLEAN:
 					if (options.data[column.field] === true) {
 						options.data[column.field] = 1
 					} else if (options.data[column.field] === false) {
 						options.data[column.field] = 0
 					}
 					break
-				case DatabaseColumnType.DATE:
+				case DataSourceColumnType.DATE:
 					if (options.data[column.field]) {
 						options.data[column.field] = new Date(options.data[column.field])
 							.toISOString()
@@ -792,7 +792,7 @@ export class MSSQL {
 					}
 					break
 
-				case DatabaseColumnType.NUMBER:
+				case DataSourceColumnType.NUMBER:
 					if (options.data[column.field]) {
 						options.data[column.field] = Number(options.data[column.field])
 					}
@@ -806,7 +806,7 @@ export class MSSQL {
 		return options
 	}
 
-	private formatOutput(options: DatabaseFindOneOptions, data: { [key: string]: any }): object {
+	private formatOutput(options: DataSourceFindOneOptions, data: { [key: string]: any }): object {
 		for (const key in data) {
 			if (key.includes('.')) {
 				const [table, field] = key.split('.')
@@ -825,17 +825,17 @@ export class MSSQL {
 	 *
 	 */
 
-	private formatField(type: DatabaseColumnType, value: any): any {
+	private formatField(type: DataSourceColumnType, value: any): any {
 		if (value === null) {
 			return null
 		}
 
 		switch (type) {
-			case DatabaseColumnType.BOOLEAN:
+			case DataSourceColumnType.BOOLEAN:
 				return value === 1
-			case DatabaseColumnType.DATE:
+			case DataSourceColumnType.DATE:
 				return new Date(value).toISOString()
-			case DatabaseColumnType.NUMBER:
+			case DataSourceColumnType.NUMBER:
 				return Number(value)
 			default:
 				return value
@@ -847,7 +847,7 @@ export class MSSQL {
 	}
 
 
-	private isIdentity(options: DatabaseCreateOneOptions, columns: string[]): boolean{
+	private isIdentity(options: DataSourceCreateOneOptions, columns: string[]): boolean{
 		let has_identity = false
 		const identity = options.schema.columns.filter(c => c.extra?.is_identity)
 

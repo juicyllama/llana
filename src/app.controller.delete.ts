@@ -14,13 +14,13 @@ import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import {
-	DatabaseConfig,
-	DatabaseSchema,
-	DatabaseWhere,
+	DataSourceConfig,
+	DataSourceSchema,
+	DataSourceWhere,
 	PublishType,
 	QueryPerform,
 	WhereOperator,
-} from './types/database.types'
+} from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller()
@@ -50,7 +50,7 @@ export class DeleteController {
 			table_name = LLANA_WEBHOOK_TABLE
 		}
 
-		let schema: DatabaseSchema
+		let schema: DataSourceSchema
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -103,7 +103,7 @@ export class DeleteController {
 			return res.status(400).send(this.response.text(validateKey.message))
 		}
 
-		const where = <DatabaseWhere[]>[
+		const where = <DataSourceWhere[]>[
 			{
 				column: primary_key,
 				operator: WhereOperator.equals,
@@ -131,7 +131,7 @@ export class DeleteController {
 		}
 
 		//Soft or Hard delete check
-		const databaseConfig: DatabaseConfig = this.configService.get('database')
+		const databaseConfig: DataSourceConfig = this.configService.get('database')
 
 		let softDelete: string = null
 
@@ -209,7 +209,7 @@ export class DeleteController {
 			table_name = LLANA_WEBHOOK_TABLE
 		}
 
-		let schema: DatabaseSchema
+		let schema: DataSourceSchema
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -271,7 +271,7 @@ export class DeleteController {
 					return res.status(400).send(this.response.text(validateKey.message))
 				}
 
-				const where = <DatabaseWhere[]>[
+				const where = <DataSourceWhere[]>[
 					{
 						column: primary_key,
 						operator: WhereOperator.equals,
@@ -304,7 +304,7 @@ export class DeleteController {
 				}
 
 				//Soft or Hard delete check
-				const databaseConfig: DatabaseConfig = this.configService.get('database')
+				const databaseConfig: DataSourceConfig = this.configService.get('database')
 
 				let softDelete: string = null
 

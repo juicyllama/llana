@@ -7,7 +7,7 @@ import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
 import { Auth, AuthJWT, AuthType } from './types/auth.types'
-import { DatabaseSchema, DatabaseWhere, QueryPerform, WhereOperator } from './types/database.types'
+import { DataSourceSchema, DataSourceWhere, QueryPerform, WhereOperator } from './types/datasource.types'
 
 @Injectable()
 export class AuthService {
@@ -38,7 +38,7 @@ export class AuthService {
 			throw new UnauthorizedException()
 		}
 
-		let schema: DatabaseSchema
+		let schema: DataSourceSchema
 		try {
 			schema = await this.schema.getSchema({ table: jwtAuthConfig.table.name, x_request_id })
 		} catch (e) {
@@ -46,7 +46,7 @@ export class AuthService {
 			throw new UnauthorizedException()
 		}
 
-		const where: DatabaseWhere[] = [
+		const where: DataSourceWhere[] = [
 			{
 				column: (jwtAuthConfig.table as AuthJWT).columns.username,
 				operator: WhereOperator.equals,

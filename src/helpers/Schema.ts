@@ -7,21 +7,21 @@ import { IsBoolean, IsDateString, IsNumber, IsOptional, IsString, validate } fro
 import { isDate, isObject } from 'lodash'
 
 import { CACHE_DEFAULT_TABLE_SCHEMA_TTL, NON_FIELD_PARAMS } from '../app.constants'
-import { Mongo } from '../databases/mongo.database'
-import { MSSQL } from '../databases/mssql.database'
-import { MySQL } from '../databases/mysql.database'
-import { Postgres } from '../databases/postgres.database'
-import { Airtable } from '../databases/airtable.database'
+import { Mongo } from '../datasources/mongo.datasource'
+import { MSSQL } from '../datasources/mssql.datasource'
+import { MySQL } from '../datasources/mysql.datasource'
+import { Postgres } from '../datasources/postgres.datasource'
+import { Airtable } from '../datasources/airtable.datasource'
 import {
-	DatabaseColumnType,
-	DatabaseFindOneOptions,
-	DatabaseJoinType,
-	DatabaseRelations,
-	DatabaseSchema,
-	DatabaseType,
-	DatabaseWhere,
+	DataSourceColumnType,
+	DataSourceFindOneOptions,
+	DataSourceoinType,
+	DataSourceRelations,
+	DataSourceSchema,
+	DataSourceType,
+	DataSourceWhere,
 	WhereOperator,
-} from '../types/database.types'
+} from '../types/datasource.types'
 import {
 	SortCondition,
 	ValidateFieldsResponse,
@@ -48,13 +48,13 @@ export class Schema {
 	 * Get Table Schema
 	 */
 
-	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
+	async getSchema(options: { table: string; x_request_id?: string }): Promise<DataSourceSchema> {
 		if (!options.table) {
 			throw new Error('Table name not provided')
 		}
 
 		//check cache for schema
-		let result: DatabaseSchema = await this.cacheManager.get(`schema:${options.table}`)
+		let result: DataSourceSchema = await this.cacheManager.get(`schema:${options.table}`)
 
 		if (result?.table) {
 			this.logger.debug(`[GetSchema] Cache hit for ${options.table} ${options.x_request_id ?? ''}`)
@@ -66,19 +66,19 @@ export class Schema {
 
 		try {
 			switch (this.configService.get<string>('database.type')) {
-				case DatabaseType.MYSQL:
+				case DataSourceType.MYSQL:
 					result = await this.mysql.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
-				case DatabaseType.POSTGRES:
+				case DataSourceType.POSTGRES:
 					result = await this.postgres.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
-				case DatabaseType.MONGODB:
+				case DataSourceType.MONGODB:
 					result = await this.mongo.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
-				case DatabaseType.MSSQL:
+				case DataSourceType.MSSQL:
 					result = await this.mssql.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
-				case DatabaseType.AIRTABLE:
+				case DataSourceType.AIRTABLE:
 					result = await this.airtable.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					break
 				default:
@@ -111,7 +111,7 @@ export class Schema {
 	/**
 	 * The primary key's name of the table
 	 */
-	getPrimaryKey(schema: DatabaseSchema): string {
+	getPrimaryKey(schema: DataSourceSchema): string {
 		return schema.columns.find(column => {
 			if (column.primary_key) {
 				return column
@@ -123,7 +123,7 @@ export class Schema {
 	 * Get the class for the schema
 	 */
 
-	schemaToClass(schema: DatabaseSchema, data?: { [key: string]: any }): any {
+	schemaToClass(schema: DataSourceSchema, data?: { [key: string]: any }): any {
 		class DynamicClass {}
 
 		for (const column of schema.columns) {
@@ -139,19 +139,19 @@ export class Schema {
 			}
 
 			switch (column.type) {
-				case DatabaseColumnType.NUMBER:
+				case DataSourceColumnType.NUMBER:
 					decorators.push(IsNumber())
 					break
-				case DatabaseColumnType.STRING:
+				case DataSourceColumnType.STRING:
 					decorators.push(IsString())
 					break
-				case DatabaseColumnType.BOOLEAN:
+				case DataSourceColumnType.BOOLEAN:
 					decorators.push(IsBoolean())
 					break
-				case DatabaseColumnType.DATE:
+				case DataSourceColumnType.DATE:
 					decorators.push(IsDateString())
 					break
-				case DatabaseColumnType.JSON:
+				case DataSourceColumnType.JSON:
 					//decorators.push(IsJSON()) //breaks nested objects
 					break
 				default:
@@ -177,7 +177,7 @@ export class Schema {
 	 */
 
 	async pipeResponse(
-		options: DatabaseFindOneOptions,
+		options: DataSourceFindOneOptions,
 		data: { [key: string]: any },
 		x_request_id?: string,
 	): Promise<object> {
@@ -265,7 +265,7 @@ export class Schema {
 	 */
 
 	async validateData(
-		schema: DatabaseSchema,
+		schema: DataSourceSchema,
 		data: { [key: string]: any },
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
 
@@ -282,7 +282,7 @@ export class Schema {
 				}
 
 				switch (column.type) {
-					case DatabaseColumnType.NUMBER:
+					case DataSourceColumnType.NUMBER:
 						if (isNaN(data[key])) {
 							return {
 								valid: false,
@@ -325,13 +325,13 @@ export class Schema {
 	}
 
 	async validateFields(options: {
-		schema: DatabaseSchema
+		schema: DataSourceSchema
 		fields: string[]
 		x_request_id?: string
 	}): Promise<ValidateFieldsResponse> {
 		try {
 			const validated: string[] = []
-			let relations: DatabaseRelations[] = []
+			let relations: DataSourceRelations[] = []
 
 			for (const field of options.fields) {
 				if (field === '') {
@@ -371,7 +371,7 @@ export class Schema {
 		}
 	}
 
-	validateField(schema: DatabaseSchema, field: string): boolean {
+	validateField(schema: DataSourceSchema, field: string): boolean {
 		return schema.columns.find(col => col.field === field) ? true : false
 	}
 
@@ -380,14 +380,14 @@ export class Schema {
 	 */
 
 	async validateRelations(options: {
-		schema: DatabaseSchema
+		schema: DataSourceSchema
 		relation_query: string[]
-		existing_relations: DatabaseRelations[]
+		existing_relations: DataSourceRelations[]
 		x_request_id?: string
 	}): Promise<validateRelationsResponse> {
 		try {
 			const relations = options.relation_query
-			const validated: DatabaseRelations[] = []
+			const validated: DataSourceRelations[] = []
 
 			for (const relation of relations) {
 				if (relation.includes('.')) {
@@ -424,7 +424,7 @@ export class Schema {
 						table: relation,
 						join: {
 							...options.schema.relations.find(col => col.table === relation),
-							type: DatabaseJoinType.INNER,
+							type: DataSourceoinType.INNER,
 						},
 						columns: relation_schema.columns.map(col => col.field),
 						schema: relation_schema,
@@ -451,8 +451,8 @@ export class Schema {
 	 * Example: ?id[equals]=1&name=John&age[gte]=21
 	 */
 
-	async validateWhereParams(options: { schema: DatabaseSchema; params: any }): Promise<validateWhereResponse> {
-		const where: DatabaseWhere[] = []
+	async validateWhereParams(options: { schema: DataSourceSchema; params: any }): Promise<validateWhereResponse> {
+		const where: DataSourceWhere[] = []
 
 		for (const param in options.params) {
 			if (NON_FIELD_PARAMS.includes(param)) continue
@@ -530,7 +530,7 @@ export class Schema {
 	 * Example: ?sort=name.asc,id.desc,content.title.asc
 	 */
 
-	validateSort(options: { schema: DatabaseSchema; sort: string[] }): ValidateSortResponse {
+	validateSort(options: { schema: DataSourceSchema; sort: string[] }): ValidateSortResponse {
 		const array = options.sort?.filter(sort => !sort.includes('.'))
 
 		for (const item of array) {
@@ -573,11 +573,11 @@ export class Schema {
 	 */
 
 	async convertDeepWhere(options: {
-		where: DatabaseWhere
-		schema: DatabaseSchema
+		where: DataSourceWhere
+		schema: DataSourceSchema
 		x_request_id?: string
-	}): Promise<DatabaseRelations[]> {
-		const relations: DatabaseRelations[] = []
+	}): Promise<DataSourceRelations[]> {
+		const relations: DataSourceRelations[] = []
 
 		//deconstruct the column to create the relations of each table in the items object
 		let items = options.where.column.split('.')
@@ -598,7 +598,7 @@ export class Schema {
 				table: items[i],
 				join: {
 					...options.schema.relations.find(col => col.table === items[i]),
-					type: DatabaseJoinType.INNER,
+					type: DataSourceoinType.INNER,
 				},
 				where: i === items.length - 2 ? options.where : undefined,
 				schema: relation_schema,
@@ -618,10 +618,10 @@ export class Schema {
 
 	async convertDeepField(options: {
 		field: string
-		schema: DatabaseSchema
-		relations: DatabaseRelations[]
+		schema: DataSourceSchema
+		relations: DataSourceRelations[]
 		x_request_id?: string
-	}): Promise<DatabaseRelations[]> {
+	}): Promise<DataSourceRelations[]> {
 		//deconstruct the column to create the relations of each table in the items object
 		let items = options.field.split('.')
 
@@ -647,7 +647,7 @@ export class Schema {
 					table: items[i],
 					join: {
 						...options.schema.relations.find(col => col.table === items[i]),
-						type: DatabaseJoinType.INNER,
+						type: DataSourceoinType.INNER,
 					},
 					columns: i === items.length - 2 ? [items[items.length - 1]] : undefined,
 					schema: relation_schema,
@@ -666,10 +666,10 @@ export class Schema {
 
 	async convertDeepRelation(options: {
 		relation: string
-		schema: DatabaseSchema
+		schema: DataSourceSchema
 		x_request_id?: string
-	}): Promise<DatabaseRelations[]> {
-		const relations: DatabaseRelations[] = []
+	}): Promise<DataSourceRelations[]> {
+		const relations: DataSourceRelations[] = []
 
 		//deconstruct the column to create the relations of each table in the items object
 		let items = options.relation.split('.')
@@ -690,7 +690,7 @@ export class Schema {
 				table: items[i],
 				join: {
 					...options.schema.relations.find(col => col.table === items[i]),
-					type: DatabaseJoinType.INNER,
+					type: DataSourceoinType.INNER,
 				},
 				columns: i === items.length - 1 ? [items[items.length]] : undefined,
 				schema: relation_schema,

@@ -6,7 +6,7 @@ import { Authentication } from './helpers/Authentication'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Schema } from './helpers/Schema'
-import { DatabaseFindOneOptions, QueryPerform, WhereOperator } from './types/database.types'
+import { DataSourceFindOneOptions, QueryPerform, WhereOperator } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller('auth')
@@ -65,7 +65,7 @@ export class AuthController {
 		const schema = await this.schema.getSchema({ table, x_request_id })
 		const identity_column = await this.authentication.getIdentityColumn(x_request_id)
 
-		const databaseQuery: DatabaseFindOneOptions = {
+		const databaseQuery: DataSourceFindOneOptions = {
 			schema,
 			where: [
 				{

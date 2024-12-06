@@ -10,24 +10,24 @@ import {
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
 import {
-	DatabaseColumnType,
-	DatabaseCreateOneOptions,
-	DatabaseDeleteOneOptions,
-	DatabaseFindManyOptions,
-	DatabaseFindOneOptions,
-	DatabaseFindTotalRecords,
-	DatabaseSchema,
-	DatabaseSchemaColumn,
-	DatabaseSchemaRelation,
-	DatabaseType,
-	DatabaseUniqueCheckOptions,
-	DatabaseUpdateOneOptions,
-	DatabaseWhere,
+	DataSourceColumnType,
+	DataSourceCreateOneOptions,
+	DataSourceDeleteOneOptions,
+	DataSourceFindManyOptions,
+	DataSourceFindOneOptions,
+	DataSourceFindTotalRecords,
+	DataSourceSchema,
+	DataSourceSchemaColumn,
+	DataSourceSchemaRelation,
+	DataSourceType,
+	DataSourceUniqueCheckOptions,
+	DataSourceUpdateOneOptions,
+	DataSourceWhere,
 	WhereOperator,
-} from '../types/database.types'
-import { AirtableColumnType } from '../types/databases/airtable.types'
+} from '../types/datasource.types'
+import { AirtableColumnType } from '../types/datasources/airtable.types'
 
-const DATABASE_TYPE = DatabaseType.AIRTABLE
+const DATABASE_TYPE = DataSourceType.AIRTABLE
 const ENDPOINT = 'https://api.airtable.com/v0'
 
 @Injectable()
@@ -134,7 +134,7 @@ export class Airtable {
 	 * @param table_name
 	 */
 
-	async getSchema(options: { table: string; x_request_id?: string }): Promise<DatabaseSchema> {
+	async getSchema(options: { table: string; x_request_id?: string }): Promise<DataSourceSchema> {
 	
 		try {
 			this.logger.debug(`[${DATABASE_TYPE}] Get Schema for table ${options.table}`, options.x_request_id)
@@ -151,13 +151,13 @@ export class Airtable {
 				throw new Error('Table not found')
 			}
 
-			let columns: DatabaseSchemaColumn[] = []
-			let relations: DatabaseSchemaRelation[] = []
+			let columns: DataSourceSchemaColumn[] = []
+			let relations: DataSourceSchemaRelation[] = []
 
 			//pass in ID column as primary key
 			columns.push({
 				field: 'id',
-				type: DatabaseColumnType.STRING,
+				type: DataSourceColumnType.STRING,
 				nullable: false,
 				required: false,
 				primary_key: true,
@@ -214,7 +214,7 @@ export class Airtable {
 	 * Insert a record
 	 */
 
-	async createOne(options: DatabaseCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
+	async createOne(options: DataSourceCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
 		this.logger.debug(
 			`[${DATABASE_TYPE}] Create Record on ${options.schema.table}: ${JSON.stringify(options.data)}`,
 			x_request_id,
@@ -285,7 +285,7 @@ export class Airtable {
 	 * Find single record
 	 */
 
-	async findOne(options: DatabaseFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
+	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
 		
 		try {
 			this.logger.debug(
@@ -346,7 +346,7 @@ export class Airtable {
 	 * Find multiple records
 	 */
 
-	async findMany(options: DatabaseFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
+	async findMany(options: DataSourceFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
 
 		//If primary key is passed in where clause, return single record
 		if(options.where.length === 1 && options.where[0].column === options.schema.primary_key){
@@ -522,7 +522,7 @@ export class Airtable {
 	 * Get total records with where conditions
 	 */
 
-	async findTotalRecords(options: DatabaseFindTotalRecords, x_request_id: string): Promise<number> {
+	async findTotalRecords(options: DataSourceFindTotalRecords, x_request_id: string): Promise<number> {
 		try {
 			this.logger.debug(
 				`[${DATABASE_TYPE}] Find Records on ${options.schema.table}: ${JSON.stringify(options.where)} ${x_request_id ?? ''}`
@@ -583,7 +583,7 @@ export class Airtable {
 	 * Update one records
 	 */
 
-	async updateOne(options: DatabaseUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
+	async updateOne(options: DataSourceUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 
 		if (options.data[options.schema.primary_key]) {
 			delete options.data[options.schema.primary_key]
@@ -656,7 +656,7 @@ export class Airtable {
 	 * Delete single record
 	 */
 
-	async deleteOne(options: DatabaseDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
+	async deleteOne(options: DataSourceDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
 		
 		try {
 			this.logger.debug(
@@ -707,7 +707,7 @@ export class Airtable {
 	 * Create table from schema object
 	 */
 
-	async createTable(schema: DatabaseSchema, x_request_id?: string): Promise<boolean> {
+	async createTable(schema: DataSourceSchema, x_request_id?: string): Promise<boolean> {
 	
 		try {
 			this.logger.debug(`[${DATABASE_TYPE}] Create table ${schema.table}`, x_request_id)
@@ -728,26 +728,26 @@ export class Airtable {
 
 					//https://airtable.com/developers/web/api/field-model
 					switch(column.type){
-						case DatabaseColumnType.NUMBER:
+						case DataSourceColumnType.NUMBER:
 							options = {
 								precision: column.extra.decimal ?? 0,
 							}
 							break
 
-						case DatabaseColumnType.ENUM:
+						case DataSourceColumnType.ENUM:
 							options = {
 								choices: column.enums.map(e => ({ name: e }))
 							}
 							break
 
-						case DatabaseColumnType.BOOLEAN: 
+						case DataSourceColumnType.BOOLEAN: 
 							options = {
 								icon: "check",
 								color: "grayBright" 
 							}
 							break
 
-						case DatabaseColumnType.DATE:
+						case DataSourceColumnType.DATE:
 
 							let timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'client'
 							if(timeZone === 'UTC'){
@@ -847,7 +847,7 @@ export class Airtable {
 		}
 	}
 
-	async uniqueCheck(options: DatabaseUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
+	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		this.logger.debug(
 			`[${DATABASE_TYPE}] Unique Check not applicable: ${JSON.stringify(options)}`,
 			x_request_id,
@@ -861,7 +861,7 @@ export class Airtable {
 	/**
 	 * Convert a Llana DatabaseWhere to Airtable filterByFormula object
 	 */
-	async whereToFilter(where: DatabaseWhere[], schema: DatabaseSchema): Promise<string> {
+	async whereToFilter(where: DataSourceWhere[], schema: DataSourceSchema): Promise<string> {
 		let filter = ''
 
 		if (!where || where.length === 0) {
@@ -874,7 +874,7 @@ export class Airtable {
 
 			const columnSchema = schema.columns.find(c => c.field === w.column)
 
-			if(columnSchema.type === DatabaseColumnType.BOOLEAN && w.value === false){
+			if(columnSchema.type === DataSourceColumnType.BOOLEAN && w.value === false){
 				w.value = ''
 			}
 		
@@ -952,7 +952,7 @@ export class Airtable {
 	 * Convert a AirtableColumnType to Llana DatabaseColumnType
 	 */
 
-	private fieldMapper(type: AirtableColumnType): DatabaseColumnType {
+	private fieldMapper(type: AirtableColumnType): DataSourceColumnType {
 		switch (type) {
 			case AirtableColumnType.EMAIL:
 			case AirtableColumnType.URL:
@@ -962,7 +962,7 @@ export class Airtable {
 			case AirtableColumnType.DURATION:
 			case AirtableColumnType.PHONE_NUMBER:
 			case AirtableColumnType.SINGLE_LINE_TEXT:
-				return DatabaseColumnType.STRING
+				return DataSourceColumnType.STRING
 
 			case AirtableColumnType.AUTO_NUMBER:
 			case AirtableColumnType.NUMBER:
@@ -970,16 +970,16 @@ export class Airtable {
 			case AirtableColumnType.PERCENT:
 			case AirtableColumnType.CURRENCY:
 			case AirtableColumnType.RATING:
-				return DatabaseColumnType.NUMBER
+				return DataSourceColumnType.NUMBER
 
 			case AirtableColumnType.CHECKBOX:
-				return DatabaseColumnType.BOOLEAN
+				return DataSourceColumnType.BOOLEAN
 
 			case AirtableColumnType.DATE:
 			case AirtableColumnType.DATE_TIME:
 			case AirtableColumnType.CREATED_TIME:
 			case AirtableColumnType.LAST_MODIFIED_TIME:
-				return DatabaseColumnType.DATE
+				return DataSourceColumnType.DATE
 
 			case AirtableColumnType.MULTIPLE_ATTACHMENTS:
 			case AirtableColumnType.MULTIPLE_COLLABORATORS:
@@ -994,13 +994,13 @@ export class Airtable {
 			case AirtableColumnType.BUTTON:
 			case AirtableColumnType.EXTERNAL_SYNC_SOURCE:
 			case AirtableColumnType.AI_TEXT:
-				return DatabaseColumnType.JSON
+				return DataSourceColumnType.JSON
 				
 			case AirtableColumnType.SINGLE_SELECT:
-				return DatabaseColumnType.ENUM
+				return DataSourceColumnType.ENUM
 
 			default:
-				return DatabaseColumnType.UNKNOWN
+				return DataSourceColumnType.UNKNOWN
 		}
 	}
 
@@ -1008,24 +1008,24 @@ export class Airtable {
 	 * Convert a AirtableColumnType to Llana DatabaseColumnType
 	 */
 
-	private fieldMapperRev(type: DatabaseColumnType): AirtableColumnType {
+	private fieldMapperRev(type: DataSourceColumnType): AirtableColumnType {
 		switch (type) {
-			case DatabaseColumnType.STRING:
+			case DataSourceColumnType.STRING:
 				return AirtableColumnType.SINGLE_LINE_TEXT
 			
-			case DatabaseColumnType.NUMBER:
+			case DataSourceColumnType.NUMBER:
 				return AirtableColumnType.NUMBER
 			
-			case DatabaseColumnType.BOOLEAN:
+			case DataSourceColumnType.BOOLEAN:
 				return AirtableColumnType.CHECKBOX
 			
-			case DatabaseColumnType.DATE:
+			case DataSourceColumnType.DATE:
 				return AirtableColumnType.DATE_TIME
 			
-			case DatabaseColumnType.JSON:
+			case DataSourceColumnType.JSON:
 				return AirtableColumnType.MULTILINE_TEXT
 			
-			case DatabaseColumnType.ENUM: 
+			case DataSourceColumnType.ENUM: 
 				return AirtableColumnType.SINGLE_SELECT
 
 			default:
@@ -1033,7 +1033,7 @@ export class Airtable {
 		}
 	}
 
-	private formatOutput(options: DatabaseFindOneOptions, data: { [key: string]: any }): object {
+	private formatOutput(options: DataSourceFindOneOptions, data: { [key: string]: any }): object {
 
 		// You cannot specify fields for single records with airtable, so remove any fields that are not in the schema
 
@@ -1058,13 +1058,13 @@ export class Airtable {
 		return data
 	}
 
-	private formatField(type: DatabaseColumnType, value: any): any {
+	private formatField(type: DataSourceColumnType, value: any): any {
 		if (value === null) {
 			return null
 		}
 
 		switch (type) {
-			case DatabaseColumnType.DATE:
+			case DataSourceColumnType.DATE:
 				return new Date(value).toISOString()
 			default:
 				return value

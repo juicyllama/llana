@@ -5,7 +5,7 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
-import { DatabaseSchema } from './types/database.types'
+import { DataSourceSchema } from './types/datasource.types'
 import { UserTestingService } from './testing/user.testing.service'
 import { Logger } from './helpers/Logger'
 import { TIMEOUT } from './testing/testing.const'
@@ -17,8 +17,8 @@ describe('App > Controller > Post', () => {
 	let customerTestingService: CustomerTestingService
 	let userTestingService: UserTestingService
 
-	let customerSchema: DatabaseSchema
-	let userSchema: DatabaseSchema
+	let customerSchema: DataSourceSchema
+	let userSchema: DataSourceSchema
 
 	let customer1: any
 	let customer2: any

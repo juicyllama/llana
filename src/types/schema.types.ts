@@ -1,16 +1,16 @@
-import { DatabaseRelations, DatabaseWhere } from './database.types'
+import { DataSourceRelations, DataSourceWhere } from './datasource.types'
 
 export interface ValidateFieldsResponse extends ValidateResponse {
 	fields?: string[]
-	relations?: DatabaseRelations[]
+	relations?: DataSourceRelations[]
 }
 
 export interface validateRelationsResponse extends ValidateResponse {
-	relations?: DatabaseRelations[]
+	relations?: DataSourceRelations[]
 }
 
 export interface validateWhereResponse extends ValidateResponse {
-	where?: DatabaseWhere[]
+	where?: DataSourceWhere[]
 }
 
 export interface ValidateSortResponse extends ValidateResponse {

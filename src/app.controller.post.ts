@@ -12,7 +12,7 @@ import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { AuthTablePermissionFailResponse } from './types/auth.types'
-import { DatabaseCreateOneOptions, PublishType, QueryPerform } from './types/database.types'
+import { DataSourceCreateOneOptions, PublishType, QueryPerform } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller()
@@ -77,7 +77,7 @@ export class PostController {
 
 		const body = req.body
 
-		const options: DatabaseCreateOneOptions = {
+		const options: DataSourceCreateOneOptions = {
 			schema: null,
 			data: {},
 		}

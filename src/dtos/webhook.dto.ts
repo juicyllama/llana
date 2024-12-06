@@ -1,6 +1,6 @@
 import { IsBoolean, IsDate, IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator'
 
-import { PublishType } from '../types/database.types'
+import { PublishType } from '../types/datasource.types'
 import { Method } from '../types/response.types'
 
 export class Webhook {

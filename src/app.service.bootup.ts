@@ -20,7 +20,7 @@ import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
 import { AuthType } from './types/auth.types'
-import { ColumnExtraNumber, DatabaseColumnType, DatabaseSchema, PublishType, QueryPerform, WhereOperator } from './types/database.types'
+import { ColumnExtraNumber, DataSourceColumnType, DataSourceSchema, PublishType, QueryPerform, WhereOperator } from './types/datasource.types'
 import { Method } from './types/response.types'
 import { CustomRole, DefaultRole, RolePermission } from './types/roles.types'
 
@@ -69,13 +69,13 @@ export class AppBootup implements OnApplicationBootstrap {
 			 * |`public_records` | `enum` | The permission level if `EXCLUDE` and opened to the public, either `NONE` `READ` `WRITE` `DELETE`|
 			 */
 
-			const schema: DatabaseSchema = {
+			const schema: DataSourceSchema = {
 				table: LLANA_AUTH_TABLE,
 				primary_key: 'id',
 				columns: [
 					{
 						field: 'id',
-						type: DatabaseColumnType.NUMBER,
+						type: DataSourceColumnType.NUMBER,
 						nullable: false,
 						required: true,
 						primary_key: true,
@@ -88,7 +88,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'auth',
-						type: DatabaseColumnType.ENUM,
+						type: DataSourceColumnType.ENUM,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -98,7 +98,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'type',
-						type: DatabaseColumnType.ENUM,
+						type: DataSourceColumnType.ENUM,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -108,7 +108,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'table',
-						type: DatabaseColumnType.STRING,
+						type: DataSourceColumnType.STRING,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -117,7 +117,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'public_records',
-						type: DatabaseColumnType.ENUM,
+						type: DataSourceColumnType.ENUM,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -184,13 +184,13 @@ export class AppBootup implements OnApplicationBootstrap {
 			 * |`own_records` | `enum` | The permission level for this role if it includes a reference back to the user identity (their own records) either `NONE` `READ` `WRITE` `DELETE`|
 			 */
 
-			const schema: DatabaseSchema = {
+			const schema: DataSourceSchema = {
 				table: LLANA_ROLES_TABLE,
 				primary_key: 'id',
 				columns: [
 					{
 						field: 'id',
-						type: DatabaseColumnType.NUMBER,
+						type: DataSourceColumnType.NUMBER,
 						nullable: false,
 						required: true,
 						primary_key: true,
@@ -203,7 +203,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'custom',
-						type: DatabaseColumnType.BOOLEAN,
+						type: DataSourceColumnType.BOOLEAN,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -212,7 +212,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'table',
-						type: DatabaseColumnType.STRING,
+						type: DataSourceColumnType.STRING,
 						nullable: true,
 						required: false,
 						primary_key: false,
@@ -221,7 +221,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'identity_column',
-						type: DatabaseColumnType.STRING,
+						type: DataSourceColumnType.STRING,
 						nullable: true,
 						required: false,
 						primary_key: false,
@@ -230,7 +230,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'role',
-						type: DatabaseColumnType.STRING,
+						type: DataSourceColumnType.STRING,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -239,7 +239,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'records',
-						type: DatabaseColumnType.ENUM,
+						type: DataSourceColumnType.ENUM,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -249,7 +249,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'own_records',
-						type: DatabaseColumnType.ENUM,
+						type: DataSourceColumnType.ENUM,
 						nullable: true,
 						required: false,
 						primary_key: false,
@@ -374,13 +374,13 @@ export class AppBootup implements OnApplicationBootstrap {
 			 * |`public_records` | `enum` | The permission level if `EXCLUDE` and opened to the public, either `NONE` `READ` `WRITE` `DELETE`|
 			 */
 
-			const schema: DatabaseSchema = {
+			const schema: DataSourceSchema = {
 				table: LLANA_RELATION_TABLE,
 				primary_key: 'id',
 				columns: [
 					{
 						field: 'id',
-						type: DatabaseColumnType.NUMBER,
+						type: DataSourceColumnType.NUMBER,
 						nullable: false,
 						required: true,
 						primary_key: true,
@@ -393,7 +393,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'table',
-						type: DatabaseColumnType.STRING,
+						type: DataSourceColumnType.STRING,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -402,7 +402,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'column',
-						type: DatabaseColumnType.STRING,
+						type: DataSourceColumnType.STRING,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -411,7 +411,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'org_table',
-						type: DatabaseColumnType.STRING,
+						type: DataSourceColumnType.STRING,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -420,7 +420,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'org_column',
-						type: DatabaseColumnType.STRING,
+						type: DataSourceColumnType.STRING,
 						nullable: false,
 						required: true,
 						primary_key: false,
@@ -450,13 +450,13 @@ export class AppBootup implements OnApplicationBootstrap {
 				 * Create the _llana_webhook schema
 				 */
 
-				const schema: DatabaseSchema = {
+				const schema: DataSourceSchema = {
 					table: LLANA_WEBHOOK_TABLE,
 					primary_key: 'id',
 					columns: [
 						{
 							field: 'id',
-							type: DatabaseColumnType.NUMBER,
+							type: DataSourceColumnType.NUMBER,
 							nullable: false,
 							required: true,
 							primary_key: true,
@@ -469,7 +469,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'type',
-							type: DatabaseColumnType.ENUM,
+							type: DataSourceColumnType.ENUM,
 							nullable: false,
 							required: true,
 							primary_key: false,
@@ -479,7 +479,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'url',
-							type: DatabaseColumnType.STRING,
+							type: DataSourceColumnType.STRING,
 							nullable: false,
 							required: true,
 							primary_key: false,
@@ -488,7 +488,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'table',
-							type: DatabaseColumnType.STRING,
+							type: DataSourceColumnType.STRING,
 							nullable: false,
 							required: true,
 							primary_key: false,
@@ -497,7 +497,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'user_identifier',
-							type: DatabaseColumnType.STRING,
+							type: DataSourceColumnType.STRING,
 							nullable: true,
 							required: false,
 							primary_key: false,
@@ -507,7 +507,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'on_create',
-							type: DatabaseColumnType.BOOLEAN,
+							type: DataSourceColumnType.BOOLEAN,
 							nullable: false,
 							required: false,
 							primary_key: false,
@@ -517,7 +517,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'on_update',
-							type: DatabaseColumnType.BOOLEAN,
+							type: DataSourceColumnType.BOOLEAN,
 							nullable: false,
 							required: false,
 							primary_key: false,
@@ -527,7 +527,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'on_delete',
-							type: DatabaseColumnType.BOOLEAN,
+							type: DataSourceColumnType.BOOLEAN,
 							nullable: false,
 							required: false,
 							primary_key: false,
@@ -541,7 +541,7 @@ export class AppBootup implements OnApplicationBootstrap {
 				if (this.configService.get<string>('SOFT_DELETE_COLUMN')) {
 					schema.columns.push({
 						field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
-						type: DatabaseColumnType.STRING,
+						type: DataSourceColumnType.STRING,
 						nullable: true,
 						required: false,
 						primary_key: false,
@@ -600,13 +600,13 @@ export class AppBootup implements OnApplicationBootstrap {
 				 * Create the _llana_webhook_log schema
 				 */
 
-				const schema: DatabaseSchema = {
+				const schema: DataSourceSchema = {
 					table: LLANA_WEBHOOK_LOG_TABLE,
 					primary_key: 'id',
 					columns: [
 						{
 							field: 'id',
-							type: DatabaseColumnType.NUMBER,
+							type: DataSourceColumnType.NUMBER,
 							nullable: false,
 							required: true,
 							primary_key: true,
@@ -619,7 +619,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'webhook_id',
-							type: DatabaseColumnType.NUMBER,
+							type: DataSourceColumnType.NUMBER,
 							nullable: false,
 							required: true,
 							primary_key: false,
@@ -632,7 +632,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'type',
-							type: DatabaseColumnType.ENUM,
+							type: DataSourceColumnType.ENUM,
 							nullable: false,
 							required: true,
 							primary_key: false,
@@ -642,7 +642,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'url',
-							type: DatabaseColumnType.STRING,
+							type: DataSourceColumnType.STRING,
 							nullable: false,
 							required: true,
 							primary_key: false,
@@ -651,7 +651,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'record_key',
-							type: DatabaseColumnType.STRING,
+							type: DataSourceColumnType.STRING,
 							nullable: false,
 							required: true,
 							primary_key: false,
@@ -660,7 +660,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'record_id',
-							type: DatabaseColumnType.STRING,
+							type: DataSourceColumnType.STRING,
 							nullable: false,
 							required: true,
 							primary_key: false,
@@ -669,7 +669,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'attempt',
-							type: DatabaseColumnType.NUMBER,
+							type: DataSourceColumnType.NUMBER,
 							nullable: false,
 							required: true,
 							primary_key: false,
@@ -682,7 +682,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'delivered',
-							type: DatabaseColumnType.BOOLEAN,
+							type: DataSourceColumnType.BOOLEAN,
 							nullable: false,
 							required: true,
 							primary_key: false,
@@ -692,7 +692,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'response_status',
-							type: DatabaseColumnType.NUMBER,
+							type: DataSourceColumnType.NUMBER,
 							nullable: true,
 							required: false,
 							primary_key: false,
@@ -705,7 +705,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'response_message',
-							type: DatabaseColumnType.STRING,
+							type: DataSourceColumnType.STRING,
 							nullable: true,
 							required: false,
 							primary_key: false,
@@ -715,7 +715,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'created_at',
-							type: DatabaseColumnType.DATE,
+							type: DataSourceColumnType.DATE,
 							nullable: false,
 							required: false,
 							primary_key: false,
@@ -725,7 +725,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'next_attempt_at',
-							type: DatabaseColumnType.DATE,
+							type: DataSourceColumnType.DATE,
 							nullable: true,
 							required: false,
 							primary_key: false,
@@ -735,7 +735,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 						{
 							field: 'delivered_at',
-							type: DatabaseColumnType.DATE,
+							type: DataSourceColumnType.DATE,
 							nullable: true,
 							required: false,
 							primary_key: false,

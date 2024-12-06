@@ -1,6 +1,6 @@
 import { SortCondition } from './schema.types'
 
-export enum DatabaseType {
+export enum DataSourceType {
 	MYSQL = 'mysql',
 	POSTGRES = 'postgres',
 	MONGODB = 'mongodb',
@@ -8,7 +8,7 @@ export enum DatabaseType {
 	AIRTABLE = 'airtable',
 }
 
-export enum DatabaseNaming {
+export enum DataSourceNaming {
 	snake_case = 'snake_case',
 	camelCase = 'camelCase',
 }
@@ -48,7 +48,7 @@ export enum WhereOperator {
 	search = 'SEARCH',
 }
 
-export enum DatabaseColumnType {
+export enum DataSourceColumnType {
 	STRING = 'string',
 	NUMBER = 'number',
 	BOOLEAN = 'boolean',
@@ -76,13 +76,13 @@ export declare enum ChartsPeriod {
 	YEAR = 'YEAR',
 }
 
-export enum DatabaseJoinType {
+export enum DataSourceoinType {
 	INNER = 'INNER JOIN',
 	LEFT = 'LEFT JOIN',
 	RIGHT = 'RIGHT JOIN',
 }
 
-export enum DatabaseJoinStage {
+export enum DataSourceJoinStage {
 	WITH_QUERY = 'WITH_QUERY',
 	POST_QUERY = 'POST_QUERY',
 }
@@ -93,15 +93,15 @@ export interface ChartResult {
 	time_interval: Date
 }
 
-export interface DatabaseSchema {
+export interface DataSourceSchema {
 	table: string
 	primary_key: string
-	columns: DatabaseSchemaColumn[]
-	relations?: DatabaseSchemaRelation[]
+	columns: DataSourceSchemaColumn[]
+	relations?: DataSourceSchemaRelation[]
 	_x_request_id?: string
 }
 
-export interface DatabaseWhere {
+export interface DataSourceWhere {
 	column: string
 	operator: WhereOperator
 	value?: any
@@ -111,9 +111,9 @@ export interface ColumnExtraNumber {
 	decimal: number // Number of decimal places
 }
 
-export interface DatabaseSchemaColumn {
+export interface DataSourceSchemaColumn {
 	field: string
-	type: DatabaseColumnType
+	type: DataSourceColumnType
 	nullable: boolean
 	required: boolean
 	primary_key: boolean
@@ -125,64 +125,64 @@ export interface DatabaseSchemaColumn {
 	enums?: string[]
 }
 
-export interface DatabaseSchemaRelation {
+export interface DataSourceSchemaRelation {
 	table: string
 	column: string
 	org_table: string
 	org_column: string
 }
 
-export interface DatabaseCreateOneOptions {
-	schema: DatabaseSchema
+export interface DataSourceCreateOneOptions {
+	schema: DataSourceSchema
 	data: object
 }
 
-export interface DatabaseJoin extends DatabaseSchemaRelation {
-	type?: DatabaseJoinType
+export interface DataSourceJoin extends DataSourceSchemaRelation {
+	type?: DataSourceoinType
 }
 
-export interface DatabaseRelations {
+export interface DataSourceRelations {
 	table: string
-	join: DatabaseJoin
+	join: DataSourceJoin
 	columns?: string[]
-	where?: DatabaseWhere
-	schema: DatabaseSchema
+	where?: DataSourceWhere
+	schema: DataSourceSchema
 }
 
-export interface DatabaseFindOneOptions extends DatabaeseFindOptions {}
+export interface DataSourceFindOneOptions extends DataSourceFindOptions {}
 
-export interface DatabaseFindManyOptions extends DatabaeseFindOptions {
+export interface DataSourceFindManyOptions extends DataSourceFindOptions {
 	limit?: number
 	offset?: number
 	sort?: SortCondition[]
 }
 
-export interface DatabaeseFindOptions {
-	schema: DatabaseSchema
+export interface DataSourceFindOptions {
+	schema: DataSourceSchema
 	fields?: string[]
-	where?: DatabaseWhere[]
-	relations?: DatabaseRelations[]
+	where?: DataSourceWhere[]
+	relations?: DataSourceRelations[]
 }
 
-export interface DatabaseUpdateOneOptions {
+export interface DataSourceUpdateOneOptions {
 	id: string
-	schema: DatabaseSchema
+	schema: DataSourceSchema
 	data: object
 }
 
-export interface DatabaseDeleteOneOptions {
+export interface DataSourceDeleteOneOptions {
 	id: string
-	schema: DatabaseSchema
+	schema: DataSourceSchema
 	softDelete?: string // Soft delete column
 }
 
-export interface DatabaseFindTotalRecords {
-	schema: DatabaseSchema
-	where?: DatabaseWhere[]
+export interface DataSourceFindTotalRecords {
+	schema: DataSourceSchema
+	where?: DataSourceWhere[]
 }
 
-export interface DatabaseConfig {
-	type: DatabaseType
+export interface DataSourceConfig {
+	type: DataSourceType
 	host: string
 	defaults: {
 		limit: number
@@ -195,29 +195,30 @@ export interface DatabaseConfig {
 	}
 }
 
-export interface DatabaseUniqueCheckOptions {
-	schema: DatabaseSchema
+export interface DataSourceUniqueCheckOptions {
+	schema: DataSourceSchema
 	data: {
 		[key: string]: string | number | boolean
 	}
-	id?: string
+	id?: string,
+	x_request_id?: string
 }
 
-export interface DatabaseListTablesOptions {
+export interface DataSourceListTablesOptions {
 	include_system?: boolean // tables like _llana_*
 	include_known_db_orchestration?: boolean // like atlas_schema_revisions
 }
 
 
-export interface DatabaseInterface {
-	createTable(schema: DatabaseSchema): Promise<void>
-	findOne(options: DatabaseFindOneOptions): Promise<any>
-	findMany(options: DatabaseFindManyOptions): Promise<any[]>
-	createOne(options: DatabaseCreateOneOptions): Promise<any>
-	updateOne(options: DatabaseUpdateOneOptions): Promise<any>
-	deleteOne(options: DatabaseDeleteOneOptions): Promise<void>
-	uniqueCheck(options: DatabaseUniqueCheckOptions): Promise<boolean>
-	truncate(schema: DatabaseSchema): Promise<void>
+export interface DataSourceInterface {
+	createTable(schema: DataSourceSchema): Promise<void>
+	findOne(options: DataSourceFindOneOptions): Promise<any>
+	findMany(options: DataSourceFindManyOptions): Promise<any[]>
+	createOne(options: DataSourceCreateOneOptions): Promise<any>
+	updateOne(options: DataSourceUpdateOneOptions): Promise<any>
+	deleteOne(options: DataSourceDeleteOneOptions): Promise<void>
+	uniqueCheck(options: DataSourceUniqueCheckOptions): Promise<boolean>
+	truncate(schema: DataSourceSchema): Promise<void>
 	checkConnection(): Promise<boolean>
 	listTables(): Promise<string[]>
 }

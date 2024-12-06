@@ -7,7 +7,7 @@ import { version } from '../../package.json'
 import { APP_BOOT_CONTEXT, LLANA_WEBHOOK_TABLE } from '../app.constants'
 import { ListTablesResponseObject } from '../dtos/response.dto'
 import { AuthLocation } from '../types/auth.types'
-import { DatabaseColumnType, DatabaseSchema, QueryPerform } from '../types/database.types'
+import { DataSourceColumnType, DataSourceSchema, QueryPerform } from '../types/datasource.types'
 import { plural } from '../utils/String'
 import { Authentication } from './Authentication'
 import { Logger } from './Logger'
@@ -460,14 +460,14 @@ export class Documentation {
 	 * Convert Llana schema to OpenAPI schema
 	 */
 
-	convertSchemaToOpenAPIBodyRequest(schema: DatabaseSchema): object {
+	convertSchemaToOpenAPIBodyRequest(schema: DataSourceSchema): object {
 		let columns = schema.columns
 
 		columns = schema.columns.filter(column => column.field !== schema.primary_key)
 
 		return columns.reduce((acc, column) => {
 			acc[column.field] =
-				column.type === DatabaseColumnType.ENUM
+				column.type === DataSourceColumnType.ENUM
 					? `One of: ${column.enums?.join(', ')}`
 					: (column.default ?? column.type)
 			return acc
@@ -478,7 +478,7 @@ export class Documentation {
 	 * Convert Llana schema to OpenAPI schema
 	 */
 
-	convertSchemaToOpenAPIExample(schema: DatabaseSchema): object {
+	convertSchemaToOpenAPIExample(schema: DataSourceSchema): object {
 		let columns = schema.columns
 
 		return columns.reduce((acc, column) => {
@@ -491,7 +491,7 @@ export class Documentation {
 	 * Convert Llana schema required fields to OpenAPI schema
 	 */
 
-	convertSchemaRequiredToOpenAPI(schema: DatabaseSchema): string[] {
+	convertSchemaRequiredToOpenAPI(schema: DataSourceSchema): string[] {
 		return schema.columns.filter(column => column.required).map(column => column.field)
 	}
 
@@ -499,7 +499,7 @@ export class Documentation {
 	 * Convert Llana schema to OpenAPI schema
 	 */
 
-	convertSchemaToOpenAPISchema(schema: DatabaseSchema): OpenAPIV3_1.SchemaObject {
+	convertSchemaToOpenAPISchema(schema: DataSourceSchema): OpenAPIV3_1.SchemaObject {
 		const openapiSchema = schema.columns.reduce((acc, column) => {
 			acc[column.field] = {
 				type: column.type,
@@ -535,26 +535,26 @@ export class Documentation {
 		}
 	}
 
-	getListRequestBody(schema: DatabaseSchema): OpenAPIV3_1.RequestBodyObject {
+	getListRequestBody(schema: DataSourceSchema): OpenAPIV3_1.RequestBodyObject {
 		const properties = {}
 
 		for (const column of schema.columns) {
 			let operators = ''
 
 			switch (column.type) {
-				case DatabaseColumnType.BOOLEAN:
+				case DataSourceColumnType.BOOLEAN:
 					operators = `\`${column.field}=true\`, \`${column.field}=false\`, \`${column.field}[null]\`, \`${column.field}[not_null]\`, \`${column.field}[equals]=true\`, \`${column.field}[not_equals]=true\``
 					break
-				case DatabaseColumnType.DATE:
+				case DataSourceColumnType.DATE:
 					operators = `\`${column.field}=2021-01-01\`, \`${column.field}[gt]=2021-01-01\`, \`${column.field}[lt]=2021-01-01\`, \`${column.field}[gte]=2021-01-01\`, \`${column.field}[lte]=2021-01-01\`, \`${column.field}[null]\`, \`${column.field}[not_null]\``
 					break
-				case DatabaseColumnType.STRING:
+				case DataSourceColumnType.STRING:
 					operators = `\`${column.field}=value\`, \`${column.field}[search]=value\`, \`${column.field}[like]=value\`, \`${column.field}[not_like]=value\`, \`${column.field}[null]\`, \`${column.field}[not_null]\``
 					break
-				case DatabaseColumnType.NUMBER:
+				case DataSourceColumnType.NUMBER:
 					operators = `\`${column.field}=1\`, \`${column.field}[gt]=1\`, \`${column.field}[lt]=1\`, \`${column.field}[gte]=1\`, \`${column.field}[lte]=1\`, \`${column.field}[null]\`, \`${column.field}[not_null]\``
 					break
-				case DatabaseColumnType.ENUM:
+				case DataSourceColumnType.ENUM:
 					operators = `\`${column.field}=value\`, \`${column.field}[null]\`, \`${column.field}[not_null].\``
 					if (column.enums?.length) {
 						operators += `Enums are: \`${column.enums?.join('`, `')}\`.`
@@ -615,7 +615,7 @@ export class Documentation {
 		}
 	}
 
-	getSingleRequestBody(schema: DatabaseSchema): OpenAPIV3_1.RequestBodyObject {
+	getSingleRequestBody(schema: DataSourceSchema): OpenAPIV3_1.RequestBodyObject {
 		return {
 			content: {
 				'application/json': {

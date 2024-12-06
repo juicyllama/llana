@@ -4,7 +4,7 @@ import * as request from 'supertest'
 
 import { LLANA_ROLES_TABLE } from '../app.constants'
 import { AppModule } from '../app.module'
-import { DatabaseSchema, QueryPerform } from '../types/database.types'
+import { DataSourceSchema, QueryPerform } from '../types/datasource.types'
 import { CustomRole, DefaultRole, RolePermission } from '../types/roles.types'
 //import { Logger } from './Logger'
 import { Query } from './Query'
@@ -18,7 +18,7 @@ describe('Roles', () => {
 	let query: Query
 	let schema: Schema
 
-	let llanaRolesTableSchema: DatabaseSchema
+	let llanaRolesTableSchema: DataSourceSchema
 	//let customerTableSchema: DatabaseSchema
 	let role_record: DefaultRole | CustomRole
 
@@ -44,7 +44,7 @@ describe('Roles', () => {
 
 	describe('No roles', () => {
 		it('Full permissions for all', async function () {
-			const schema: DatabaseSchema = {
+			const schema: DataSourceSchema = {
 				table: LLANA_ROLES_TABLE,
 				primary_key: null,
 				columns: [],

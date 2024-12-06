@@ -5,7 +5,7 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
-import { DatabaseSchema } from './types/database.types'
+import { DataSourceSchema } from './types/datasource.types'
 
 describe('App > Controller > Delete', () => {
 	let app: INestApplication
@@ -13,7 +13,7 @@ describe('App > Controller > Delete', () => {
 	let authTestingService: AuthTestingService
 	let customerTestingService: CustomerTestingService
 
-	let customerSchema: DatabaseSchema
+	let customerSchema: DataSourceSchema
 
 	let customer1: any
 	let customer2: any

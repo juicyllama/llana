@@ -2,10 +2,10 @@ import 'dotenv/config'
 
 import * as escape from 'escape-html'
 
-import { DatabaseType } from '../types/database.types'
+import { DataSourceType } from '../types/datasource.types'
 
 export function deconstructConnectionString(connectionString: string): {
-	type: DatabaseType
+	type: DataSourceType
 	host: string
 	port: number
 	username: string
@@ -16,7 +16,7 @@ export function deconstructConnectionString(connectionString: string): {
 	if (connectionString.includes('airtable')) {
 		const [baseId, apiKey] = connectionString.split('://')[1].split('@')
 		return {
-			type: DatabaseType.AIRTABLE,
+			type: DataSourceType.AIRTABLE,
 			host: 'api.airtable.com',
 			port: 443,
 			username: 'apikey',
@@ -59,17 +59,17 @@ export function UrlToTable(uri: string, dropSlashes?: number): string {
 	return escape(uri)
 }
 
-export function getDatabaseType(uri: string): DatabaseType {
+export function getDatabaseType(uri: string): DataSourceType {
 	if (uri.includes('mysql')) {
-		return DatabaseType.MYSQL
+		return DataSourceType.MYSQL
 	} else if (uri.includes('postgresql')) {
-		return DatabaseType.POSTGRES
+		return DataSourceType.POSTGRES
 	} else if (uri.includes('mongodb')) {
-		return DatabaseType.MONGODB
+		return DataSourceType.MONGODB
 	} else if (uri.includes('mssql')) {
-		return DatabaseType.MSSQL
+		return DataSourceType.MSSQL
 	} else if (uri.includes('airtable')) {
-		return DatabaseType.AIRTABLE
+		return DataSourceType.AIRTABLE
 	} else {
 		throw new Error('Database type not supported')
 	}

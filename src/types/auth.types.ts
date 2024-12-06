@@ -1,4 +1,4 @@
-import { DatabaseWhere } from './database.types'
+import { DataSourceWhere } from './datasource.types'
 
 export interface Auth {
 	type: AuthType
@@ -54,7 +54,7 @@ export interface AuthRestrictionsResponse {
 }
 
 export interface AuthTablePermissionSuccessResponse extends AuthTablePermissionResponse {
-	restriction?: DatabaseWhere
+	restriction?: DataSourceWhere
 }
 
 export interface AuthTablePermissionFailResponse extends AuthTablePermissionResponse {
