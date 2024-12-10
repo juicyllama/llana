@@ -8,7 +8,7 @@ export const envValidationSchema = Joi.object({
 	DATABASE_URI: Joi.string().uri().required(),
 	JWT_KEY: Joi.string().min(32).required(),
 	JWT_EXPIRES_IN: Joi.string().default('1d'),
-	AUTH_USER_API_KEY_LOCATION: Joi.string().default('header'),
+	AUTH_USER_API_KEY_LOCATION: Joi.string().default('HEADER'),
 	AUTH_USER_API_KEY_NAME: Joi.string().default('x-api-key'),
 	AUTH_USER_TABLE_NAME: Joi.string().default('User'),
 	AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN: Joi.string().optional(),
