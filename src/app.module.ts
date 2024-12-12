@@ -42,11 +42,11 @@ import { WebsocketGateway } from './modules/websocket/websocket.gateway'
 import { WebsocketService } from './modules/websocket/websocket.service'
 import { Env } from './utils/Env'
 
-const singleServerRedisPubsub = new RedisMockWithPubSub()
+const singleServerRedisPubsub = new RedisMockWithPubSub() // in-memory pubsub for testing or single server setup
 
-function createRedisClient() {
+function createPubSubOnlyRedisClient() {
 	if (Env.IsTest() || !process.env.REDIS_PORT || !process.env.REDIS_HOST) {
-		new Logger().warn('REDIS_PORT or REDIS_HOST not found, websocket will not work in a multi-instance setup')
+		new Logger().warn('REDIS_PORT or REDIS_HOST not found - Websockets will NOT work in a multi-instance setup')
 		return singleServerRedisPubsub
 	}
 	return new Redis(+process.env.REDIS_PORT, process.env.REDIS_HOST, {})
@@ -89,11 +89,11 @@ function createRedisClient() {
 		WebsocketService,
 		{
 			provide: REDIS_PUB_CLIENT_TOKEN,
-			useFactory: createRedisClient,
+			useFactory: createPubSubOnlyRedisClient,
 		},
 		{
 			provide: REDIS_SUB_CLIENT_TOKEN, // A redis client, once subscribed to events, cannot be used for publishing events unfortunately. This is why two are needed
-			useFactory: createRedisClient,
+			useFactory: createPubSubOnlyRedisClient,
 		},
 	],
 	exports: [

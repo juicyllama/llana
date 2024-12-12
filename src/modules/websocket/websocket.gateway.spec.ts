@@ -33,7 +33,7 @@ describe('WebsocketGateway', () => {
 	let token2 = jwt.encode(USER2, process.env.JWT_KEY)
 	let table1 = 'test_table_1'
 	let table2 = 'test_table_2'
-	let openSockets: Socket[] = []
+	let openSocketsForCleanup: Socket[] = []
 
 	async function listenAndOpenSocket(authToken: string, table: string, port = PORT1) {
 		const clientSocket = createSocket(port, authToken, table)
@@ -42,7 +42,7 @@ describe('WebsocketGateway', () => {
 		// 	console.log(`Received event: ${eventName}`)
 		// 	console.log(`Arguments: ${args}`)
 		// })
-		openSockets.push(clientSocket)
+		openSocketsForCleanup.push(clientSocket)
 		return clientSocket
 	}
 
@@ -63,10 +63,10 @@ describe('WebsocketGateway', () => {
 	})
 
 	afterEach(async () => {
-		openSockets.forEach(socket => {
+		openSocketsForCleanup.forEach(socket => {
 			socket.close()
 		})
-		openSockets = []
+		openSocketsForCleanup = []
 	})
 
 	it('gateway should be defined', () => {
@@ -103,9 +103,7 @@ describe('WebsocketGateway', () => {
 
 	it(`should send message to two users on same server`, async () => {
 		const clientSocket = await listenAndOpenSocket(token1, table1, PORT1) //
-		// user 2
-		const user2Socket = createSocket(PORT1, token2, table1)
-		await waitForSocketToBeReady(user2Socket)
+		const user2Socket = await listenAndOpenSocket(token2, table1, PORT1)
 
 		const promises = [waitForSocketEvent(clientSocket), waitForSocketEvent(user2Socket)]
 		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
@@ -117,10 +115,8 @@ describe('WebsocketGateway', () => {
 
 	it(`should send message to two users, each on a different server`, async () => {
 		const clientSocket = await listenAndOpenSocket(token1, table1, PORT1) //
-		// user 2
-		const user2Socket = createSocket(PORT2, token2, table1)
-		await waitForSocketToBeReady(user2Socket)
-
+		const user2Socket = await listenAndOpenSocket(token2, table1, PORT2)
+		
 		const promises = [waitForSocketEvent(clientSocket), waitForSocketEvent(user2Socket)]
 		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
 		const [eventUser1, eventUser2] = await Promise.all(promises)
@@ -152,8 +148,7 @@ describe('WebsocketGateway', () => {
 	it(`A user should not receive message that was sent not sent about a different table`, async () => {
 		const clientSocket = await listenAndOpenSocket(token1, table1) // user 1
 		// user 2
-		const user2Socket = createSocket(PORT1, token2, table2)
-		await waitForSocketToBeReady(user2Socket)
+		const user2Socket = await listenAndOpenSocket(token2, table2, PORT1)
 
 		const promises = [waitForSocketEvent(clientSocket), waitForSocketEvent(user2Socket)]
 		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
@@ -166,8 +161,7 @@ describe('WebsocketGateway', () => {
 	it(`A user should not receive message that was sent about a different table (opposite server)`, async () => {
 		const clientSocket = await listenAndOpenSocket(token1, table1) // user 1
 		// user 2
-		const user2Socket = createSocket(PORT1, token2, table2)
-		await waitForSocketToBeReady(user2Socket)
+		const user2Socket = await listenAndOpenSocket(token2, table2, PORT1)
 
 		const promises = [waitForSocketEvent(clientSocket), waitForSocketEvent(user2Socket)]
 		app1.service.publish({ table: table2, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
