@@ -46,7 +46,9 @@ const singleServerRedisPubsub = new RedisMockWithPubSub() // in-memory pubsub fo
 
 function createPubSubOnlyRedisClient() {
 	if (Env.IsTest() || !process.env.REDIS_PORT || !process.env.REDIS_HOST) {
-		new Logger().warn('REDIS_PORT or REDIS_HOST not found - Websockets will NOT work in a multi-instance setup')
+		if (!Env.IsTest()) {
+			new Logger().warn('REDIS_PORT or REDIS_HOST not found - Websockets will NOT work in a multi-instance setup')
+		}
 		return singleServerRedisPubsub
 	}
 	return new Redis(+process.env.REDIS_PORT, process.env.REDIS_HOST, {})
