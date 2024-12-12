@@ -36,6 +36,7 @@ import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
+import { WebsocketModule } from './modules/websocket/websocket.module'
 
 @Module({
 	imports: [
@@ -48,6 +49,7 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 			isGlobal: true,
 		}),
 		ScheduleModule.forRoot(),
+		WebsocketModule,
 	],
 	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
 	providers: [
