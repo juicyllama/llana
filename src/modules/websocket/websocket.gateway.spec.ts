@@ -1,11 +1,11 @@
-import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import * as jwt from 'jwt-simple';
-import { io, Socket } from 'socket.io-client'; // Changed import
-import { DataSourceSchema, PublishType } from 'src/types/datasource.types';
-import { AppModule } from '../../app.module';
-import { WebsocketGateway } from './websocket.gateway';
-import { WebsocketService } from './websocket.service';
+import { INestApplication } from '@nestjs/common'
+import { Test, TestingModule } from '@nestjs/testing'
+import * as jwt from 'jwt-simple'
+import { io, Socket } from 'socket.io-client' // Changed import
+import { DataSourceSchema, PublishType } from 'src/types/datasource.types'
+import { AppModule } from '../../app.module'
+import { WebsocketGateway } from './websocket.gateway'
+import { WebsocketService } from './websocket.service'
 
 const USER1 = { sub: 'test@test.com' }
 const USER2 = { sub: 'test2@test.com' }
@@ -94,7 +94,7 @@ describe('WebsocketGateway', () => {
 	it(`should not sent a message to a user that lacks sufficient permissions on the table`, async () => {
 		const clientSocket = await listenAndOpenSocket(token1, table1)
 		mockAuthResponse = {
-			valid: false
+			valid: false,
 		}
 		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
 		const event = await waitForSocketEvent(clientSocket)
@@ -116,7 +116,7 @@ describe('WebsocketGateway', () => {
 	it(`should send message to two users, each on a different server`, async () => {
 		const clientSocket = await listenAndOpenSocket(token1, table1, PORT1) //
 		const user2Socket = await listenAndOpenSocket(token2, table1, PORT2)
-		
+
 		const promises = [waitForSocketEvent(clientSocket), waitForSocketEvent(user2Socket)]
 		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
 		const [eventUser1, eventUser2] = await Promise.all(promises)
@@ -200,11 +200,14 @@ async function waitForSocketToBeReady(clientSocket: Socket, timeoutMs: number = 
 
 async function waitForSocketEvent(clientSocket: Socket, timeoutMs: number = 1000) {
 	return await new Promise((resolve, reject) => {
+		let resolved = false
 		const timeoutId = setTimeout(() => {
+			resolved = true
 			resolve(undefined)
 		}, timeoutMs)
 		//@ts-ignore
 		clientSocket.on(clientSocket['table'], data => {
+			if (resolved) return
 			clearTimeout(timeoutId)
 			resolve(data)
 		})
@@ -223,7 +226,7 @@ async function createApp(port: number): Promise<App> {
 	gateway.testInstanceId = ' ' + appId++
 	// @ts-ignore
 	gateway.authentication = {
-		auth: async () => (mockAuthResponse),
+		auth: async () => mockAuthResponse,
 		skipAuth: () => false,
 	}
 	await app.listen(port)
