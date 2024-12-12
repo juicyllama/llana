@@ -1,13 +1,14 @@
-import { INestApplication } from '@nestjs/common'
-import { Test, TestingModule } from '@nestjs/testing'
-import { io, Socket } from 'socket.io-client' // Changed import
-import * as jwt from 'jwt-simple'
-import { WebsocketGateway } from './websocket.gateway'
-import { WebsocketService } from './websocket.service'
-import { WebsocketModule } from './websocket.module'
+import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import * as jwt from 'jwt-simple';
+import { io, Socket } from 'socket.io-client'; // Changed import
+import { DataSourceSchema, PublishType } from 'src/types/datasource.types';
+import { AppModule } from '../../app.module';
+import { WebsocketGateway } from './websocket.gateway';
+import { WebsocketService } from './websocket.service';
 
-const USER1 = { email: 'test@test.com', user_id: 1, account_ids: [] }
-const USER2 = { email: 'test2@test.com', user_id: 2, account_ids: [] }
+const USER1 = { sub: 'test@test.com' }
+const USER2 = { sub: 'test2@test.com' }
 
 const PORT1 = 8998
 const PORT2 = 8999
@@ -19,6 +20,8 @@ type App = {
 	module: TestingModule
 }
 
+let mockAuthResponse
+
 describe('WebsocketGateway', () => {
 	if (!process.env.JWT_KEY) {
 		throw new Error('JWT_KEY not found')
@@ -26,18 +29,28 @@ describe('WebsocketGateway', () => {
 
 	let app1: App
 	let app2: App
-	let token = jwt.encode(USER1, process.env.JWT_KEY)
+	let token1 = jwt.encode(USER1, process.env.JWT_KEY)
 	let token2 = jwt.encode(USER2, process.env.JWT_KEY)
-	let clientSocket: Socket
+	let table1 = 'test_table_1'
+	let table2 = 'test_table_2'
+	let openSockets: Socket[] = []
 
-	async function listenAndOpenSocket(authToken: string, port = PORT1) {
-		clientSocket = createSocket(port, authToken)
-		await waitForSocket(clientSocket, 1000)
+	async function listenAndOpenSocket(authToken: string, table: string, port = PORT1) {
+		const clientSocket = createSocket(port, authToken, table)
+		await waitForSocketToBeReady(clientSocket, 1000)
 		// clientSocket.onAny((eventName, ...args) => {
 		// 	console.log(`Received event: ${eventName}`)
 		// 	console.log(`Arguments: ${args}`)
 		// })
+		openSockets.push(clientSocket)
+		return clientSocket
 	}
+
+	beforeEach(() => {
+		mockAuthResponse = {
+			valid: true,
+		}
+	})
 
 	beforeAll(async () => {
 		app1 = await createApp(PORT1)
@@ -50,7 +63,10 @@ describe('WebsocketGateway', () => {
 	})
 
 	afterEach(async () => {
-		clientSocket?.close()
+		openSockets.forEach(socket => {
+			socket.close()
+		})
+		openSockets = []
 	})
 
 	it('gateway should be defined', () => {
@@ -58,96 +74,113 @@ describe('WebsocketGateway', () => {
 	})
 
 	it(`should throw error with an invalid token`, async () => {
-		await expect(listenAndOpenSocket('invalid_token')).rejects.toEqual('Timeout')
+		await expect(listenAndOpenSocket('invalid_token', table1)).rejects.toEqual('Timeout')
 	})
 
 	it(`should not throw error with a valid token`, async () => {
-		await listenAndOpenSocket(token)
+		await listenAndOpenSocket(token1, table1)
 	})
 
-	it(`should send message to all users`, async () => {
-		await listenAndOpenSocket(token)
-		app1.service.emit('testABC', { test: 'test123' })
-		const event = await connectSocket(clientSocket, 'testABC')
-		expect(event).toEqual({ test: 'test123' })
+	it(`should send valid message to a user`, async () => {
+		const clientSocket = await listenAndOpenSocket(token1, table1)
+		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
+		const event = await waitForSocketEvent(clientSocket)
+		expect(event).toEqual({
+			type: 'INSERT',
+			test_id: '12',
+		})
 	})
 
-	it(`should send message to two users, each on a different server`, async () => {
-		await listenAndOpenSocket(token, PORT1) //
+	it(`should not sent a message to a user that lacks sufficient permissions on the table`, async () => {
+		const clientSocket = await listenAndOpenSocket(token1, table1)
+		mockAuthResponse = {
+			valid: false
+		}
+		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
+		const event = await waitForSocketEvent(clientSocket)
+		expect(event).toBeUndefined()
+	})
+
+	it(`should send message to two users on same server`, async () => {
+		const clientSocket = await listenAndOpenSocket(token1, table1, PORT1) //
 		// user 2
-		const user2Socket = createSocket(PORT2, token2)
-		await waitForSocket(user2Socket, 1000)
+		const user2Socket = createSocket(PORT1, token2, table1)
+		await waitForSocketToBeReady(user2Socket)
 
-		const promises = [
-			connectSocket(clientSocket, 'testTwoServersTwoUsers', 1000),
-			connectSocket(user2Socket, 'testTwoServersTwoUsers', 1000),
-		]
-		app1.service.emit('testTwoServersTwoUsers', { test: 'test123' })
+		const promises = [waitForSocketEvent(clientSocket), waitForSocketEvent(user2Socket)]
+		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
 		const [eventUser1, eventUser2] = await Promise.all(promises)
 		user2Socket.close()
 		expect(eventUser1).toBeDefined()
 		expect(eventUser2).toBeDefined()
 	})
 
-	it(`should send message to specific user`, async () => {
-		await listenAndOpenSocket(token)
-		app1.service.emit('testABC', { test: 'test123' }, 1)
-		const event = await connectSocket(clientSocket, 'testABC')
-		expect(event).toEqual({ test: 'test123' })
-	})
-
-	it(`should not send message to specific user if user is not connected`, async () => {
-		await listenAndOpenSocket(token)
-		app1.service.emit('testABC', { test: 'test123' }, 2)
-	})
-
-	it(`A user should not receive message that was not sent to him`, async () => {
-		await listenAndOpenSocket(token) // user 1
+	it(`should send message to two users, each on a different server`, async () => {
+		const clientSocket = await listenAndOpenSocket(token1, table1, PORT1) //
 		// user 2
-		const user2Socket = createSocket(PORT1, token2)
-		await waitForSocket(user2Socket, 1000)
+		const user2Socket = createSocket(PORT2, token2, table1)
+		await waitForSocketToBeReady(user2Socket)
 
-		const promises = [connectSocket(clientSocket, 'testABC', 1000), connectSocket(user2Socket, 'testABC', 1000)]
-		app1.service.emit('testABC', { test: 'test123' }, 2) // send to user 2
+		const promises = [waitForSocketEvent(clientSocket), waitForSocketEvent(user2Socket)]
+		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
 		const [eventUser1, eventUser2] = await Promise.all(promises)
 		user2Socket.close()
-		expect(eventUser1).toBeUndefined()
+		expect(eventUser1).toBeDefined()
 		expect(eventUser2).toBeDefined()
 	})
 
-	it(`A user should not receive message that was not sent to him (opposite user)`, async () => {
-		await listenAndOpenSocket(token) // user 1
+	it(`should send message to a on another server`, async () => {
+		const clientSocket = await listenAndOpenSocket(token1, table1, PORT2) // the other app
+		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
+		const event = await waitForSocketEvent(clientSocket)
+		expect(event).toEqual({
+			type: 'INSERT',
+			test_id: '12',
+		})
+	})
 
+	it(`should send message to a user on another server (opposite server)`, async () => {
+		const clientSocket = await listenAndOpenSocket(token1, table1, PORT1) // the other app
+		app2.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
+		const event = await waitForSocketEvent(clientSocket)
+		expect(event).toEqual({
+			type: 'INSERT',
+			test_id: '12',
+		})
+	})
+
+	it(`A user should not receive message that was sent not sent about a different table`, async () => {
+		const clientSocket = await listenAndOpenSocket(token1, table1) // user 1
 		// user 2
-		const user2Socket = createSocket(PORT1, token2)
-		await waitForSocket(user2Socket, 1000)
+		const user2Socket = createSocket(PORT1, token2, table2)
+		await waitForSocketToBeReady(user2Socket)
 
-		const promises = [connectSocket(clientSocket, 'testABC', 1000), connectSocket(user2Socket, 'testABC', 1000)]
-		app1.service.emit('testABC', { test: 'test123' }, 1) // send to user 2
+		const promises = [waitForSocketEvent(clientSocket), waitForSocketEvent(user2Socket)]
+		app1.service.publish({ table: table1, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
 		const [eventUser1, eventUser2] = await Promise.all(promises)
 		user2Socket.close()
 		expect(eventUser1).toBeDefined()
 		expect(eventUser2).toBeUndefined()
 	})
 
-	it(`should send message to specific user on another server`, async () => {
-		await listenAndOpenSocket(token, PORT2) // the other app
-		app1.service.emit('testABC', { test: 'test1235' }, 1)
-		const event = await connectSocket(clientSocket, 'testABC')
-		expect(event).toEqual({ test: 'test1235' })
-	})
+	it(`A user should not receive message that was sent about a different table (opposite server)`, async () => {
+		const clientSocket = await listenAndOpenSocket(token1, table1) // user 1
+		// user 2
+		const user2Socket = createSocket(PORT1, token2, table2)
+		await waitForSocketToBeReady(user2Socket)
 
-	it(`should send message to specific user on another server (opposite apps)`, async () => {
-		await listenAndOpenSocket(token, PORT1) // the other app
-		app2.service.emit('testABC', { test: 'test1236' }, 1)
-		const event = await connectSocket(clientSocket, 'testABC')
-		expect(event).toEqual({ test: 'test1236' })
+		const promises = [waitForSocketEvent(clientSocket), waitForSocketEvent(user2Socket)]
+		app1.service.publish({ table: table2, primary_key: 'test_id' } as DataSourceSchema, PublishType.INSERT, 12)
+		const [eventUser1, eventUser2] = await Promise.all(promises)
+		user2Socket.close()
+		expect(eventUser1).toBeUndefined()
+		expect(eventUser2).toBeDefined()
 	})
 })
 
 // helpers
 
-async function waitForSocket(clientSocket: Socket, timeoutMs: number = 1000) {
+async function waitForSocketToBeReady(clientSocket: Socket, timeoutMs: number = 1000) {
 	return await new Promise((resolve, reject) => {
 		const timeoutId = setTimeout(() => {
 			reject('Timeout')
@@ -171,34 +204,45 @@ async function waitForSocket(clientSocket: Socket, timeoutMs: number = 1000) {
 	})
 }
 
-async function connectSocket(clientSocket: Socket, eventName: string, timeoutMs: number = 1000) {
+async function waitForSocketEvent(clientSocket: Socket, timeoutMs: number = 1000) {
 	return await new Promise((resolve, reject) => {
 		const timeoutId = setTimeout(() => {
 			resolve(undefined)
 		}, timeoutMs)
-		clientSocket.on(eventName, data => {
+		//@ts-ignore
+		clientSocket.on(clientSocket['table'], data => {
 			clearTimeout(timeoutId)
 			resolve(data)
 		})
 	})
 }
 
+let appId = 1
 async function createApp(port: number): Promise<App> {
 	const module: TestingModule = await Test.createTestingModule({
-		imports: [WebsocketModule],
+		imports: [AppModule],
 	}).compile()
 	const gateway = module.get<WebsocketGateway>(WebsocketGateway)
 	const service = module.get<WebsocketService>(WebsocketService)
 
 	const app = module.createNestApplication()
+	gateway.testInstanceId = ' ' + appId++
+	// @ts-ignore
+	gateway.authentication = {
+		auth: async () => (mockAuthResponse),
+		skipAuth: () => false,
+	}
 	await app.listen(port)
 	return { app, gateway, service, module }
 }
 
-function createSocket(port: number, token: string): Socket {
-	return io(`http://localhost:${port}`, { // Changed to io
+function createSocket(port: number, token: string, table: string): Socket {
+	const socket = io(`http://localhost:${port}`, {
 		extraHeaders: {
 			authorization: `Bearer ${token}`,
+			'x-llana-table': table,
 		},
 	})
+	socket['table'] = table
+	return socket
 }

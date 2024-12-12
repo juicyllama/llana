@@ -135,7 +135,10 @@
 		],
 		"coverageDirectory": "../coverage",
 		"testEnvironment": "node",
-		"testTimeout": 20000
+		"testTimeout": 20000,
+		"moduleNameMapper": {
+			"^src/(.*)$": "<rootDir>/$1"
+		}
 	},
 	"prettier": {
 		"singleQuote": true,

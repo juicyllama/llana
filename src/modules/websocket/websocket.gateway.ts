@@ -9,12 +9,14 @@ import {
 } from '@nestjs/websockets'
 import Redis from 'ioredis'
 import { Server } from 'socket.io'
+import { Authentication } from 'src/helpers/Authentication'
+import { HostCheckMiddleware } from 'src/middleware/HostCheck'
+import { RolePermission } from 'src/types/roles.types'
 
 import { Logger } from '../../helpers/Logger'
 import { REDIS_SUB_CLIENT_TOKEN, WebsocketRedisEvent, WEBSOCKETS_REDIS_CHANNEL } from './websocket.constants'
 import { WebsocketJwtAuthGuard } from './websocket.jwt-auth.guard'
 import { WebsocketJwtAuthMiddleware } from './websocket.jwt-auth.middleware'
-import { WebsocketService } from './websocket.service'
 
 /**
  * WebsocketGateway
@@ -26,21 +28,24 @@ import { WebsocketService } from './websocket.service'
 export class WebsocketGateway
 	implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnApplicationShutdown
 {
-	private connectedUserSockets: Map<number, string> = new Map() // user_id -> socket_id
+	private tablesToConnectedUserSockets: Record<string, Record<string, string>> = {} // table_name -> sub -> socket_id
+	testInstanceId: string = '' // Used for testing purposes
+	authentication: Authentication = this._authentication // Used for testing purposes
 	@WebSocketServer() server: Server
 
 	constructor(
 		private readonly logger: Logger,
-		private websocketService: WebsocketService,
+		private readonly _authentication: Authentication,
+		private readonly hostCheckMiddleware: HostCheckMiddleware,
 		@Inject(REDIS_SUB_CLIENT_TOKEN) private readonly redisSubClient: Redis,
 	) {}
 
 	async afterInit(server: Server) {
-		server.use(WebsocketJwtAuthMiddleware() as any)
+		server.use(WebsocketJwtAuthMiddleware(this.authentication, this.hostCheckMiddleware) as any)
 		if (this.server) {
-			this.logger.debug('[Websocket] server initialized')
+			this.logger.debug(`[WebsocketGateway${this.testInstanceId}] server initialized`)
 		} else {
-			throw new Error('[Websocket] server not initialized')
+			throw new Error(`[WebsocketGateway${this.testInstanceId}] server not initialized`)
 		}
 		await this.subscribeToEvents()
 	}
@@ -53,7 +58,7 @@ export class WebsocketGateway
 		await this.redisSubClient.subscribe(WEBSOCKETS_REDIS_CHANNEL, err => {
 			if (err) {
 				this.logger.error(
-					`[Websocket] Failed to subscribe to Redis channel "${WEBSOCKETS_REDIS_CHANNEL}": %s`,
+					`[WebsocketGateway${this.testInstanceId}] Failed to subscribe to Redis channel "${WEBSOCKETS_REDIS_CHANNEL}": %s`,
 					err.message,
 				)
 				throw err
@@ -61,39 +66,67 @@ export class WebsocketGateway
 		})
 
 		this.redisSubClient.on('message', (channel, message) => {
+			this.logger.debug(
+				`[WebsocketGateway${this.testInstanceId}] Received message from Redis channel: ${message}`,
+			)
 			const json = JSON.parse(message) as WebsocketRedisEvent
 			this.emitToSockets(json)
 		})
 	}
 
-	private emitToSockets(msg: WebsocketRedisEvent) {
-		if (!this.server) throw new Error('[Websocket] Server not initialized')
-		if (msg.userId) {
-			const socketId = this.connectedUserSockets.get(msg.userId)
-			if (socketId) {
-				this.logger.debug(
-					`[Websocket] Emitting to user ${msg.userId} with socketId ${socketId}. event=${msg.event}`,
-				)
-				this.server.to(socketId).emit(msg.event, msg.data)
-			}
+	private async emitToSockets(msg: WebsocketRedisEvent) {
+		if (!this.server) throw new Error(`[WebsocketGateway${this.testInstanceId}] Server not initialized`)
+		this.logger.debug(
+			`[WebsocketGateway${this.testInstanceId}] Publishing ${msg.tableName} ${msg.publishType} for #${msg.id}`,
+		)
+		const userSockets = this.tablesToConnectedUserSockets[msg.tableName]
+		if (!userSockets) {
+			this.logger.debug(`[WebsocketGateway${this.testInstanceId}] No connected users for table ${msg.tableName}`)
 			return
-		} else {
-			this.logger.debug(`[Websocket] Emitting to all users. event=${msg.event}`)
-			this.server.emit(msg.event, msg.data)
 		}
+		this.logger.debug(`[WebsocketGateway${this.testInstanceId}] Connected users: ${JSON.stringify(userSockets)}`)
+		for (const [sub, socketId] of Object.entries(userSockets)) {
+			const auth = await this.authentication.auth({
+				table: msg.tableName,
+				access: RolePermission.READ,
+				user_identifier: sub,
+			})
+			if (auth.valid) {
+				this.logger.debug(
+					`[WebsocketGateway${this.testInstanceId}] Emitting ${msg.tableName} ${msg.publishType} for #${msg.id} to ${socketId} (User: ${sub})`,
+				)
+				this.server.to(socketId).emit(msg.tableName, {
+					type: msg.publishType,
+					[msg.primaryKey]: msg.id,
+				})
+			} else {
+				this.logger.debug(
+					`[WebsocketGateway${this.testInstanceId}] User ${sub} not authorized to receive event for table ${msg.tableName}`,
+				)
+			}
+		}
+		return
 	}
 
 	handleConnection(client: any) {
-		this.connectedUserSockets.set(client.user.user_id, client.id)
+		this.tablesToConnectedUserSockets[client.user.table] ||= {}
+		const existingSocket = this.tablesToConnectedUserSockets[client.user.table][client.user.sub]
+		if (existingSocket) {
+			this.logger.debug(
+				`[WebsocketGateway${this.testInstanceId}] User ${client.user.sub} already connected to table ${client.user.table}. Disconnecting existing socket ${existingSocket}`,
+			)
+			this.server.sockets.sockets.get(existingSocket)?.disconnect()
+		}
+		this.tablesToConnectedUserSockets[client.user.table][client.user.sub] = client.id
 		this.logger.debug(
-			`[Websocket]  Client id: ${client.id} connected. user_id=${client.user.user_id}. Number of connected clients: ${this.server.sockets.sockets.size}`,
+			`[WebsocketGateway${this.testInstanceId}] Client id: ${client.id} connected. table=${client.user.table} sub=${client.user.sub}. Number of connected clients: ${this.server.sockets.sockets.size}`,
 		)
 	}
 
 	handleDisconnect(client: any) {
-		this.connectedUserSockets.delete(client.user.user_id)
+		delete this.tablesToConnectedUserSockets[client.user.table][client.user.sub]
 		this.logger.debug(
-			`[Websocket] Cliend id: ${client.id} disconnected. user_id=${client.user.user_id}. Number of connected clients: ${this.server.sockets.sockets.size}`,
+			`[WebsocketGateway${this.testInstanceId}] Cliend id: ${client.id} disconnected. sub=${client.user.sub}. Number of connected clients: ${this.server.sockets.sockets.size}`,
 		)
 	}
 
@@ -101,6 +134,6 @@ export class WebsocketGateway
 	handleMessage(client: any, payload: any): string {
 		this.logger.log('handleMessage', payload)
 		// TBD: Implement
-		return 'Client to server messages are not supported.'
+		throw 'Client to server messages are not supported.'
 	}
 }

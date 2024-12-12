@@ -1,27 +1,52 @@
 import { Socket } from 'socket.io'
-import { WebsocketJwtAuthGuard } from './websocket.jwt-auth.guard'
+import { Authentication } from 'src/helpers/Authentication'
+import { HostCheckMiddleware } from 'src/middleware/HostCheck'
+
 import { Logger } from '../../helpers/Logger'
+import { WebsocketJwtAuthGuard } from './websocket.jwt-auth.guard'
 
 export type SocketIOMiddleware = {
 	(client: AuthSocket, next: (err?: Error) => void): void
 }
 
 export interface AuthSocket extends Socket {
-	user: any
+	user: {
+		sub: string,
+		table: string
+	}
 }
 
 const logger = new Logger()
 
-export const WebsocketJwtAuthMiddleware = (): SocketIOMiddleware => {
+export const WebsocketJwtAuthMiddleware = (
+	authentication: Authentication,
+	hostCheckMiddleware: HostCheckMiddleware,
+): SocketIOMiddleware => {
 	return (client: AuthSocket, next) => {
 		try {
+			if (!client.handshake.headers['x-llana-table']) {
+				logger.debug('[WebsocketJwtAuthMiddleware] Socket Failed - No table provided')
+				logger.debug(client.handshake.headers)
+				return next(new Error('No Table Provided In Headers[x-llana-table]'))
+			}
+
+			if (!hostCheckMiddleware.validateHost(client.handshake, '[WS]')) {
+				logger.debug('[WebsocketJwtAuthMiddleware] Socket Host Failed - Unauthorized')
+				return next(new Error('Forbidden'))
+			}
+
+			if (authentication.skipAuth()) {
+				logger.debug(`[WebsocketJwtAuthMiddleware] Skipping authentication due to SKIP_AUTH being true`)
+				return next()
+			}
+
 			const payload = WebsocketJwtAuthGuard.validateToken(client)
-			client.user = payload
-			logger.debug(`[Websocket] User ${payload.user_id} authenticated`)
+			client.user = { sub: payload.sub, table: client.handshake.headers['x-llana-table'].toString() }
+			logger.debug(`[WebsocketJwtAuthMiddleware] User ${payload.user_id} authenticated`)
 			next()
 		} catch (err) {
 			logger.error(
-				`[Websocket] Failed to authenticate user. headers=${JSON.stringify(client.handshake.headers)}`,
+				`[WebsocketJwtAuthMiddleware] Failed to authenticate user. headers=${JSON.stringify(client.handshake.headers)}`,
 				err,
 			)
 			next(err as Error)

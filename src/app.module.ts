@@ -3,6 +3,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { ScheduleModule } from '@nestjs/schedule'
+import Redis from 'ioredis'
 
 import { AuthController } from './app.controller.auth'
 import { DeleteController } from './app.controller.delete'
@@ -34,9 +35,22 @@ import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
-import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
-import { WebsocketModule } from './modules/websocket/websocket.module'
+import { RedisMockWithPubSub } from './modules/websocket/redis-mock-with-pub-sub'
+import { REDIS_PUB_CLIENT_TOKEN, REDIS_SUB_CLIENT_TOKEN } from './modules/websocket/websocket.constants'
+import { WebsocketGateway } from './modules/websocket/websocket.gateway'
+import { WebsocketService } from './modules/websocket/websocket.service'
+import { Env } from './utils/Env'
+
+const singleServerRedisPubsub = new RedisMockWithPubSub()
+
+function createRedisClient() {
+	if (Env.IsTest() || !process.env.REDIS_PORT || !process.env.REDIS_HOST) {
+		new Logger().warn('REDIS_PORT or REDIS_HOST not found, websocket will not work in a multi-instance setup')
+		return singleServerRedisPubsub
+	}
+	return new Redis(+process.env.REDIS_PORT, process.env.REDIS_HOST, {})
+}
 
 @Module({
 	imports: [
@@ -49,7 +63,6 @@ import { WebsocketModule } from './modules/websocket/websocket.module'
 			isGlobal: true,
 		}),
 		ScheduleModule.forRoot(),
-		WebsocketModule,
 	],
 	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
 	providers: [
@@ -71,8 +84,17 @@ import { WebsocketModule } from './modules/websocket/websocket.module'
 		Roles,
 		Schema,
 		TasksService,
-		Websocket,
 		Webhook,
+		WebsocketGateway,
+		WebsocketService,
+		{
+			provide: REDIS_PUB_CLIENT_TOKEN,
+			useFactory: createRedisClient,
+		},
+		{
+			provide: REDIS_SUB_CLIENT_TOKEN, // A redis client, once subscribed to events, cannot be used for publishing events unfortunately. This is why two are needed
+			useFactory: createRedisClient,
+		},
 	],
 	exports: [
 		Airtable,
@@ -92,8 +114,9 @@ import { WebsocketModule } from './modules/websocket/websocket.module'
 		Response,
 		Roles,
 		Schema,
-		Websocket,
 		Webhook,
+		WebsocketService,
+		WebsocketGateway,
 	],
 })
 export class AppModule implements NestModule {
