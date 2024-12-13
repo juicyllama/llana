@@ -11,7 +11,7 @@ export type SocketIOMiddleware = {
 
 export interface AuthSocket extends Socket {
 	user: {
-		sub: string,
+		sub: string
 		table: string
 	}
 }
@@ -30,7 +30,7 @@ export const WebsocketJwtAuthMiddleware = (
 				return next(new Error('No Table Provided In Headers[x-llana-table]'))
 			}
 
-			if (!hostCheckMiddleware.validateHost(client.handshake, '[WS]')) {
+			if (!hostCheckMiddleware.validateHost(client.handshake, '[WebsocketJwtAuthMiddleware]')) {
 				logger.debug('[WebsocketJwtAuthMiddleware] Socket Host Failed - Unauthorized')
 				return next(new Error('Forbidden'))
 			}
@@ -42,7 +42,7 @@ export const WebsocketJwtAuthMiddleware = (
 
 			const payload = WebsocketJwtAuthGuard.validateToken(client)
 			client.user = { sub: payload.sub, table: client.handshake.headers['x-llana-table'].toString() }
-			logger.debug(`[WebsocketJwtAuthMiddleware] User ${payload.user_id} authenticated`)
+			logger.debug(`[WebsocketJwtAuthMiddleware] User ${payload.sub} authenticated`)
 			next()
 		} catch (err) {
 			logger.error(
