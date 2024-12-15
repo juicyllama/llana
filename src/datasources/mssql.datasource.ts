@@ -288,7 +288,7 @@ export class MSSQL {
 			const schema_col = options.schema.columns.find(col => col.field === columns[c])
 
 			if (schema_col.extra?.convert) {
-				valuesString += `CAST('?' AS ${schema_col.extra.convert}), `
+				valuesString += `CAST('?' AS ${schema_col.extra?.convert}), `
 			} else {
 				valuesString += `'?', `
 			}
@@ -427,7 +427,7 @@ export class MSSQL {
 			const schema_col = options.schema.columns.find(col => col.field === key)
 
 			if (schema_col.extra?.convert) {
-				command += `${key} = CAST('?' AS ${schema_col.extra.convert}), `
+				command += `${key} = CAST('?' AS ${schema_col.extra?.convert}), `
 			} else {
 				command += `${key} = '?', `
 			}

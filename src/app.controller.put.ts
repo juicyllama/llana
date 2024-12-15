@@ -10,7 +10,7 @@ import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
-import { Websocket } from './helpers/Websocket'
+import { WebsocketService } from './modules/websocket/websocket.service'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import { DataSourceSchema, DataSourceWhere, PublishType, QueryPerform, WhereOperator } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
@@ -23,7 +23,7 @@ export class PutController {
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
-		private readonly websocket: Websocket,
+		private readonly websocket: WebsocketService,
 		private readonly webhooks: Webhook,
 	) {}
 
