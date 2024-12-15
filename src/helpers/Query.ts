@@ -33,6 +33,10 @@ import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
 
+
+//todo load async based on installed datasource to avoid loading datasources we will never use (performance)
+
+
 @Injectable()
 export class Query {
 	constructor(

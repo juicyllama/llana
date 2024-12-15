@@ -66,6 +66,7 @@ describe('Login Service', () => {
 	})
 
 	describe('Successful Login', () => {
+		
 		it('Correct username & password', async () => {
 			try {
 				const result = await service.signIn('test@test.com', 'test')
@@ -77,6 +78,7 @@ describe('Login Service', () => {
 				expect(e).toBeUndefined()
 			}
 		})
+
 	})
 
 	afterAll(async () => {

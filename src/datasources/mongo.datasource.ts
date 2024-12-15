@@ -186,6 +186,20 @@ export class Mongo {
 				})
 			}
 
+			const relations_back = await mongo.db
+				.collection(LLANA_RELATION_TABLE)
+				.find({ table: options.table })
+				.toArray()
+
+			for (const relation of relations_back) {
+				relations.push({
+					table: relation.table,
+					column: relation.column,
+					org_table: relation.org_table,
+					org_column: relation.org_column,
+				})
+			}
+
 			this.logger.debug(
 				`[${DATABASE_TYPE}] Relations built for collection ${options.table}, relations: ${JSON.stringify(relations.map(r => r.table))}`,
 			)
@@ -250,27 +264,109 @@ export class Mongo {
 	 */
 
 	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
+
+		let relationMongo
+		let result
+		let relational_lookup = false
 		const mongo = await this.createConnection(options.schema.table)
 
 		try {
-			this.logger.debug(
-				`[${DATABASE_TYPE}] Find Record on for collection ${options.schema.table}: ${JSON.stringify(options.where)}`,
-				x_request_id,
-			)
-			const mongoFilters = await this.whereToFilter(options.where)
 
-			let mongoFields = {}
-			if (options.fields) {
-				for (const field of options.fields) {
-					mongoFields[field] = 1
+			console.log(options)
+		
+			for(const w of options.where){
+				const parts = w.column.split('.')
+			
+				if(parts.length === 2){
+					console.log( w.column)
+					relational_lookup = true
+					relationMongo = await this.createConnection(parts[0])
+
+					const relationSchema = await this.getSchema({table: parts[0], x_request_id})
+					const relationResult = await this.findOne({
+						schema: relationSchema,
+						where: [
+							{
+								column: parts[1],
+								operator: w.operator,
+								value: w.value
+							}
+						]
+					}, x_request_id)
+
+					relationMongo.connection.close()
+
+					//find the lookup field from schema relation
+					let relation = relationSchema.relations.find(r => r.table === options.schema.table)
+					if(!relation){
+						relation = relationSchema.relations.find(r => r.org_table === options.schema.table)
+					}
+
+					const filters = [{
+						column: (relation.table === options.schema.table) ? relation.column : relation.org_column,
+						operator: WhereOperator.equals,
+						value: relationResult[(relation.table === options.schema.table) ? relation.org_column : relation.column]
+					}]
+
+					const mongoFilters = await this.whereToFilter(filters)
+
+					//do lookup on main table with relation result
+
+					let mongoFields = {}
+					if (options.fields) {
+						for (const field of options.fields) {
+							mongoFields[field] = 1
+						}
+					}
+
+					result = await mongo.collection.find(mongoFilters).project(mongoFields).limit(1).toArray()
+
+					//include fields from relation
+					if (options.fields) {
+						for(const field of options.fields){
+							const parts = field.split('.')
+							if(parts.length === 2){
+								const relationField = relationResult[parts[1]]
+
+								if(!result[0][parts[0]]){
+									result[0][parts[0]] = {
+										[parts[1]]: relationField
+									}
+								}else{
+									result[0][parts[0]][parts[1]] = relationField
+								}
+							}	
+						}
+					}
+					this.logger.debug(`[${DATABASE_TYPE}] Result: ${JSON.stringify(result[0])}`, x_request_id)
+					mongo.connection.close()
 				}
 			}
 
-			const result = await mongo.collection.find(mongoFilters).project(mongoFields).limit(1).toArray()
+			if(!relational_lookup){
 
-			this.logger.debug(`[${DATABASE_TYPE}] Result: ${JSON.stringify(result[0])}`, x_request_id)
-			mongo.connection.close()
+				this.logger.debug(
+					`[${DATABASE_TYPE}] Find Record on for collection ${options.schema.table}: ${JSON.stringify(options.where)}`,
+					x_request_id,
+				)
+				const mongoFilters = await this.whereToFilter(options.where)
+
+				let mongoFields = {}
+				if (options.fields) {
+					for (const field of options.fields) {
+						mongoFields[field] = 1
+					}
+				}
+
+				result = await mongo.collection.find(mongoFilters).project(mongoFields).limit(1).toArray()
+
+				this.logger.debug(`[${DATABASE_TYPE}] Result: ${JSON.stringify(result[0])}`, x_request_id)
+				mongo.connection.close()
+
+			}
+
 			return this.formatOutput(options, result[0])
+
 		} catch (e) {
 			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`, x_request_id)
 			this.logger.warn({
@@ -279,9 +375,11 @@ export class Mongo {
 					message: e.message,
 				},
 			})
+			relationMongo.connection.close()
 			mongo.connection.close()
 			throw new Error(e)
 		}
+
 	}
 
 	/**

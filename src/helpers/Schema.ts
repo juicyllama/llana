@@ -624,7 +624,7 @@ export class Schema {
 		let items = options.field.split('.')
 
 		for (let i = 0; i < items.length - 1; i++) {
-			if (!options.schema.relations.find(col => col.table === items[i])) {
+			if (!options.schema.relations.find(col => col.table === items[i]) && !options.schema.relations.find(col => col.org_table === items[i])) {
 				this.logger.error(
 					`Relation ${items[i]} not found in schema for ${options.schema.table}`,
 					options.x_request_id,
@@ -632,7 +632,7 @@ export class Schema {
 				this.logger.error(options)
 				throw new Error(`Relation ${items[i]} not found in schema for ${options.schema.table}`)
 			}
-
+			
 			const relation_schema = await this.getSchema({ table: items[i], x_request_id: options.x_request_id })
 
 			if (options.relations.find(rel => rel.table === items[i])) {

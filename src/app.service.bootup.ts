@@ -285,13 +285,9 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						custom: false,
-						role: 'EDITOR',
-						records: RolePermission.WRITE,
-					},
-					{
-						custom: false,
-						role: 'VIEWER',
+						role: 'USER',
 						records: RolePermission.READ,
+
 					},
 				]
 				const custom_roles: CustomRole[] = [
@@ -304,17 +300,10 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						custom: true,
-						role: 'EDITOR',
+						role: 'USER',
 						table: this.authentication.getIdentityTable(),
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
-					},
-					{
-						custom: true,
-						role: 'VIEWER',
-						table: this.authentication.getIdentityTable(),
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
+						records: RolePermission.READ,
+						own_records: RolePermission.DELETE,
 					},
 					{
 						custom: true,
@@ -327,22 +316,13 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						custom: true,
-						role: 'EDITOR',
+						role: 'USER',
 						table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
 						identity_column:
 							this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
-					},
-					{
-						custom: true,
-						role: 'VIEWER',
-						table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
-						identity_column:
-							this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
-					},
+						records: RolePermission.READ,
+						own_records: RolePermission.DELETE,
+					}
 				]
 
 				for (const default_role of default_roles) {

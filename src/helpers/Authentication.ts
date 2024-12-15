@@ -166,6 +166,7 @@ export class Authentication {
 
 			switch (auth.type) {
 				case AuthType.APIKEY:
+
 					if (!auth.name) {
 						auth_passed = {
 							valid: false,
@@ -227,14 +228,6 @@ export class Authentication {
 						continue
 					}
 
-					if (Env.IsTest()) {
-						this.logger.debug(`[Authentication][auth] Skipping API key check in test environment`)
-						auth_passed = {
-							valid: true,
-						}
-						continue
-					}
-
 					const api_key_config = auth.table as AuthAPIKey
 
 					if (!api_key_config || !api_key_config.name) {
@@ -266,7 +259,7 @@ export class Authentication {
 					if (!auth_result || !auth_result[identity_column]) {
 						const db_options: DataSourceFindOneOptions = {
 							schema,
-							fields: [identity_column],
+							fields: [identity_column, api_key_config.column],
 							where: [
 								{
 									column: api_key_config.column,
