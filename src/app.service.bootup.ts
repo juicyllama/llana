@@ -370,7 +370,10 @@ export class AppBootup implements OnApplicationBootstrap {
 			}
 		}
 
-		if (!database.tables.includes(LLANA_RELATION_TABLE) && NON_RELATIONAL_DBS.includes(this.configService.get('database.type'))) {
+		if (
+			!database.tables.includes(LLANA_RELATION_TABLE) &&
+			NON_RELATIONAL_DBS.includes(this.configService.get('database.type'))
+		) {
 			this.logger.log(`Creating ${LLANA_RELATION_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
 
 			const schema: DataSourceSchema = {

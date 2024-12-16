@@ -1,6 +1,6 @@
 import { CacheModule } from '@nestjs/cache-manager'
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { ScheduleModule } from '@nestjs/schedule'
 import Redis from 'ioredis'
@@ -60,7 +60,14 @@ function createPubSubOnlyRedisClient() {
 			load: [auth, database, hosts, jwt, roles],
 			validationSchema: envValidationSchema,
 		}),
-		JwtModule.register(jwt()),
+		JwtModule.registerAsync({
+			imports: [ConfigModule],
+			useFactory: async (configService: ConfigService) => ({
+				secret: configService.get('jwt.secret'),
+				signOptions: configService.get('jwt.signOptions'),
+			}),
+			inject: [ConfigService],
+		}),
 		CacheModule.register({
 			isGlobal: true,
 		}),
