@@ -6,7 +6,7 @@ export const envValidationSchema = Joi.object({
 	NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
 	PORT: Joi.number().default(3000),
 	DATABASE_URI: Joi.string().uri().required(),
-	JWT_KEY: Joi.string().min(32).default('S$3cr3tK3y'),
+	JWT_KEY: Joi.string().min(8).default('S$3cr3tK3y'),
 	JWT_EXPIRES_IN: Joi.string().default('1d'),
 	AUTH_USER_API_KEY_LOCATION: Joi.string().default('HEADER'),
 	AUTH_USER_API_KEY_NAME: Joi.string().default('x-api-key'),
