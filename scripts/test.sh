@@ -26,3 +26,11 @@ do
     fi
 
 done
+
+if [ "$errored" = true ]; then
+    echo "Tests failed"
+    exit 1
+else
+    echo "Tests passed"
+    exit 0
+fi
