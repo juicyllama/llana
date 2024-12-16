@@ -1,4 +1,4 @@
-name: llana
+version: '3.8'
 
 networks:
     llana-network:

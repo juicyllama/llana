@@ -127,7 +127,7 @@ export class PostController {
 				if (!insertResult.valid) {
 					errored++
 					errors.push({
-						item: body.indexOf(item),
+						item: Array.isArray(body) ? body.findIndex(i => i === item) : -1,
 						message: insertResult.message,
 					})
 					continue
