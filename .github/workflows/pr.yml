@@ -42,14 +42,8 @@ jobs:
             -   name: Lint
                 run: npm run lint
 
-            -  name: Setup MySQL
-               uses: ankane/setup-mysql@v1
-               with:
-                  mysql-version: 8.0
-                  database: llana
-            
-            -   name: Seed MySQL
-                run:  mysql -uroot < demo/databases/mysql.sql
+            -  name: Setup Docker
+               run:  npm run docker:dev
 
             -   name: Test
-                run:  export DATABASE_URI="mysql://root@127.0.0.1:3306/llana" && npm run test
+                run:  npm run test
