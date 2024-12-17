@@ -1,14 +1,26 @@
 import { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
+import { ConfigModule, ConfigService, ConfigFactory } from '@nestjs/config'
+import { JwtModule } from '@nestjs/jwt'
 import * as request from 'supertest'
 import { CustomerTestingService } from './testing/customer.testing.service'
-
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
 import { DataSourceSchema } from './types/datasource.types'
 import { UserTestingService } from './testing/user.testing.service'
 import { Logger } from './helpers/Logger'
 import { TIMEOUT } from './testing/testing.const'
+
+// Import configs
+import auth from './config/auth.config'
+import database from './config/database.config'
+import hosts from './config/hosts.config'
+import jwt from './config/jwt.config'
+import roles from './config/roles.config'
+import { envValidationSchema } from './config/env.validation'
+
+// Type the config imports
+const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
 
 describe('App > Controller > Post', () => {
 	let app: INestApplication
@@ -30,7 +42,22 @@ describe('App > Controller > Post', () => {
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
-			imports: [AppModule],
+			imports: [
+				ConfigModule.forRoot({
+					load: configs,
+					validationSchema: envValidationSchema,
+					isGlobal: true,
+				}),
+				JwtModule.registerAsync({
+					imports: [ConfigModule],
+					useFactory: async (configService: ConfigService) => ({
+						secret: configService.get('jwt.secret'),
+						signOptions: configService.get('jwt.signOptions'),
+					}),
+					inject: [ConfigService],
+				}),
+				AppModule,
+			],
 			providers: [AuthTestingService, CustomerTestingService, UserTestingService],
 			exports: [AuthTestingService, CustomerTestingService, UserTestingService],
 		}).compile()
