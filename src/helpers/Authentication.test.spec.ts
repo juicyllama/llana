@@ -58,12 +58,9 @@ describe('Authentication Helper', () => {
 							const jwt = require('jsonwebtoken')
 							const secret = 'test-secret-key'
 							try {
-								console.log('Verifying token with secret:', secret)
 								const decoded = jwt.verify(token, secret)
-								console.log('Token verified successfully:', decoded)
 								return Promise.resolve(decoded)
 							} catch (error) {
-								console.log('Token verification failed:', error.message)
 								throw error
 							}
 						}),
@@ -217,7 +214,6 @@ describe('Authentication Helper', () => {
 
 		it('should allow authenticated WRITE access for excluded Employee table', async () => {
 			const token = await jwtService.signAsync({ sub: 'test-user' })
-			console.log('Test token:', token)
 
 			const result = await authentication.auth({
 				table: 'Employee',
@@ -227,7 +223,6 @@ describe('Authentication Helper', () => {
 				query: {},
 			})
 
-			console.log('Auth result:', JSON.stringify(result, null, 2))
 			expect(result.valid).toBe(true)
 			expect(result.message).toBe('JWT Authentication Successful')
 		})
@@ -249,7 +244,7 @@ describe('Authentication Helper', () => {
 			const result = await authentication.auth({
 				table: 'Employee',
 				access: RolePermission.WRITE,
-				headers: { Authorization: 'Bearer invalid.token' },
+				headers: { Authorization: `Bearer ${Buffer.from('invalid').toString('base64')}` },
 				body: {},
 				query: {},
 			})
