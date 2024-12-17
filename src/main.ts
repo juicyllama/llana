@@ -25,7 +25,9 @@ async function bootstrap() {
 		app = await NestFactory.create<NestExpressApplication>(AppModule)
 	}
 
-	app.enableCors()
+	app.enableCors({
+		origin: true
+	})
 	await app.listen(process.env.PORT)
 
 	app.useGlobalPipes(
