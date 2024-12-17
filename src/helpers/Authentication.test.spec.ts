@@ -244,7 +244,7 @@ describe('Authentication Helper', () => {
 			const result = await authentication.auth({
 				table: 'Employee',
 				access: RolePermission.WRITE,
-				headers: { Authorization: 'Bearer invalid.token' },
+				headers: { Authorization: `Bearer ${Buffer.from('invalid').toString('base64')}` },
 				body: {},
 				query: {},
 			})
