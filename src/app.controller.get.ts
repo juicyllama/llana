@@ -33,6 +33,26 @@ export class GetController {
 		private readonly schema: Schema,
 	) {}
 
+	@Get('/tables')
+	async listTables(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DataSourceSchema> {
+		const x_request_id = headers['x-request-id']
+
+		const auth = await this.authentication.auth({
+			table: '',
+			x_request_id,
+			access: RolePermission.READ,
+			headers: req.headers,
+			body: req.body,
+			query: req.query,
+			skip_table_checks: true,
+		})
+		if (!auth.valid) {
+			return res.status(401).send(this.response.text(auth.message))
+		}
+
+		return res.status(200).send(await this.query.perform(QueryPerform.LIST_TABLES, undefined, x_request_id))
+	}
+	
 	@Get('*/schema')
 	async getSchema(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<ListTablesResponseObject> {
 		const x_request_id = headers['x-request-id']
@@ -74,25 +94,6 @@ export class GetController {
 		}
 
 		return res.status(200).send(schema)
-	}
-
-	@Get('/tables')
-	async listTables(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DataSourceSchema> {
-		const x_request_id = headers['x-request-id']
-
-		const auth = await this.authentication.auth({
-			table: '',
-			x_request_id,
-			access: RolePermission.READ,
-			headers: req.headers,
-			body: req.body,
-			query: req.query,
-		})
-		if (!auth.valid) {
-			return res.status(401).send(this.response.text(auth.message))
-		}
-
-		return res.status(200).send(await this.query.perform(QueryPerform.LIST_TABLES, undefined, x_request_id))
 	}
 
 	@Get('*/:id')

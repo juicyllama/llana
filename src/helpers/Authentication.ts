@@ -55,6 +55,7 @@ export class Authentication {
 		query?: any
 		x_request_id?: string
 		user_identifier?: string | number
+		skip_table_checks?: boolean
 	}): Promise<AuthRestrictionsResponse> {
 		if (this.skipAuth()) {
 			this.logger.debug(`[Authentication][auth] Skipping authentication due to SKIP_AUTH being true`)
@@ -62,21 +63,25 @@ export class Authentication {
 		}
 
 		// Check if table exists first
-		try {
-			await this.schema.getSchema({ table: options.table, x_request_id: options.x_request_id })
-		} catch (error) {
-			this.logger.debug(`[Authentication][auth] Schema error: ${error.message}`)
-			return { valid: false, message: `No Schema Found For Table ${options.table}` }
+		
+		if(!options.skip_table_checks){
+			try {
+				await this.schema.getSchema({ table: options.table, x_request_id: options.x_request_id })
+			} catch (error) {
+				this.logger.debug(`[Authentication][auth] Schema error: ${error.message}`)
+				return { valid: false, message: `No Schema Found For Table ${options.table}` }
+			}
 		}
 
-		const authentications = this.configService.get<Auth[]>('auth')
-		const auth_schema = await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: options.x_request_id })
+			const authentications = this.configService.get<Auth[]>('auth')
+			const auth_schema = await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: options.x_request_id })
 
-		let auth_passed: AuthRestrictionsResponse = {
-			valid: false,
-			message: 'Unauthorized',
-		}
+			let auth_passed: AuthRestrictionsResponse = {
+				valid: false,
+				message: 'Unauthorized',
+			}
 
+	
 		for (const auth of authentications) {
 			if (auth_passed.valid) continue
 
@@ -116,81 +121,85 @@ export class Authentication {
 				)
 			}
 
-			const excludes = rules.data.filter(rule => rule.type === 'EXCLUDE')
-			const includes = rules.data.filter(rule => rule.type === 'INCLUDE')
+			if(!options.skip_table_checks){
 
-			if (excludes?.length > 0) {
-				for (const exclude of excludes) {
-					if (options.table === exclude.table) {
-						// Initialize rule object if it doesn't exist
-						if (!exclude.rule) {
-							exclude.rule = {}
-						}
-						if (!exclude.rule.public_records) {
-							exclude.rule.public_records = RolePermission.READ
-						}
+				const excludes = rules.data.filter(rule => rule.type === 'EXCLUDE')
+				const includes = rules.data.filter(rule => rule.type === 'INCLUDE')
 
-						// For excluded tables, READ access follows public_records setting
-						if (options.access === RolePermission.READ) {
-							if (this.roles.rolePass(exclude.rule.public_records, options.access)) {
-								check_required = false
-								auth_passed = {
-									valid: true,
-									message: 'Public Access Granted',
-								}
-							} else {
-								check_required = true
+				if (excludes?.length > 0) {
+					for (const exclude of excludes) {
+						if (options.table === exclude.table) {
+							// Initialize rule object if it doesn't exist
+							if (!exclude.rule) {
+								exclude.rule = {}
 							}
-						} else {
-							// For non-READ operations on excluded tables, require authentication
-							const authHeader = options.headers['Authorization'] || options.headers['authorization']
-							this.logger.debug(`[Authentication][auth] Auth header for write operation: ${authHeader}`)
-
-							if (!authHeader) {
-								return {
-									valid: false,
-									message: 'JWT Authentication Required',
-								}
+							if (!exclude.rule.public_records) {
+								exclude.rule.public_records = RolePermission.READ
 							}
 
-							try {
-								const token = authHeader.replace(/^Bearer\s+/i, '') // Case-insensitive Bearer prefix removal
-								this.logger.debug(
-									`[Authentication][auth] Attempting JWT verification with token: ${token}`,
-								)
-								const payload = await this.jwtService.verifyAsync(token, {
-									secret: this.configService.get('jwt.secret'),
-									...this.configService.get('jwt.signOptions'),
-								})
-								if (payload) {
-									this.logger.debug(
-										`[Authentication][auth] JWT verification successful for excluded table write operation: ${JSON.stringify(payload)}`,
-									)
+							// For excluded tables, READ access follows public_records setting
+							if (options.access === RolePermission.READ) {
+								if (this.roles.rolePass(exclude.rule.public_records, options.access)) {
+									check_required = false
 									auth_passed = {
 										valid: true,
-										message: 'JWT Authentication Successful',
+										message: 'Public Access Granted',
 									}
-									return auth_passed
+								} else {
+									check_required = true
 								}
-							} catch (error) {
-								this.logger.debug(`[Authentication][auth] JWT verification failed: ${error.message}`)
-								return {
-									valid: false,
-									message: 'JWT Authentication Failed',
+							} else {
+								// For non-READ operations on excluded tables, require authentication
+								const authHeader = options.headers['Authorization'] || options.headers['authorization']
+								this.logger.debug(`[Authentication][auth] Auth header for write operation: ${authHeader}`)
+
+								if (!authHeader) {
+									return {
+										valid: false,
+										message: 'JWT Authentication Required',
+									}
+								}
+
+								try {
+									const token = authHeader.replace(/^Bearer\s+/i, '') // Case-insensitive Bearer prefix removal
+									this.logger.debug(
+										`[Authentication][auth] Attempting JWT verification with token: ${token}`,
+									)
+									const payload = await this.jwtService.verifyAsync(token, {
+										secret: this.configService.get('jwt.secret'),
+										...this.configService.get('jwt.signOptions'),
+									})
+									if (payload) {
+										this.logger.debug(
+											`[Authentication][auth] JWT verification successful for excluded table write operation: ${JSON.stringify(payload)}`,
+										)
+										auth_passed = {
+											valid: true,
+											message: 'JWT Authentication Successful',
+										}
+										return auth_passed
+									}
+								} catch (error) {
+									this.logger.debug(`[Authentication][auth] JWT verification failed: ${error.message}`)
+									return {
+										valid: false,
+										message: 'JWT Authentication Failed',
+									}
 								}
 							}
+							check_required = false
 						}
-						check_required = false
 					}
 				}
-			}
 
-			if (includes) {
-				for (const include of includes) {
-					if (options.table.includes(include.table)) {
-						check_required = true
+				if (includes) {
+					for (const include of includes) {
+						if (options.table.includes(include.table)) {
+							check_required = true
+						}
 					}
 				}
+
 			}
 
 			if (!check_required) continue
@@ -205,30 +214,34 @@ export class Authentication {
 			let schema: DataSourceSchema | null = null
 			let identity_column: string | null = null
 
-			try {
-				schema = await this.schema.getSchema({ table: options.table, x_request_id: options.x_request_id })
-				if (!schema) {
+			if(!options.skip_table_checks){
+
+				try {
+					schema = await this.schema.getSchema({ table: options.table, x_request_id: options.x_request_id })
+					if (!schema) {
+						this.logger.error(
+							`[Authentication][auth] No schema found for table ${options.table}`,
+							options.x_request_id,
+						)
+						return { valid: false, message: `No Schema Found For Table ${options.table}` }
+					}
+				} catch (e) {
 					this.logger.error(
-						`[Authentication][auth] No schema found for table ${options.table}`,
+						`[Authentication][auth] Error getting schema for table ${options.table} - ${e.message}`,
 						options.x_request_id,
 					)
 					return { valid: false, message: `No Schema Found For Table ${options.table}` }
 				}
-			} catch (e) {
-				this.logger.error(
-					`[Authentication][auth] Error getting schema for table ${options.table} - ${e.message}`,
-					options.x_request_id,
-				)
-				return { valid: false, message: `No Schema Found For Table ${options.table}` }
-			}
 
-			if (auth?.table?.identity_column) {
-				identity_column = auth.table.identity_column
-			} else if (schema?.primary_key) {
-				identity_column = schema.primary_key
-			} else {
-				this.logger.debug(`[Authentication][auth] No identity column found for table ${options.table}`)
-				return { valid: false, message: `No identity column found for table ${options.table}` }
+				if (auth?.table?.identity_column) {
+					identity_column = auth.table.identity_column
+				} else if (schema?.primary_key) {
+					identity_column = schema.primary_key
+				} else {
+					this.logger.debug(`[Authentication][auth] No identity column found for table ${options.table}`)
+					return { valid: false, message: `No identity column found for table ${options.table}` }
+				}
+
 			}
 
 			switch (auth.type) {
@@ -439,7 +452,7 @@ export class Authentication {
 					if (!authHeader) {
 						auth_passed = {
 							valid: false,
-							message: 'Authentication required for write operations',
+							message: 'Authentication Failed',
 						}
 						continue
 					}
@@ -461,7 +474,7 @@ export class Authentication {
 						if (!payload) {
 							auth_passed = {
 								valid: false,
-								message: 'JWT Authentication Failed',
+								message: 'Authentication Failed',
 							}
 							continue
 						}
@@ -489,7 +502,7 @@ export class Authentication {
 							// For WRITE operations on excluded tables, allow if JWT is valid
 							return {
 								valid: true,
-								message: 'JWT Authentication Successful',
+								message: 'Authentication Successful',
 								user_identifier: payload.sub,
 							}
 						}
@@ -497,14 +510,14 @@ export class Authentication {
 						// For non-excluded tables or if no specific rule matched
 						auth_passed = {
 							valid: true,
-							message: 'JWT Authentication Successful',
+							message: 'Authentication Successful',
 							user_identifier: payload.sub,
 						}
 					} catch (error) {
 						this.logger.debug(`[Authentication][auth] JWT verification error: ${error.message}`)
 						auth_passed = {
 							valid: false,
-							message: 'JWT Authentication Failed',
+							message: 'Authentication Failed',
 						}
 					}
 
