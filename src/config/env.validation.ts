@@ -4,10 +4,7 @@ import { AuthPasswordEncryption } from '../types/auth.types'
 
 export const envValidationSchema = Joi.object({
 	NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
-	PORT: Joi.alternatives().try(
-		Joi.string().empty('').default('3000'),
-		Joi.number()
-	).default(3000),
+	PORT: Joi.alternatives().try(Joi.string().empty('').default('3000'), Joi.number()).default(3000),
 	DATABASE_URI: Joi.string().uri().required(),
 	JWT_KEY: Joi.string().min(8).default('S$3cr3tK3y'),
 	JWT_EXPIRES_IN: Joi.string().default('1d'),
