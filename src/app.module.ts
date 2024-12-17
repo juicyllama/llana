@@ -1,8 +1,9 @@
 import { CacheModule } from '@nestjs/cache-manager'
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
+import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { ScheduleModule } from '@nestjs/schedule'
+import Redis from 'ioredis'
 
 import { AuthController } from './app.controller.auth'
 import { DeleteController } from './app.controller.delete'
@@ -34,8 +35,24 @@ import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
-import { Websocket } from './helpers/Websocket'
 import { HostCheckMiddleware } from './middleware/HostCheck'
+import { RedisMockWithPubSub } from './modules/websocket/redis-mock-with-pub-sub'
+import { REDIS_PUB_CLIENT_TOKEN, REDIS_SUB_CLIENT_TOKEN } from './modules/websocket/websocket.constants'
+import { WebsocketGateway } from './modules/websocket/websocket.gateway'
+import { WebsocketService } from './modules/websocket/websocket.service'
+import { Env } from './utils/Env'
+
+const singleServerRedisPubsub = new RedisMockWithPubSub() // in-memory pubsub for testing or single server setup
+
+function createPubSubOnlyRedisClient() {
+	if (Env.IsTest() || !process.env.REDIS_PORT || !process.env.REDIS_HOST) {
+		if (!Env.IsTest()) {
+			new Logger().warn('REDIS_PORT or REDIS_HOST not found - Websockets will NOT work in a multi-instance setup')
+		}
+		return singleServerRedisPubsub
+	}
+	return new Redis(+process.env.REDIS_PORT, process.env.REDIS_HOST, {})
+}
 
 @Module({
 	imports: [
@@ -43,7 +60,14 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 			load: [auth, database, hosts, jwt, roles],
 			validationSchema: envValidationSchema,
 		}),
-		JwtModule.register(jwt()),
+		JwtModule.registerAsync({
+			imports: [ConfigModule],
+			useFactory: async (configService: ConfigService) => ({
+				secret: configService.get('jwt.secret'),
+				signOptions: configService.get('jwt.signOptions'),
+			}),
+			inject: [ConfigService],
+		}),
 		CacheModule.register({
 			isGlobal: true,
 		}),
@@ -69,8 +93,17 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Roles,
 		Schema,
 		TasksService,
-		Websocket,
 		Webhook,
+		WebsocketGateway,
+		WebsocketService,
+		{
+			provide: REDIS_PUB_CLIENT_TOKEN,
+			useFactory: createPubSubOnlyRedisClient,
+		},
+		{
+			provide: REDIS_SUB_CLIENT_TOKEN, // A redis client, once subscribed to events, cannot be used for publishing events unfortunately. This is why two are needed
+			useFactory: createPubSubOnlyRedisClient,
+		},
 	],
 	exports: [
 		Airtable,
@@ -90,8 +123,9 @@ import { HostCheckMiddleware } from './middleware/HostCheck'
 		Response,
 		Roles,
 		Schema,
-		Websocket,
 		Webhook,
+		WebsocketService,
+		WebsocketGateway,
 	],
 })
 export class AppModule implements NestModule {

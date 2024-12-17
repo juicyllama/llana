@@ -1,3 +1,5 @@
+import { DataSourceType } from './types/datasource.types'
+
 export const NON_FIELD_PARAMS = ['fields', 'limit', 'offset', 'sort', 'page', 'relations', 'join']
 export const LLANA_AUTH_TABLE = '_llana_auth'
 export const LLANA_ROLES_TABLE = '_llana_role'
@@ -10,3 +12,4 @@ export const CACHE_DEFAULT_IDENTITY_DATA_TTL = 600000 // 10 minutes
 export const CACHE_DEFAULT_WS_IDENTITY_DATA_TTL = 3600000 * 24 * 2 // 2 days
 export const CACHE_DEFAULT_WEBHOOK_TTL = 3600000 * 24 * 2 // 2 days
 export const WEBHOOK_LOG_DAYS = 1
+export const NON_RELATIONAL_DBS = [DataSourceType.MONGODB]

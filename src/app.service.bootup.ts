@@ -11,6 +11,7 @@ import {
 	LLANA_ROLES_TABLE,
 	LLANA_WEBHOOK_LOG_TABLE,
 	LLANA_WEBHOOK_TABLE,
+	NON_RELATIONAL_DBS,
 	WEBHOOK_LOG_DAYS,
 } from './app.constants'
 import { FindManyResponseObject, ListTablesResponseObject } from './dtos/response.dto'
@@ -369,19 +370,11 @@ export class AppBootup implements OnApplicationBootstrap {
 			}
 		}
 
-		if (!database.tables.includes(LLANA_AUTH_TABLE)) {
-			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
-
-			/**
-			 * Create the _llana_auth schema
-			 *
-			 * |Field | Type | Details|
-			 * |--------|---------|--------|
-			 * |`auth` | `enum` | Which auth type this applies to, either `APIKEY` or `JWT` |
-			 * |`type` | `enum` | If to `INCLUDE` or `EXCLUDE` the endpoint, excluding means authentication will not be required |
-			 * |`table` | `string` | The table this rule applies to |
-			 * |`public_records` | `enum` | The permission level if `EXCLUDE` and opened to the public, either `NONE` `READ` `WRITE` `DELETE`|
-			 */
+		if (
+			!database.tables.includes(LLANA_RELATION_TABLE) &&
+			NON_RELATIONAL_DBS.includes(this.configService.get('database.type'))
+		) {
+			this.logger.log(`Creating ${LLANA_RELATION_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
 
 			const schema: DataSourceSchema = {
 				table: LLANA_RELATION_TABLE,
