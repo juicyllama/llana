@@ -17,6 +17,7 @@ import {
 import { FindManyResponseObject, ListTablesResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
 import { Documentation } from './helpers/Documentation'
+import { ErrorHandler } from './helpers/ErrorHandler'
 import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
@@ -25,6 +26,7 @@ import {
 	ColumnExtraNumber,
 	DataSourceColumnType,
 	DataSourceSchema,
+	DataSourceType,
 	PublishType,
 	QueryPerform,
 	WhereOperator,
@@ -39,6 +41,7 @@ export class AppBootup implements OnApplicationBootstrap {
 		private readonly configService: ConfigService,
 		@Inject(CACHE_MANAGER) private cacheManager: Cache,
 		private readonly documentation: Documentation,
+		private readonly errorHandler: ErrorHandler,
 		private readonly logger: Logger,
 		private readonly query: Query,
 		private readonly schema: Schema,
@@ -55,19 +58,30 @@ export class AppBootup implements OnApplicationBootstrap {
 		this.logger.log('Resetting Cache', APP_BOOT_CONTEXT)
 		await this.cacheManager.reset()
 
+		let database: ListTablesResponseObject
+
 		try {
 			await this.query.perform(QueryPerform.CHECK_CONNECTION, undefined, APP_BOOT_CONTEXT)
 			this.logger.log('Database Connection Successful', APP_BOOT_CONTEXT)
-		} catch (e) {
-			this.logger.error(`Database Connection Error - ${e.message}`, APP_BOOT_CONTEXT)
-			throw new Error('Database Connection Error')
-		}
 
-		const database = (await this.query.perform(
-			QueryPerform.LIST_TABLES,
-			{ include_system: true },
-			APP_BOOT_CONTEXT,
-		)) as ListTablesResponseObject
+			database = (await this.query.perform(
+				QueryPerform.LIST_TABLES,
+				{ include_system: true },
+				APP_BOOT_CONTEXT,
+			)) as ListTablesResponseObject
+
+			if (!database || !database.tables) {
+				throw new Error('Failed to retrieve database tables')
+			}
+		} catch (e) {
+			const datasourceType =
+				(this.configService.get<string>('database.type') as DataSourceType) || DataSourceType.POSTGRES
+			const errorMessage = this.errorHandler.handleDatabaseError(e, datasourceType)
+			this.logger.error(`Database Connection Error - ${errorMessage}`, APP_BOOT_CONTEXT)
+
+			// Throw a more descriptive error that includes connection details
+			throw new Error(`Database Connection Error: ${errorMessage}. Please check database configuration and ensure the database is running.`)
+		}
 
 		if (!database.tables.includes(LLANA_AUTH_TABLE)) {
 			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
@@ -96,32 +110,18 @@ export class AppBootup implements OnApplicationBootstrap {
 						unique_key: true,
 						foreign_key: false,
 						auto_increment: true,
-						extra: <ColumnExtraNumber>{
-							decimal: 0,
-						},
 					},
 					{
-						field: 'auth',
-						type: DataSourceColumnType.ENUM,
+						field: 'email',
+						type: DataSourceColumnType.STRING,
 						nullable: false,
 						required: true,
 						primary_key: false,
-						unique_key: false,
+						unique_key: true,
 						foreign_key: false,
-						enums: ['APIKEY', 'JWT'],
 					},
 					{
-						field: 'type',
-						type: DataSourceColumnType.ENUM,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						enums: ['INCLUDE', 'EXCLUDE'],
-					},
-					{
-						field: 'table',
+						field: 'password',
 						type: DataSourceColumnType.STRING,
 						nullable: false,
 						required: true,
@@ -130,14 +130,43 @@ export class AppBootup implements OnApplicationBootstrap {
 						foreign_key: false,
 					},
 					{
-						field: 'public_records',
-						type: DataSourceColumnType.ENUM,
+						field: 'role',
+						type: DataSourceColumnType.STRING,
 						nullable: false,
 						required: true,
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
-						enums: ['NONE', 'READ', 'WRITE', 'DELETE'],
+					},
+					{
+						field: 'active',
+						type: DataSourceColumnType.BOOLEAN,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						default: true,
+					},
+					{
+						field: 'created_at',
+						type: DataSourceColumnType.DATE,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						default: 'CURRENT_TIMESTAMP',
+					},
+					{
+						field: 'updated_at',
+						type: DataSourceColumnType.DATE,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						default: 'CURRENT_TIMESTAMP',
 					},
 				],
 			}
@@ -153,16 +182,30 @@ export class AppBootup implements OnApplicationBootstrap {
 			if (!this.authentication.skipAuth()) {
 				const example_auth: any[] = [
 					{
+						id: undefined, // Let database handle auto-increment
+						email: 'api@example.com',
+						password: 'api123',
+						role: 'api',
+						active: true,
 						auth: AuthType.APIKEY,
 						type: 'EXCLUDE',
 						table: 'Employee',
 						public_records: RolePermission.READ,
+						created_at: undefined, // Let database use CURRENT_TIMESTAMP
+						updated_at: undefined, // Let database use CURRENT_TIMESTAMP
 					},
 					{
+						id: undefined, // Let database handle auto-increment
+						email: 'jwt@example.com',
+						password: 'jwt123',
+						role: 'jwt',
+						active: true,
 						auth: AuthType.JWT,
 						type: 'EXCLUDE',
 						table: 'Employee',
 						public_records: RolePermission.READ,
+						created_at: undefined, // Let database use CURRENT_TIMESTAMP
+						updated_at: undefined, // Let database use CURRENT_TIMESTAMP
 					},
 				]
 

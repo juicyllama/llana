@@ -49,70 +49,76 @@ describe('App > Controller > Get', () => {
 	let logger = new Logger()
 
 	beforeAll(async () => {
-		const moduleRef = await Test.createTestingModule({
-			imports: [
-				ConfigModule.forRoot({
-					load: configs,
-					validationSchema: envValidationSchema,
-					isGlobal: true,
-				}),
-				JwtModule.registerAsync({
-					imports: [ConfigModule],
-					useFactory: async (configService: ConfigService) => ({
-						secret: configService.get('jwt.secret'),
-						signOptions: configService.get('jwt.signOptions'),
+		try {
+			const moduleRef = await Test.createTestingModule({
+				imports: [
+					ConfigModule.forRoot({
+						load: configs,
+						validationSchema: envValidationSchema,
+						isGlobal: true,
 					}),
-					inject: [ConfigService],
-				}),
-				AppModule,
-			],
-			providers: [
-				AuthTestingService,
-				CustomerTestingService,
-				EmployeeTestingService,
-				ShipperTestingService,
-				SalesOrderTestingService,
-			],
-			exports: [
-				AuthTestingService,
-				CustomerTestingService,
-				EmployeeTestingService,
-				ShipperTestingService,
-				SalesOrderTestingService,
-			],
-		}).compile()
-		app = moduleRef.createNestApplication()
-		await app.init()
+					JwtModule.registerAsync({
+						imports: [ConfigModule],
+						useFactory: async (configService: ConfigService) => ({
+							secret: configService.get('jwt.secret'),
+							signOptions: configService.get('jwt.signOptions'),
+						}),
+						inject: [ConfigService],
+					}),
+					AppModule,
+				],
+				providers: [
+					AuthTestingService,
+					CustomerTestingService,
+					EmployeeTestingService,
+					ShipperTestingService,
+					SalesOrderTestingService,
+				],
+			}).compile()
 
-		authTestingService = app.get<AuthTestingService>(AuthTestingService)
-		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
-		employeeTestingService = app.get<EmployeeTestingService>(EmployeeTestingService)
-		shipperTestingService = app.get<ShipperTestingService>(ShipperTestingService)
+			app = moduleRef.createNestApplication()
+			await app.init()
 
-		salesOrderTestingService = app.get<SalesOrderTestingService>(SalesOrderTestingService)
+			// Initialize all testing services
+			authTestingService = moduleRef.get<AuthTestingService>(AuthTestingService)
+			customerTestingService = moduleRef.get<CustomerTestingService>(CustomerTestingService)
+			employeeTestingService = moduleRef.get<EmployeeTestingService>(EmployeeTestingService)
+			shipperTestingService = moduleRef.get<ShipperTestingService>(ShipperTestingService)
+			salesOrderTestingService = moduleRef.get<SalesOrderTestingService>(SalesOrderTestingService)
 
-		customerSchema = await customerTestingService.getSchema()
-		employeeSchema = await employeeTestingService.getSchema()
-		shipperSchema = await shipperTestingService.getSchema()
-		salesOrderSchema = await salesOrderTestingService.getSchema()
+			// Get schemas
+			customerSchema = await customerTestingService.getSchema()
+			employeeSchema = await employeeTestingService.getSchema()
+			shipperSchema = await shipperTestingService.getSchema()
+			salesOrderSchema = await salesOrderTestingService.getSchema()
 
-		customer = await customerTestingService.createCustomer({})
-		employee = await employeeTestingService.createEmployee({})
+			// Create test data
+			customer = await customerTestingService.createCustomer({})
+			employee = await employeeTestingService.createEmployee({})
+			shipper = await shipperTestingService.createShipper({})
 
-		shipper = await shipperTestingService.createShipper({})
+			// Create orders
+			for (let i = 0; i < 10; i++) {
+				try {
+					const order = await salesOrderTestingService.createOrder({
+						orderId: i + 1000,
+						custId: customer[customerSchema.primary_key],
+						employeeId: employee[employeeSchema.primary_key],
+						shipperId: shipper[shipperSchema.primary_key],
+					})
+					orders[i] = order
+				} catch (error) {
+					console.error(`Failed to create order ${i}: ${error.message}`)
+					throw error
+				}
+			}
 
-		for (let i = 0; i < 10; i++) {
-			orders.push(
-				await salesOrderTestingService.createOrder({
-					orderId: i + 1000,
-					custId: customer[customerSchema.primary_key],
-					employeeId: employee[employeeSchema.primary_key],
-					shipperId: shipper[shipperSchema.primary_key],
-				}),
-			)
+			// Get JWT token
+			jwt = await authTestingService.login()
+		} catch (error) {
+			console.error('Failed to initialize test module:', error)
+			throw error
 		}
-
-		jwt = await authTestingService.login()
 	}, TIMEOUT)
 
 	beforeEach(() => {
@@ -275,12 +281,20 @@ describe('App > Controller > Get', () => {
 	})
 
 	afterAll(async () => {
-		for (let i = 0; i < 10; i++) {
-			await salesOrderTestingService.deleteOrder(orders[i][salesOrderSchema.primary_key])
+		try {
+			for (const order of orders) {
+				if (order && order[salesOrderSchema.primary_key]) {
+					await salesOrderTestingService.deleteOrder(order[salesOrderSchema.primary_key])
+				}
+			}
+			await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
+			await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])
+			await shipperTestingService.deleteShipper(shipper[shipperSchema.primary_key])
+		} catch (error) {
+			console.error(`Cleanup failed: ${error.message}`)
+			throw error
+		} finally {
+			await app.close()
 		}
-		await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
-		await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])
-		await shipperTestingService.deleteShipper(shipper[shipperSchema.primary_key])
-		await app.close()
 	}, TIMEOUT)
 })

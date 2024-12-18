@@ -40,7 +40,7 @@ export const WebsocketJwtAuthMiddleware = (
 				try {
 					const payload = WebsocketJwtAuthGuard.validateToken(client)
 					client.user = { sub: payload.sub, table: client.handshake.headers['x-llana-table'].toString() }
-				} catch (err) {
+				} catch {
 					return next(new Error('Invalid token format'))
 				}
 				return next()

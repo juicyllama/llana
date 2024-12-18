@@ -118,13 +118,13 @@ describe('App > Controller > Post', () => {
 		})
 		it('should handle unique constraint violations', async () => {
 			const duplicateCustomer = await customerTestingService.mockCustomer()
-			// Use a valid numeric ID for MySQL
+			// Use a valid numeric ID that works across all database types
 			duplicateCustomer[customerSchema.primary_key] = 12345
 
 			// Create first record - should succeed
 			const firstResult = await request(app.getHttpServer())
 				.post(`/Customer/`)
-				.send({ ...duplicateCustomer }) // Send a copy to avoid reference issues
+				.send(duplicateCustomer)
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(201)
 
@@ -135,10 +135,9 @@ describe('App > Controller > Post', () => {
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(400)
 
-			// Response.text() returns the error message
-			const errorMessage = duplicateResult.text
-			expect(errorMessage).toBeDefined()
-			expect(errorMessage).toContain('already exists') // Generic error message that works across databases
+			// Verify error message is database-agnostic
+			expect(duplicateResult.text).toBeDefined()
+			expect(duplicateResult.text).toContain('Database error: Duplicate record found')
 
 			// Cleanup
 			await customerTestingService.deleteCustomer(firstResult.body[customerSchema.primary_key])

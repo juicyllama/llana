@@ -225,7 +225,7 @@ export class PostController {
 		} catch (e) {
 			return {
 				valid: false,
-				message: `Database error: ${e.message || 'Unknown error'}`,
+				message: e.message || 'Unknown error',
 			}
 		}
 	}

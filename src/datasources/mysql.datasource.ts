@@ -575,6 +575,11 @@ export class MySQL {
 		options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions,
 	): DataSourceCreateOneOptions | DataSourceUpdateOneOptions {
 		for (const column of options.schema.columns) {
+			// Skip validation for auto-increment primary keys during creation
+			if (column.primary_key && column.auto_increment) {
+				continue;
+			}
+
 			// Check required fields (skip validation if value is 0 or false)
 			if (
 				column.required &&

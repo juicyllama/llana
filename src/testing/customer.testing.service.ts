@@ -39,14 +39,12 @@ export class CustomerTestingService {
 	async createCustomer(customer: any = this.mockCustomer()): Promise<any> {
 		const customerTableSchema = await this.schema.getSchema({ table })
 
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const { custId, ...customerData } = customer
-
+		// Don't try to handle custId as it's an auto-increment field
 		return (await this.query.perform(
 			QueryPerform.CREATE,
 			{
 				schema: customerTableSchema,
-				data: customerData,
+				data: customer,
 			},
 			'testing',
 		)) as FindOneResponseObject
