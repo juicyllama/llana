@@ -122,6 +122,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						primary_key: false,
 						unique_key: true,
 						foreign_key: false,
+						extra: { length: 255 },
 					},
 					{
 						field: 'password',
@@ -131,15 +132,17 @@ export class AppBootup implements OnApplicationBootstrap {
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
+						extra: { length: 255 },
 					},
 					{
 						field: 'role',
-						type: DataSourceColumnType.STRING,
+						type: DataSourceColumnType.ENUM,
 						nullable: false,
 						required: true,
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
+						enums: ['admin', 'api', 'jwt', 'user'],
 					},
 					{
 						field: 'active',
@@ -179,6 +182,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
+						extra: { length: 255 },
 					},
 					{
 						field: 'public_records',

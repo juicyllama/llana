@@ -19,6 +19,7 @@ export class CustomerTestingService {
 
 	mockCustomer(): any {
 		return {
+			custId: faker.number.int({ min: 1, max: 999999 }), // Add custId for databases that don't auto-increment
 			companyName: faker.company.name().substring(0, 40),
 			contactName: (faker.person.firstName() + ', ' + faker.person.lastName()).substring(0, 30),
 			contactTitle: faker.person.prefix().substring(0, 30),
@@ -49,14 +50,24 @@ export class CustomerTestingService {
 			this.logger.log('Creating test customer', 'customer-testing')
 			const customerTableSchema = await this.schema.getSchema({ table })
 
-			return (await this.query.perform(
+			// Remove custId for databases that handle auto-increment
+			const { custId, ...customerData } = customer
+
+			const result = await this.query.perform(
 				QueryPerform.CREATE,
 				{
 					schema: customerTableSchema,
-					data: customer,
+					data: customerData,
 				},
 				'testing',
-			)) as FindOneResponseObject
+			) as FindOneResponseObject
+
+			this.logger.debug(
+				`[customer-testing] Created customer with result: ${JSON.stringify(result)}`,
+				'customer-testing',
+			)
+
+			return result
 		} catch (error) {
 			this.logger.error(`Failed to create test customer: ${error.message}`, 'customer-testing')
 			throw new Error(`Failed to create test customer: ${error.message}`)
