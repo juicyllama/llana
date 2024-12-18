@@ -153,21 +153,23 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'auth',
-						type: DataSourceColumnType.STRING,
+						type: DataSourceColumnType.ENUM,
 						nullable: false,
 						required: true,
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
+						enums: ['APIKEY', 'JWT'],
 					},
 					{
 						field: 'type',
-						type: DataSourceColumnType.STRING,
+						type: DataSourceColumnType.ENUM,
 						nullable: false,
 						required: true,
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
+						enums: ['INCLUDE', 'EXCLUDE'],
 					},
 					{
 						field: 'table',
@@ -231,8 +233,8 @@ export class AppBootup implements OnApplicationBootstrap {
 						type: 'EXCLUDE',
 						table: '*',
 						public_records: RolePermission.READ,
-						created_at: new Date(),
-						updated_at: new Date(),
+						created_at: new Date().toISOString(),
+						updated_at: new Date().toISOString(),
 					},
 					{
 						id: undefined,
@@ -244,8 +246,8 @@ export class AppBootup implements OnApplicationBootstrap {
 						type: 'EXCLUDE',
 						table: 'Employee',
 						public_records: RolePermission.READ,
-						created_at: new Date(),
-						updated_at: new Date(),
+						created_at: new Date().toISOString(),
+						updated_at: new Date().toISOString(),
 					},
 					{
 						id: undefined,
@@ -257,8 +259,8 @@ export class AppBootup implements OnApplicationBootstrap {
 						type: 'EXCLUDE',
 						table: 'Employee',
 						public_records: RolePermission.READ,
-						created_at: new Date(),
-						updated_at: new Date(),
+						created_at: new Date().toISOString(),
+						updated_at: new Date().toISOString(),
 					},
 				]
 

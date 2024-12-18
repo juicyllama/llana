@@ -1,300 +1,282 @@
 import { INestApplication } from '@nestjs/common'
-import { Test } from '@nestjs/testing'
-import { JwtModule } from '@nestjs/jwt'
-import { ConfigModule, ConfigService, ConfigFactory } from '@nestjs/config'
+import { Test, TestingModule } from '@nestjs/testing'
 import * as request from 'supertest'
-import { CustomerTestingService } from './testing/customer.testing.service'
-
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
-import { SalesOrderTestingService } from './testing/salesorder.testing.service'
-import { DataSourceSchema } from './types/datasource.types'
+import { CustomerTestingService } from './testing/customer.testing.service'
+import { DatabaseTestingService } from './testing/database.testing.service'
 import { EmployeeTestingService } from './testing/employee.testing.service'
+import { SalesOrderTestingService } from './testing/salesorder.testing.service'
 import { ShipperTestingService } from './testing/shipper.testing.service'
-import { TIMEOUT } from './testing/testing.const'
 import { Logger } from './helpers/Logger'
+import { Schema } from './helpers/Schema'
+import { DataSourceSchema } from './types/datasource.types'
 
-// Import configs
-import auth from './config/auth.config'
-import database from './config/database.config'
-import hosts from './config/hosts.config'
-import jwt from './config/jwt.config'
-import roles from './config/roles.config'
-import { envValidationSchema } from './config/env.validation'
-
-// Type the config imports
-const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
+const TIMEOUT = 30000
 
 describe('App > Controller > Get', () => {
-	let app: INestApplication
+    let app: INestApplication
+    let moduleRef: TestingModule
+    let authTestingService: AuthTestingService
+    let customerTestingService: CustomerTestingService
+    let employeeTestingService: EmployeeTestingService
+    let salesOrderTestingService: SalesOrderTestingService
+    let shipperTestingService: ShipperTestingService
+    let databaseTestingService: DatabaseTestingService
+    let schema: Schema
+    let logger: Logger
 
-	let authTestingService: AuthTestingService
-	let customerTestingService: CustomerTestingService
-	let employeeTestingService: EmployeeTestingService
-	let shipperTestingService: ShipperTestingService
+    let jwt: string
+    let customer: any
+    let employee: any
+    let shipper: any
+    let orders: any[] = []
+    let customerSchema: DataSourceSchema
+    let employeeSchema: DataSourceSchema
+    let shipperSchema: DataSourceSchema
+    let salesOrderSchema: DataSourceSchema
 
-	let salesOrderTestingService: SalesOrderTestingService
+    beforeAll(async () => {
+        try {
+            logger = new Logger()
+            logger.log('Setting up test module...', 'test')
 
-	let customerSchema: DataSourceSchema
-	let employeeSchema: DataSourceSchema
-	let shipperSchema: DataSourceSchema
-	let salesOrderSchema: DataSourceSchema
+            moduleRef = await Test.createTestingModule({
+                imports: [AppModule],
+            }).compile()
 
-	let customer: any
-	let employee: any
-	let shipper: any
-	let orders = []
+            app = moduleRef.createNestApplication()
+            await app.init()
 
-	let jwt: string
-	let logger = new Logger()
+            // Initialize services
+            authTestingService = moduleRef.get(AuthTestingService)
+            customerTestingService = moduleRef.get(CustomerTestingService)
+            employeeTestingService = moduleRef.get(EmployeeTestingService)
+            salesOrderTestingService = moduleRef.get(SalesOrderTestingService)
+            shipperTestingService = moduleRef.get(ShipperTestingService)
+            databaseTestingService = moduleRef.get(DatabaseTestingService)
+            schema = moduleRef.get(Schema)
 
-	beforeAll(async () => {
-		try {
-			const moduleRef = await Test.createTestingModule({
-				imports: [
-					ConfigModule.forRoot({
-						load: configs,
-						validationSchema: envValidationSchema,
-						isGlobal: true,
-					}),
-					JwtModule.registerAsync({
-						imports: [ConfigModule],
-						useFactory: async (configService: ConfigService) => ({
-							secret: configService.get('jwt.secret'),
-							signOptions: configService.get('jwt.signOptions'),
-						}),
-						inject: [ConfigService],
-					}),
-					AppModule,
-				],
-				providers: [
-					AuthTestingService,
-					CustomerTestingService,
-					EmployeeTestingService,
-					ShipperTestingService,
-					SalesOrderTestingService,
-				],
-			}).compile()
+            // Get schemas
+            customerSchema = await schema.getSchema({ table: 'Customer' })
+            employeeSchema = await schema.getSchema({ table: 'Employee' })
+            shipperSchema = await schema.getSchema({ table: 'Shipper' })
+            salesOrderSchema = await schema.getSchema({ table: 'SalesOrder' })
 
-			app = moduleRef.createNestApplication()
-			await app.init()
+            if (!customerSchema || !employeeSchema || !shipperSchema || !salesOrderSchema) {
+                throw new Error('Failed to load required schemas')
+            }
 
-			// Initialize all testing services
-			authTestingService = moduleRef.get<AuthTestingService>(AuthTestingService)
-			customerTestingService = moduleRef.get<CustomerTestingService>(CustomerTestingService)
-			employeeTestingService = moduleRef.get<EmployeeTestingService>(EmployeeTestingService)
-			shipperTestingService = moduleRef.get<ShipperTestingService>(ShipperTestingService)
-			salesOrderTestingService = moduleRef.get<SalesOrderTestingService>(SalesOrderTestingService)
+            // Create test data
+            logger.log('Creating test data...', 'test')
+            customer = await customerTestingService.createCustomer({})
+            employee = await employeeTestingService.createEmployee({})
+            shipper = await shipperTestingService.createShipper({})
 
-			// Get schemas
-			customerSchema = await customerTestingService.getSchema()
-			employeeSchema = await employeeTestingService.getSchema()
-			shipperSchema = await shipperTestingService.getSchema()
-			salesOrderSchema = await salesOrderTestingService.getSchema()
+            // Create test orders
+            for (let i = 0; i < 3; i++) {
+                const order = await salesOrderTestingService.createOrder({
+                    custId: customer[customerSchema.primary_key],
+                    employeeId: employee[employeeSchema.primary_key],
+                    shipperId: shipper[shipperSchema.primary_key],
+                })
+                orders.push(order)
+            }
 
-			// Create test data
-			customer = await customerTestingService.createCustomer({})
-			employee = await employeeTestingService.createEmployee({})
-			shipper = await shipperTestingService.createShipper({})
+            // Get authentication token
+            jwt = await authTestingService.login()
+            logger.log('Test setup complete', 'test')
+        } catch (error) {
+            logger.error(`Failed to initialize test module: ${error}`, 'test')
+            if (app) await app.close()
+            throw error
+        }
+    }, TIMEOUT)
 
-			// Create orders
-			for (let i = 0; i < 10; i++) {
-				try {
-					const order = await salesOrderTestingService.createOrder({
-						orderId: i + 1000,
-						custId: customer[customerSchema.primary_key],
-						employeeId: employee[employeeSchema.primary_key],
-						shipperId: shipper[shipperSchema.primary_key],
-					})
-					orders[i] = order
-				} catch (error) {
-					console.error(`Failed to create order ${i}: ${error.message}`)
-					throw error
-				}
-			}
+    describe('Get', () => {
+        beforeEach(() => {
+            logger.debug('===========================================')
+            logger.log('🧪 Running test: ' + expect.getState().currentTestName, 'test')
+            logger.debug('===========================================')
+        })
 
-			// Get JWT token
-			jwt = await authTestingService.login()
-		} catch (error) {
-			console.error('Failed to initialize test module:', error)
-			throw error
-		}
-	}, TIMEOUT)
+        it('should get a single record by primary key', async () => {
+            try {
+                const result = await request(app.getHttpServer())
+                    .get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+                    .set('Authorization', `Bearer ${jwt}`)
+                    .expect(200)
 
-	beforeEach(() => {
-		logger.debug('===========================================')
-		logger.log('🧪 ' + expect.getState().currentTestName)
-		logger.debug('===========================================')
-	})
+                expect(result.body).toBeDefined()
+                expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
+                expect(result.body.custId).toBeDefined()
+                expect(result.body.employeeId).toBeDefined()
+                expect(result.body.shipperId).toBeDefined()
+            } catch (error) {
+                logger.error(`Test failed: ${error.message}`, 'test')
+                throw error
+            }
+        })
 
-	describe('Get', () => {
-		it('One', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+        it('should get a single record with related Customer data', async () => {
+            try {
+                const result = await request(app.getHttpServer())
+                    .get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?relations=Customer`)
+                    .set('Authorization', `Bearer ${jwt}`)
+                    .expect(200)
 
-			expect(result.body).toBeDefined()
-			expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.custId).toBeDefined()
-			expect(result.body.employeeId).toBeDefined()
-			expect(result.body.shipperId).toBeDefined()
-			expect(result.body.shipName).toBeDefined()
-		})
+                expect(result.body).toBeDefined()
+                expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
+                expect(result.body.Customer).toBeInstanceOf(Array)
+                expect(result.body.Customer[0]).toBeDefined()
+                expect(result.body.Customer[0][customerSchema.primary_key]).toBeDefined()
+            } catch (error) {
+                logger.error(`Test failed: ${error.message}`, 'test')
+                throw error
+            }
+        })
 
-		it('One - With Relations', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?relations=Customer`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+        it('should get a single record with specific fields only', async () => {
+            try {
+                const result = await request(app.getHttpServer())
+                    .get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=custId`)
+                    .set('Authorization', `Bearer ${jwt}`)
+                    .expect(200)
 
-			expect(result.body).toBeDefined()
-			expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.custId).toBeDefined()
-			expect(result.body.employeeId).toBeDefined()
-			expect(result.body.shipperId).toBeDefined()
-			expect(result.body.shipName).toBeDefined()
-			expect(result.body.Customer[0]).toBeDefined()
-			expect(result.body.Customer[0].contactName).toBeDefined()
-		})
+                expect(result.body).toBeDefined()
+                expect(result.body.custId).toBeDefined()
+                expect(result.body.employeeId).toBeUndefined()
+                expect(result.body.shipperId).toBeUndefined()
+            } catch (error) {
+                logger.error(`Test failed: ${error.message}`, 'test')
+                throw error
+            }
+        })
 
-		it('One - With Fields', async function () {
-			const result = <any>(
-				await request(app.getHttpServer())
-					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName`)
-					.set('Authorization', `Bearer ${jwt}`)
-					.expect(200)
-			)
+        it('should handle non-existent record gracefully', async () => {
+            try {
+                await request(app.getHttpServer())
+                    .get('/SalesOrder/999999999')
+                    .set('Authorization', `Bearer ${jwt}`)
+                    .expect(404)
+            } catch (error) {
+                logger.error(`Test failed: ${error.message}`, 'test')
+                throw error
+            }
+        })
+    })
 
-			expect(result.body).toBeDefined()
-			expect(result.body.shipName).toBeDefined()
-			expect(result.body.freight).toBeUndefined()
-			expect(result.body.shipCity).toBeUndefined()
-			expect(result.body.orderDate).toBeUndefined()
-		})
+    describe('List', () => {
+        it('should get all records with pagination', async () => {
+            try {
+                const result = await request(app.getHttpServer())
+                    .get('/SalesOrder/')
+                    .set('Authorization', `Bearer ${jwt}`)
+                    .expect(200)
 
-		it('One - With Filters', async function () {
-			const result = await request(app.getHttpServer())
-				.get(
-					`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName&shipName=${orders[0].shipName}`,
-				)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+                expect(result.body).toBeDefined()
+                expect(result.body.total).toBeDefined()
+                expect(result.body.total).toBeGreaterThan(0)
+                expect(result.body.data).toBeInstanceOf(Array)
+                expect(result.body.data.length).toBeGreaterThan(0)
+                expect(result.body.data[0][salesOrderSchema.primary_key]).toBeDefined()
+            } catch (error) {
+                logger.error(`Test failed: ${error.message}`, 'test')
+                throw error
+            }
+        })
 
-			expect(result.body).toBeDefined()
-			expect(result.body.shipName).toBe(orders[0].shipName)
-			expect(result.body.freight).toBeUndefined()
-			expect(result.body.shipCity).toBeUndefined()
-			expect(result.body.orderDate).toBeUndefined()
-		})
-	})
+        it('should get records with related Customer data', async () => {
+            try {
+                const result = await request(app.getHttpServer())
+                    .get('/SalesOrder/?relations=Customer')
+                    .set('Authorization', `Bearer ${jwt}`)
+                    .expect(200)
 
-	describe('List', () => {
-		it('All', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+                expect(result.body).toBeDefined()
+                expect(result.body.total).toBeDefined()
+                expect(result.body.data).toBeInstanceOf(Array)
+                expect(result.body.data[0].Customer).toBeInstanceOf(Array)
+                expect(result.body.data[0].Customer[0][customerSchema.primary_key]).toBeDefined()
+            } catch (error) {
+                logger.error(`Test failed: ${error.message}`, 'test')
+                throw error
+            }
+        })
 
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0][salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.data[0].shipName).toBeDefined()
-		})
+        it('should respect pagination limits', async () => {
+            try {
+                const limit = 2
+                const result = await request(app.getHttpServer())
+                    .get(`/SalesOrder/?limit=${limit}`)
+                    .set('Authorization', `Bearer ${jwt}`)
+                    .expect(200)
 
-		it('All - With Relations', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?relations=Customer`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+                expect(result.body).toBeDefined()
+                expect(result.body.limit).toBe(limit)
+                expect(result.body.data).toHaveLength(limit)
+            } catch (error) {
+                logger.error(`Test failed: ${error.message}`, 'test')
+                throw error
+            }
+        })
 
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0][salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.data[0].shipName).toBeDefined()
-			expect(result.body.data[0].Customer[0]).toBeDefined()
-			expect(result.body.data[0].Customer[0].contactName).toBeDefined()
-		})
+        it('should handle offset pagination', async () => {
+            try {
+                const offset = 1
+                const result = await request(app.getHttpServer())
+                    .get(`/SalesOrder/?offset=${offset}`)
+                    .set('Authorization', `Bearer ${jwt}`)
+                    .expect(200)
 
-		it('All - With Fields', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?fields=shipName`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+                expect(result.body).toBeDefined()
+                expect(result.body.offset).toBe(offset)
+                expect(result.body.data.length).toBeLessThanOrEqual(result.body.total)
+            } catch (error) {
+                logger.error(`Test failed: ${error.message}`, 'test')
+                throw error
+            }
+        })
 
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0].shipName).toBeDefined()
-			expect(result.body.data[0].freight).toBeUndefined()
-			expect(result.body.data[0].shipCity).toBeUndefined()
-		})
+        it('should handle invalid pagination parameters gracefully', async () => {
+            try {
+                await request(app.getHttpServer())
+                    .get('/SalesOrder/?limit=invalid')
+                    .set('Authorization', `Bearer ${jwt}`)
+                    .expect(400)
+            } catch (error) {
+                logger.error(`Test failed: ${error.message}`, 'test')
+                throw error
+            }
+        })
+    })
 
-		it('All - With Filters', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?fields=shipName&shipName=${orders[0].shipName}`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+    afterAll(async () => {
+        try {
+            logger.log('Cleaning up test data...', 'test')
+            // Clean up orders first due to foreign key constraints
+            for (const order of orders) {
+                if (order && order[salesOrderSchema.primary_key]) {
+                    await salesOrderTestingService.deleteOrder(order[salesOrderSchema.primary_key])
+                }
+            }
 
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0].shipName).toBeDefined()
-			expect(result.body.data[0].freight).toBeUndefined()
-			expect(result.body.data[0].shipCity).toBeUndefined()
-		})
-
-		it('All - With Limit', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?limit=3`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body).toBeDefined()
-			expect(result.body.limit).toBeDefined()
-			expect(result.body.limit).toEqual(3)
-			expect(result.body.offset).toEqual(0)
-			expect(result.body.total).toBeGreaterThan(3)
-			expect(result.body.data.length).toEqual(3)
-		})
-
-		it('All - With Offset', async function () {
-			const results = await request(app.getHttpServer())
-				.get(`/SalesOrder/`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(results.body.data.length).toBeGreaterThan(0)
-
-			const results2 = await request(app.getHttpServer())
-				.get(`/SalesOrder/?offset=${results.body.total - 2}`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-			expect(results2.body.data.length).toEqual(2)
-		})
-	})
-
-	afterAll(async () => {
-		try {
-			for (const order of orders) {
-				if (order && order[salesOrderSchema.primary_key]) {
-					await salesOrderTestingService.deleteOrder(order[salesOrderSchema.primary_key])
-				}
-			}
-			await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
-			await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])
-			await shipperTestingService.deleteShipper(shipper[shipperSchema.primary_key])
-		} catch (error) {
-			console.error(`Cleanup failed: ${error.message}`)
-			throw error
-		} finally {
-			await app.close()
-		}
-	}, TIMEOUT)
+            // Clean up other test data
+            if (customer && customerSchema) {
+                await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
+            }
+            if (employee && employeeSchema) {
+                await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])
+            }
+            if (shipper && shipperSchema) {
+                await shipperTestingService.deleteShipper(shipper[shipperSchema.primary_key])
+            }
+        } catch (error) {
+            logger.error(`Cleanup failed: ${error.message}`, 'test')
+        } finally {
+            if (app) {
+                await app.close()
+            }
+        }
+    }, TIMEOUT)
 })

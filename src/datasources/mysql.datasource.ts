@@ -194,6 +194,7 @@ export class MySQL {
 	 */
 
 	async createTable(schema: DataSourceSchema, x_request_id?: string): Promise<boolean> {
+		let command: string
 		try {
 			const columns = schema.columns.map(column => {
 				let column_string = `\`${column.field}\` ${this.columnTypeToDataSource(column.type)}`
@@ -202,8 +203,10 @@ export class MySQL {
 					column_string += `(${column.extra?.length ?? 255})`
 				}
 
-				if (column.type === DataSourceColumnType.ENUM) {
-					column_string += `(${column.enums?.map(e => `'${e}'`).join(', ')})`
+				if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
+					column_string += `(${column.enums.map(e => `'${e}'`).join(', ')})`
+				} else if (column.type === DataSourceColumnType.ENUM) {
+					column_string = `\`${column.field}\` ${MySQLColumnType.VARCHAR}(255)`
 				}
 
 				if (column.required) {
@@ -218,8 +221,21 @@ export class MySQL {
 					column_string += ' PRIMARY KEY'
 				}
 
-				if (column.default) {
-					column_string += ` DEFAULT ${column.default}`
+				if (column.default !== undefined) {
+					if (column.type === DataSourceColumnType.DATE) {
+						if (column.default === 'CURRENT_TIMESTAMP') {
+							column_string += ' DEFAULT CURRENT_TIMESTAMP'
+							if (column.field === 'updated_at') {
+								column_string += ' ON UPDATE CURRENT_TIMESTAMP'
+							}
+						} else {
+							column_string += ` DEFAULT '${column.default}'`
+						}
+					} else if (typeof column.default === 'string' && column.default !== 'CURRENT_TIMESTAMP') {
+						column_string += ` DEFAULT '${column.default}'`
+					} else {
+						column_string += ` DEFAULT ${column.default}`
+					}
 				}
 
 				if (column.auto_increment) {
@@ -229,24 +245,30 @@ export class MySQL {
 				return column_string
 			})
 
-			const command = `CREATE TABLE ${schema.table} (${columns.join(', ')})`
+			command = `CREATE TABLE IF NOT EXISTS ${schema.table} (${columns.join(', ')})`
+
+			this.logger.debug(
+				`[${DATABASE_TYPE}][createTable] Creating table with command:\n${command}`,
+				x_request_id,
+			)
 
 			await this.query({ sql: command })
 
 			if (schema.relations?.length) {
 				for (const relation of schema.relations) {
-					const command = `ALTER TABLE ${schema.table} ADD FOREIGN KEY (${relation.column}) REFERENCES ${relation.org_table}(${relation.org_column})`
-					await this.query({ sql: command })
+					const relationCommand = `ALTER TABLE ${schema.table} ADD FOREIGN KEY (${relation.column}) REFERENCES ${relation.org_table}(${relation.org_column})`
+					await this.query({ sql: relationCommand })
 				}
 			}
 
 			return true
 		} catch (e) {
+			const errorMessage = e instanceof Error ? e.message : String(e)
 			this.logger.error(
-				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`,
+				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${errorMessage}\nSQL: ${command}`,
 				x_request_id,
 			)
-			return false
+			throw new Error(`Database error: ${errorMessage}`)
 		}
 	}
 
@@ -555,9 +577,9 @@ export class MySQL {
 			case DataSourceColumnType.NUMBER:
 				return MySQLColumnType.INT
 			case DataSourceColumnType.BOOLEAN:
-				return MySQLColumnType.BOOLEAN
+				return MySQLColumnType.TINYINT
 			case DataSourceColumnType.DATE:
-				return MySQLColumnType.DATETIME
+				return MySQLColumnType.TIMESTAMP
 			case DataSourceColumnType.JSON:
 				return MySQLColumnType.JSON
 			case DataSourceColumnType.ENUM:

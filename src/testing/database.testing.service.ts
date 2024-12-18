@@ -87,21 +87,22 @@ export class DatabaseTestingService {
 	}
 
 	async getDatabaseType(): Promise<DataSourceType> {
-		const uri = process.env.DATABASE_URI
-		if (!uri) {
-			throw new Error('DATABASE_URI environment variable is not set')
-		}
+		try {
+			const uri = process.env.DATABASE_URI
+			if (!uri) {
+				throw new Error('DATABASE_URI environment variable is not set')
+			}
 
-		if (uri.includes('mysql')) {
-			return DataSourceType.MYSQL
-		} else if (uri.includes('postgresql')) {
-			return DataSourceType.POSTGRES
-		} else if (uri.includes('mongodb')) {
-			return DataSourceType.MONGODB
-		} else if (uri.includes('mssql')) {
-			return DataSourceType.MSSQL
+			if (uri.includes('mysql')) return DataSourceType.MYSQL
+			if (uri.includes('postgresql')) return DataSourceType.POSTGRES
+			if (uri.includes('mongodb')) return DataSourceType.MONGODB
+			if (uri.includes('mssql')) return DataSourceType.MSSQL
+
+			throw new Error(`Unsupported database type in URI: ${uri}`)
+		} catch (error) {
+			this.logger.error(`Failed to determine database type: ${error.message}`, 'database-testing')
+			throw error
 		}
-		throw new Error('Unsupported database type')
 	}
 
 	async getSchema(table: string): Promise<DataSourceSchema> {
