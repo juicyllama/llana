@@ -32,9 +32,9 @@ export class ErrorHandler {
 			}
 		}
 		if (error.code === '22P02') {
-			return `Type mismatch: value must be a number`
+			return 'Type mismatch: value must be a number'
 		}
-		return error.message || 'Database error'
+		return `Database error: ${error.message || 'Unknown error'}`
 	}
 
 	private handleMySQLError(error: any): string {
@@ -46,9 +46,9 @@ export class ErrorHandler {
 			}
 		}
 		if (error.code === 'ER_TRUNCATED_WRONG_VALUE' || error.code === 'ER_BAD_FIELD_ERROR') {
-			return `Type mismatch: value must be a number`
+			return 'Type mismatch: value must be a number'
 		}
-		return error.message || 'Database error'
+		return `Database error: ${error.message || 'Unknown error'}`
 	}
 
 	private handleMongoError(error: any): string {
@@ -58,9 +58,9 @@ export class ErrorHandler {
 			return `${field} already exists with value '${value}'`
 		}
 		if (error.name === 'CastError') {
-			return `Type mismatch: value must be a number`
+			return 'Type mismatch: value must be a number'
 		}
-		return error.message || 'Database error'
+		return `Database error: ${error.message || 'Unknown error'}`
 	}
 
 	private handleMSSQLError(error: any): string {
@@ -72,11 +72,10 @@ export class ErrorHandler {
 				const [, , field] = match
 				return `${field} already exists`
 			}
-			return `Unique constraint violation: ${error.message}`
 		}
 		if (error.number === 8114) {
-			return `Type mismatch: value must be a number`
+			return 'Type mismatch: value must be a number'
 		}
-		return error.message || 'Database error'
+		return `Database error: ${error.message || 'Unknown error'}`
 	}
 }
