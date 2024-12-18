@@ -197,16 +197,14 @@ export class MySQL {
 		let command: string
 		try {
 			const columns = schema.columns.map(column => {
-				let column_string = `\`${column.field}\` ${this.columnTypeToDataSource(column.type)}`
-
-				if (column.type === DataSourceColumnType.STRING) {
-					column_string += `(${column.extra?.length ?? 255})`
-				}
+				let column_string = `\`${column.field}\``
 
 				if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
-					column_string += `(${column.enums.map(e => `'${e}'`).join(', ')})`
-				} else if (column.type === DataSourceColumnType.ENUM) {
-					column_string = `\`${column.field}\` ${MySQLColumnType.VARCHAR}(255)`
+					column_string += ` ${MySQLColumnType.ENUM}(${column.enums.map(e => `'${e.replace(/'/g, "''")}'`).join(', ')})`
+				} else if (column.type === DataSourceColumnType.STRING) {
+					column_string += ` ${MySQLColumnType.VARCHAR}(${column.extra?.length ?? 255})`
+				} else {
+					column_string += ` ${this.columnTypeToDataSource(column.type)}`
 				}
 
 				if (column.required) {

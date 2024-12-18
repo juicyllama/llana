@@ -182,12 +182,13 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						field: 'public_records',
-						type: DataSourceColumnType.STRING,
+						type: DataSourceColumnType.ENUM,
 						nullable: false,
 						required: true,
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
+						enums: ['NONE', 'READ', 'WRITE', 'DELETE'],
 					},
 					{
 						field: 'created_at',
