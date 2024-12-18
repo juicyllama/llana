@@ -206,28 +206,22 @@ export class MySQL {
 
 				this.logger.debug(
 					`[${DATABASE_TYPE}][createTable] Processing column ${column.field}:
-					Raw type: ${column.type}
-					Type constructor: ${column.type?.constructor?.name}
-					Type values: ${JSON.stringify(column)}`,
+					Type: ${column.type}
+					Enums: ${column.enums ? JSON.stringify(column.enums) : 'none'}`,
 					x_request_id,
 				)
 
 				const columnType = this.columnTypeToDataSource(column.type)
 
-				this.logger.debug(
-					`[${DATABASE_TYPE}][createTable] Mapping column ${column.field}: ${column.type} -> ${columnType}`,
-					x_request_id,
-				)
-
 				if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
-					// Double escape single quotes in enum values and wrap in quotes
+					// Properly format enum values with escaped quotes
 					const enumValues = column.enums
 						.map(e => `'${e.replace(/'/g, "''")}'`)
-						.join(', ')
+						.join(',')
 					column_string += ` ${columnType}(${enumValues})`
 
 					this.logger.debug(
-						`[${DATABASE_TYPE}][createTable] Creating ENUM column ${column.field} with values: ${enumValues}`,
+						`[${DATABASE_TYPE}][createTable] Created ENUM column ${column.field} with values: ${enumValues}`,
 						x_request_id,
 					)
 				} else if (column.type === DataSourceColumnType.STRING) {
@@ -252,12 +246,8 @@ export class MySQL {
 					column_string += ' NULL'
 				}
 
-				if (column.unique_key) {
-					column_string += ' UNIQUE'
-				}
-
-				if (column.primary_key) {
-					column_string += ' PRIMARY KEY'
+				if (column.auto_increment) {
+					column_string += ' AUTO_INCREMENT'
 				}
 
 				if (column.default !== undefined && column.type !== DataSourceColumnType.DATE) {
@@ -268,10 +258,6 @@ export class MySQL {
 					} else {
 						column_string += ` DEFAULT ${column.default}`
 					}
-				}
-
-				if (column.auto_increment) {
-					column_string += ' AUTO_INCREMENT'
 				}
 
 				return column_string
@@ -604,35 +590,56 @@ export class MySQL {
 
 	private columnTypeToDataSource(type: DataSourceColumnType): MySQLColumnType {
 		this.logger.debug(
-			`[${DATABASE_TYPE}][columnTypeToDataSource] Converting type: ${type}`,
+			`[${DATABASE_TYPE}][columnTypeToDataSource] Converting type:
+			Input type: ${type}
+			Type of input: ${typeof type}
+			Valid types: ${Object.values(DataSourceColumnType).join(', ')}
+			Is valid type: ${Object.values(DataSourceColumnType).includes(type)}`,
 		)
 
-		if (!Object.values(DataSourceColumnType).includes(type)) {
+		const validTypes = Object.values(DataSourceColumnType)
+		if (!validTypes.includes(type)) {
 			this.logger.error(
-				`[${DATABASE_TYPE}][columnTypeToDataSource] Invalid DataSourceColumnType: ${type}`,
+				`[${DATABASE_TYPE}][columnTypeToDataSource] Invalid DataSourceColumnType:
+				Received: ${type}
+				Type of received: ${typeof type}
+				Expected one of: ${validTypes.join(', ')}`,
 			)
 			throw new Error(`Invalid data type: ${type}`)
 		}
 
+		let mysqlType: MySQLColumnType
 		switch (type) {
 			case DataSourceColumnType.STRING:
-				return MySQLColumnType.VARCHAR
+				mysqlType = MySQLColumnType.VARCHAR
+				break
 			case DataSourceColumnType.NUMBER:
-				return MySQLColumnType.INT
+				mysqlType = MySQLColumnType.INT
+				break
 			case DataSourceColumnType.BOOLEAN:
-				return MySQLColumnType.TINYINT
+				mysqlType = MySQLColumnType.TINYINT
+				break
 			case DataSourceColumnType.DATE:
-				return MySQLColumnType.DATETIME
+				mysqlType = MySQLColumnType.DATETIME
+				break
 			case DataSourceColumnType.JSON:
-				return MySQLColumnType.JSON
+				mysqlType = MySQLColumnType.JSON
+				break
 			case DataSourceColumnType.ENUM:
-				return MySQLColumnType.ENUM
+				mysqlType = MySQLColumnType.ENUM
+				break
 			default:
 				this.logger.error(
 					`[${DATABASE_TYPE}][columnTypeToDataSource] Unhandled DataSourceColumnType: ${type}`,
 				)
 				throw new Error(`Invalid data type: ${type}`)
 		}
+
+		this.logger.debug(
+			`[${DATABASE_TYPE}][columnTypeToDataSource] Successfully mapped ${type} to MySQL type ${mysqlType}`,
+		)
+
+		return mysqlType
 	}
 
 	/**
