@@ -161,7 +161,7 @@ export class Query {
 			// Use ErrorHandler to get descriptive error message
 			const errorMessage = this.errorHandler.handleDatabaseError(e, datasourceType)
 
-			let pluralAction = this.getActionDescription(action)
+			const pluralAction = this.getActionDescription(action)
 			throw new Error(`Error ${pluralAction}: ${errorMessage}`)
 		}
 	}
@@ -483,6 +483,10 @@ export class Query {
 	/**
 	 * Check if connection is alive
 	 */
+
+	async getDatabaseType(): Promise<DataSourceType> {
+		return (this.configService.get<string>('database.type') as DataSourceType) || DataSourceType.POSTGRES
+	}
 
 	private async checkConnection(options: { x_request_id?: string }): Promise<boolean> {
 		switch (this.configService.get<string>('database.type')) {

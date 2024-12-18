@@ -41,6 +41,7 @@ import { RedisMockWithPubSub } from './modules/websocket/redis-mock-with-pub-sub
 import { REDIS_PUB_CLIENT_TOKEN, REDIS_SUB_CLIENT_TOKEN } from './modules/websocket/websocket.constants'
 import { WebsocketGateway } from './modules/websocket/websocket.gateway'
 import { WebsocketService } from './modules/websocket/websocket.service'
+import { DatabaseTestingService } from './testing/database.testing.service'
 import { Env } from './utils/Env'
 
 const singleServerRedisPubsub = new RedisMockWithPubSub() // in-memory pubsub for testing or single server setup
@@ -80,6 +81,7 @@ function createPubSubOnlyRedisClient() {
 		AppBootup,
 		AuthService,
 		Authentication,
+		DatabaseTestingService,
 		Documentation,
 		Encryption,
 		ErrorHandler,
@@ -112,6 +114,7 @@ function createPubSubOnlyRedisClient() {
 		AppBootup,
 		AuthService,
 		Authentication,
+		DatabaseTestingService,
 		Documentation,
 		Encryption,
 		ErrorHandler,

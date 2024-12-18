@@ -16,6 +16,8 @@ export class ErrorHandler {
 				return this.handleMySQLError(error)
 			case DataSourceType.MONGODB:
 				return this.handleMongoError(error)
+			case DataSourceType.MSSQL:
+				return this.handleMSSQLError(error)
 			default:
 				return `Database error: ${error.message}`
 		}
@@ -60,5 +62,21 @@ export class ErrorHandler {
 			return `Invalid type: Cannot cast ${error.value} to ${error.kind} for field ${error.path}`
 		}
 		return error.message || 'Unknown MongoDB error'
+	}
+
+	private handleMSSQLError(error: any): string {
+		if (error.number === 2627) {
+			const match = error.message.match(
+				/Violation of (UNIQUE|PRIMARY KEY) constraint '(.+?)'\. Cannot insert duplicate key/,
+			)
+			if (match) {
+				return `Unique constraint violation: ${match[2]}`
+			}
+			return `Unique constraint violation: ${error.message}`
+		}
+		if (error.number === 8114) {
+			return `Invalid type: ${error.message}`
+		}
+		return error.message || 'Unknown MSSQL error'
 	}
 }
