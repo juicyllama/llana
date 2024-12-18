@@ -37,10 +37,10 @@ import { Schema } from './Schema'
 @Injectable()
 export class Query {
 	constructor(
-		private readonly configService: ConfigService,
-		private readonly encryption: Encryption,
 		private readonly logger: Logger,
+		private readonly configService: ConfigService,
 		private readonly schema: Schema,
+		private readonly encryption: Encryption,
 		private readonly mysql: MySQL,
 		private readonly mssql: MSSQL,
 		private readonly postgres: Postgres,
@@ -154,9 +154,9 @@ export class Query {
 		} catch (e) {
 			this.logger.error(`[Query][${action.toUpperCase()}][${table_name}] ${e.message}`, x_request_id)
 
-			// Get datasource type from schema
-			const schema = await this.schema.getSchema({ table: table_name, x_request_id })
-			const datasourceType = schema?.datasource?.type || DataSourceType.POSTGRES
+			// Get datasource type from config
+			const datasourceType =
+				(this.configService.get<string>('database.type') as DataSourceType) || DataSourceType.POSTGRES
 
 			// Use ErrorHandler to get descriptive error message
 			const errorMessage = this.errorHandler.handleDatabaseError(e, datasourceType)
