@@ -206,7 +206,10 @@ export class MySQL {
 				)
 
 				if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
-					const enumValues = column.enums.map(e => `'${e.replace(/'/g, "''")}'`).join(', ')
+					// Double escape single quotes in enum values and wrap in quotes
+					const enumValues = column.enums
+						.map(e => `'${e.replace(/'/g, "''")}'`)
+						.join(', ')
 					column_string += ` ${columnType}(${enumValues})`
 
 					this.logger.debug(
@@ -223,6 +226,8 @@ export class MySQL {
 							column_string += ' ON UPDATE CURRENT_TIMESTAMP'
 						}
 					}
+				} else if (column.type === DataSourceColumnType.BOOLEAN) {
+					column_string += ` ${columnType}(1)`
 				} else {
 					column_string += ` ${columnType}`
 				}
@@ -265,7 +270,7 @@ export class MySQL {
 				x_request_id,
 			)
 
-			await this.query({ sql: command })
+			await this.query({ sql: command, x_request_id })
 
 			if (schema.relations?.length) {
 				for (const relation of schema.relations) {
@@ -583,7 +588,7 @@ export class MySQL {
 	 * Convert DataSourceColumnType to MySQL column type
 	 */
 
-	private columnTypeToDataSource(type: DataSourceColumnType): string {
+	private columnTypeToDataSource(type: DataSourceColumnType): MySQLColumnType {
 		switch (type) {
 			case DataSourceColumnType.STRING:
 				return MySQLColumnType.VARCHAR
@@ -592,13 +597,13 @@ export class MySQL {
 			case DataSourceColumnType.BOOLEAN:
 				return MySQLColumnType.TINYINT
 			case DataSourceColumnType.DATE:
-				return MySQLColumnType.TIMESTAMP
+				return MySQLColumnType.DATETIME
 			case DataSourceColumnType.JSON:
 				return MySQLColumnType.JSON
 			case DataSourceColumnType.ENUM:
 				return MySQLColumnType.ENUM
 			default:
-				return MySQLColumnType.VARCHAR
+				throw new Error(`Invalid data type: ${type}`)
 		}
 	}
 
