@@ -196,8 +196,22 @@ export class MySQL {
 	async createTable(schema: DataSourceSchema, x_request_id?: string): Promise<boolean> {
 		let command: string
 		try {
+			this.logger.debug(
+				`[${DATABASE_TYPE}][createTable] Creating table ${schema.table} with schema:\n${JSON.stringify(schema, null, 2)}`,
+				x_request_id,
+			)
+
 			const columns = schema.columns.map(column => {
 				let column_string = `\`${column.field}\``
+
+				this.logger.debug(
+					`[${DATABASE_TYPE}][createTable] Processing column ${column.field}:
+					Raw type: ${column.type}
+					Type constructor: ${column.type?.constructor?.name}
+					Type values: ${JSON.stringify(column)}`,
+					x_request_id,
+				)
+
 				const columnType = this.columnTypeToDataSource(column.type)
 
 				this.logger.debug(
@@ -589,6 +603,17 @@ export class MySQL {
 	 */
 
 	private columnTypeToDataSource(type: DataSourceColumnType): MySQLColumnType {
+		this.logger.debug(
+			`[${DATABASE_TYPE}][columnTypeToDataSource] Converting type: ${type}`,
+		)
+
+		if (!Object.values(DataSourceColumnType).includes(type)) {
+			this.logger.error(
+				`[${DATABASE_TYPE}][columnTypeToDataSource] Invalid DataSourceColumnType: ${type}`,
+			)
+			throw new Error(`Invalid data type: ${type}`)
+		}
+
 		switch (type) {
 			case DataSourceColumnType.STRING:
 				return MySQLColumnType.VARCHAR
@@ -603,6 +628,9 @@ export class MySQL {
 			case DataSourceColumnType.ENUM:
 				return MySQLColumnType.ENUM
 			default:
+				this.logger.error(
+					`[${DATABASE_TYPE}][columnTypeToDataSource] Unhandled DataSourceColumnType: ${type}`,
+				)
 				throw new Error(`Invalid data type: ${type}`)
 		}
 	}
