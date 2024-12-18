@@ -19,7 +19,7 @@ export class ErrorHandler {
 			case DataSourceType.MSSQL:
 				return this.handleMSSQLError(error)
 			default:
-				return `Database error: ${error.message}`
+				return `Unknown ${datasourceType} error${error.message ? ': ' + error.message : ''}`
 		}
 	}
 
@@ -35,7 +35,7 @@ export class ErrorHandler {
 			// Invalid text representation
 			return `Invalid type: ${error.message}`
 		}
-		return error.message || 'Unknown PostgreSQL error'
+		return 'Unknown PostgreSQL error'
 	}
 
 	private handleMySQLError(error: any): string {
@@ -48,12 +48,11 @@ export class ErrorHandler {
 		if (error.code === 'ER_TRUNCATED_WRONG_VALUE') {
 			return `Invalid type: ${error.message}`
 		}
-		return error.message || 'Unknown MySQL error'
+		return 'Unknown MySQL error'
 	}
 
 	private handleMongoError(error: any): string {
 		if (error.code === 11000) {
-			// Duplicate key error
 			const field = Object.keys(error.keyPattern)[0]
 			const value = error.keyValue[field]
 			return `Unique constraint violation: ${field} already exists with value '${value}'`
@@ -61,7 +60,7 @@ export class ErrorHandler {
 		if (error.name === 'CastError') {
 			return `Invalid type: Cannot cast ${error.value} to ${error.kind} for field ${error.path}`
 		}
-		return error.message || 'Unknown MongoDB error'
+		return 'Unknown MongoDB error'
 	}
 
 	private handleMSSQLError(error: any): string {
@@ -77,6 +76,6 @@ export class ErrorHandler {
 		if (error.number === 8114) {
 			return `Invalid type: ${error.message}`
 		}
-		return error.message || 'Unknown MSSQL error'
+		return 'Unknown MSSQL error'
 	}
 }
