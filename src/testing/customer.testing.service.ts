@@ -17,19 +17,18 @@ export class CustomerTestingService {
 
 	mockCustomer(): any {
 		return {
-			custId: faker.number.int({
-				min: 1000,
-				max: 9999,
-			}),
-			companyName: faker.company.name(),
-			contactName: faker.person.firstName() + ', ' + faker.person.lastName(),
-			contactTitle: faker.person.prefix(),
-			address: faker.location.streetAddress(),
-			city: faker.location.city().substring(0, 10),
-			region: faker.location.state(),
-			postalCode: faker.location.zipCode(),
-			country: faker.location.countryCode(),
-			email: faker.internet.email(),
+			companyName: faker.company.name().substring(0, 40),
+			contactName: (faker.person.firstName() + ', ' + faker.person.lastName()).substring(0, 30),
+			contactTitle: faker.person.prefix().substring(0, 30),
+			address: faker.location.streetAddress().substring(0, 60),
+			city: faker.location.city().substring(0, 15),
+			region: faker.location.state().substring(0, 15),
+			postalCode: faker.location.zipCode().substring(0, 10),
+			country: faker.location.countryCode().substring(0, 15),
+			email: faker.internet.email().substring(0, 225),
+			phone: faker.phone.number().substring(0, 24),
+			mobile: faker.phone.number().substring(0, 24),
+			fax: faker.phone.number().substring(0, 24),
 		}
 	}
 
@@ -37,19 +36,17 @@ export class CustomerTestingService {
 		return await this.schema.getSchema({ table })
 	}
 
-	async createCustomer(customer: any): Promise<any> {
+	async createCustomer(customer: any = this.mockCustomer()): Promise<any> {
 		const customerTableSchema = await this.schema.getSchema({ table })
 
-		const CUSTOMER = this.mockCustomer()
+		// Ensure we're not trying to set the auto-increment ID
+		const { custId, ...customerData } = customer
 
 		return (await this.query.perform(
 			QueryPerform.CREATE,
 			{
 				schema: customerTableSchema,
-				data: {
-					...CUSTOMER,
-					...customer,
-				},
+				data: customerData,
 			},
 			'testing',
 		)) as FindOneResponseObject
