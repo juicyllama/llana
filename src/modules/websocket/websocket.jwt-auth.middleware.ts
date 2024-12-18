@@ -34,12 +34,17 @@ export const WebsocketJwtAuthMiddleware = (
 				logger.debug('[WebsocketJwtAuthMiddleware] Socket Host Failed - Unauthorized')
 				return next(new Error('Forbidden'))
 			}
-
 			if (authentication.skipAuth()) {
 				logger.debug(`[WebsocketJwtAuthMiddleware] Skipping authentication due to SKIP_AUTH being true`)
+				// Even in skip auth mode, we should validate the token format
+				try {
+					const payload = WebsocketJwtAuthGuard.validateToken(client)
+					client.user = { sub: payload.sub, table: client.handshake.headers['x-llana-table'].toString() }
+				} catch (err) {
+					return next(new Error('Invalid token format'))
+				}
 				return next()
 			}
-
 			const payload = WebsocketJwtAuthGuard.validateToken(client)
 			client.user = { sub: payload.sub, table: client.handshake.headers['x-llana-table'].toString() }
 			logger.debug(`[WebsocketJwtAuthMiddleware] User ${payload.sub} authenticated`)
