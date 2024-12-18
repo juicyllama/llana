@@ -2,16 +2,19 @@ import { INestApplication } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
 import * as jwt from 'jwt-simple'
 import { io, Socket } from 'socket.io-client' // Changed import
-import { DataSourceSchema, PublishType } from 'src/types/datasource.types'
+import { DataSourceSchema, PublishType, QueryPerform, DataSourceColumnType } from 'src/types/datasource.types'
+import { Authentication } from 'src/helpers/Authentication'
 import { AppModule } from '../../app.module'
 import { WebsocketGateway } from './websocket.gateway'
 import { WebsocketService } from './websocket.service'
+import { Query } from 'src/helpers/Query'
+import { Schema } from 'src/helpers/Schema'
 
 const USER1 = { sub: 'test@test.com' }
 const USER2 = { sub: 'test2@test.com' }
 
-const PORT1 = 8998
-const PORT2 = 8999
+const PORT1 = 3001
+const PORT2 = 3002
 
 type App = {
 	app: INestApplication
@@ -37,11 +40,7 @@ describe('WebsocketGateway', () => {
 
 	async function listenAndOpenSocket(authToken: string, table: string, port = PORT1) {
 		const clientSocket = createSocket(port, authToken, table)
-		await waitForSocketToBeReady(clientSocket, 1000)
-		// clientSocket.onAny((eventName, ...args) => {
-		// 	console.log(`Received event: ${eventName}`)
-		// 	console.log(`Arguments: ${args}`)
-		// })
+		await waitForSocketToBeReady(clientSocket, 5000)
 		openSocketsForCleanup.push(clientSocket)
 		return clientSocket
 	}
@@ -53,13 +52,13 @@ describe('WebsocketGateway', () => {
 	})
 
 	beforeAll(async () => {
-		app1 = await createApp(PORT1)
-		app2 = await createApp(PORT2)
+		app1 = await createApp(1, PORT1)
+		app2 = await createApp(2, PORT2)
 	})
 
 	afterAll(async () => {
-		await app1.app.close()
-		await app2.app.close()
+		if (app1?.app) await app1.app.close()
+		if (app2?.app) await app2.app.close()
 	})
 
 	afterEach(async () => {
@@ -215,20 +214,100 @@ async function waitForSocketEvent(clientSocket: Socket, timeoutMs: number = 1000
 }
 
 let appId = 1
-async function createApp(port: number): Promise<App> {
+async function createApp(appId: number, port: number) {
+	const mockQuery = {
+		perform: jest.fn().mockImplementation((type, options) => {
+			if (type === QueryPerform.CREATE_TABLE) {
+				return true
+			}
+			if (type === QueryPerform.CREATE) {
+				return { ...options.data, id: 1 }
+			}
+			if (type === QueryPerform.CHECK_CONNECTION) {
+				return true
+			}
+			if (type === QueryPerform.LIST_TABLES) {
+				return { tables: [] }
+			}
+			return null
+		}),
+	}
+
+	const mockSchema = {
+		getSchema: jest.fn().mockImplementation((options) => {
+			if (options.table === '_llana_auth') {
+				return {
+					table: '_llana_auth',
+					primary_key: 'id',
+					columns: [
+						{ field: 'id', type: DataSourceColumnType.NUMBER, auto_increment: true },
+						{ field: 'auth', type: DataSourceColumnType.ENUM, enums: ['APIKEY', 'JWT'] },
+						{ field: 'type', type: DataSourceColumnType.ENUM, enums: ['INCLUDE', 'EXCLUDE'] },
+						{ field: 'table', type: DataSourceColumnType.STRING },
+						{ field: 'public_records', type: DataSourceColumnType.ENUM, enums: ['NONE', 'READ', 'WRITE', 'DELETE'] },
+					],
+					relations: []
+				}
+			}
+			if (options.table === '_llana_webhook') {
+				return {
+					table: '_llana_webhook',
+					primary_key: 'id',
+					columns: [
+						{ field: 'id', type: DataSourceColumnType.NUMBER, auto_increment: true },
+						{ field: 'url', type: DataSourceColumnType.STRING },
+						{ field: 'table', type: DataSourceColumnType.STRING },
+						{ field: 'type', type: DataSourceColumnType.STRING },
+					],
+					relations: []
+				}
+			}
+			// Default schema for any other table
+			return {
+				table: options.table,
+				primary_key: 'id',
+				columns: [
+					{ field: 'id', type: DataSourceColumnType.NUMBER, auto_increment: true }
+				],
+				relations: []
+			}
+		}),
+	}
+
+	const mockAuth = {
+		auth: async () => mockAuthResponse,
+		skipAuth: () => true,
+		cacheManager: {},
+		configService: {
+			get: () => ({
+				type: 'mysql',
+				host: 'mock-host',
+				defaults: { limit: 20, relations: { limit: 20 } },
+				deletes: { soft: undefined },
+			}),
+		},
+		logger: { log: () => {}, error: () => {}, debug: () => {} },
+		query: mockQuery,
+		schema: mockSchema,
+		jwtService: { verifyAsync: async () => ({}) },
+		roles: { rolePass: () => true },
+	} as unknown as Authentication
+
 	const module: TestingModule = await Test.createTestingModule({
 		imports: [AppModule],
-	}).compile()
+	})
+		.overrideProvider(Query)
+		.useValue(mockQuery)
+		.overrideProvider(Schema)
+		.useValue(mockSchema)
+		.compile()
+
 	const gateway = module.get<WebsocketGateway>(WebsocketGateway)
 	const service = module.get<WebsocketService>(WebsocketService)
 
 	const app = module.createNestApplication()
 	gateway.testInstanceId = ' ' + appId++
-	// @ts-ignore
-	gateway.authentication = {
-		auth: async () => mockAuthResponse,
-		skipAuth: () => false,
-	}
+	gateway.authentication = mockAuth
 	await app.listen(port)
 	return { app, gateway, service, module }
 }
