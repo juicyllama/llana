@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common'
 
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
-import { DataSourceSchema, DataSourceType, QueryPerform } from '../types/datasource.types'
+import type { DataSourceSchema } from '../types/datasource.types'
+import { DataSourceType, QueryPerform } from '../types/datasource.types'
 import { CustomerTestingService } from './customer.testing.service'
 import { UserTestingService } from './user.testing.service'
 
@@ -15,12 +16,27 @@ export class DatabaseTestingService {
 		private readonly userTestingService: UserTestingService,
 	) {}
 
-	async createDuplicateError(): Promise<any> {
+	async createDuplicateError(dbType?: DataSourceType): Promise<any> {
 		const customerSchema = await this.schema.getSchema({ table: 'Customer' })
-		const customer = await this.customerTestingService.createCustomer({})
+
+		// Use specific field based on database type
+		const uniqueField = dbType === DataSourceType.MONGODB ? '_id' : 'custId'
+		const customer = await this.customerTestingService.createCustomer({
+			[uniqueField]: 'test-duplicate-id',
+		})
 
 		try {
-			// Attempt to create duplicate record
+			// Create first record
+			await this.query.perform(
+				QueryPerform.CREATE,
+				{
+					schema: customerSchema,
+					data: customer,
+				},
+				'testing',
+			)
+
+			// Attempt to create duplicate record to trigger error
 			await this.query.perform(
 				QueryPerform.CREATE,
 				{
@@ -40,11 +56,16 @@ export class DatabaseTestingService {
 		throw new Error('Expected duplicate error was not thrown')
 	}
 
-	async createTypeMismatchError(): Promise<any> {
+	async createTypeMismatchError(dbType?: DataSourceType): Promise<any> {
 		const customerSchema = await this.schema.getSchema({ table: 'Customer' })
+
+		// Create type mismatch based on database type
+		const invalidValue =
+			dbType === DataSourceType.MONGODB ? { $invalid: 'mongodb-specific-invalid-operator' } : 'not-a-number'
+
 		const invalidData = {
 			...(await this.customerTestingService.mockCustomer()),
-			custId: 'not-a-number', // Force type mismatch for numeric field
+			custId: invalidValue,
 		}
 
 		try {

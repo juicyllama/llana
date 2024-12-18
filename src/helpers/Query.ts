@@ -485,7 +485,7 @@ export class Query {
 	 */
 
 	async getDatabaseType(): Promise<DataSourceType> {
-		return (this.configService.get<string>('database.type') as DataSourceType) || DataSourceType.POSTGRES
+		return this.configService.get<DataSourceType>('database.type') || DataSourceType.POSTGRES
 	}
 
 	private async checkConnection(options: { x_request_id?: string }): Promise<boolean> {

@@ -29,6 +29,7 @@ import {
 import { MySQLColumnType } from '../types/datasources/mysql.types'
 import { SortCondition } from '../types/schema.types'
 import { replaceQ } from '../utils/String'
+import { ErrorHandler } from '../helpers/ErrorHandler'
 
 const DATABASE_TYPE = DataSourceType.MYSQL
 
@@ -38,6 +39,7 @@ export class MySQL {
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
 		private readonly pagination: Pagination,
+		private readonly errorHandler: ErrorHandler,
 	) {}
 
 	/**
@@ -94,10 +96,11 @@ export class MySQL {
 				sql: replaceQ(options.sql, options.values),
 				error: {
 					message: e.message,
+					code: e.code,
 				},
 			})
 			connection.end()
-			throw new Error(e)
+			throw this.errorHandler.handleDatabaseError(e, DataSourceType.MYSQL)
 		}
 	}
 

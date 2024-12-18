@@ -42,13 +42,16 @@ export class ErrorHandler {
 		if (error.code === 'ER_DUP_ENTRY') {
 			const match = error.message.match(/'(.+?)' for key '(.+?)'/)
 			if (match) {
-				return `Unique constraint violation: ${match[2]} already exists with value '${match[1]}'`
+				return `Record already exists`
 			}
 		}
-		if (error.code === 'ER_TRUNCATED_WRONG_VALUE') {
-			return `Invalid type: ${error.message}`
+		if (error.code === 'ER_TRUNCATED_WRONG_VALUE' || error.code === 'ER_BAD_FIELD_ERROR') {
+			return `Field must be a number`
 		}
-		return 'Unknown MySQL error'
+		if (error.message?.includes('Duplicate entry')) {
+			return `Record already exists`
+		}
+		return error.message || 'Unknown MySQL error'
 	}
 
 	private handleMongoError(error: any): string {

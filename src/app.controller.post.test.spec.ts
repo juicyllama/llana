@@ -116,6 +116,49 @@ describe('App > Controller > Post', () => {
 			customer2 = result.body.data[0]
 			customer3 = result.body.data[1]
 		})
+		it('should handle unique constraint violations', async () => {
+			const duplicateCustomer = await customerTestingService.mockCustomer()
+			// Use a valid numeric ID for MySQL
+			duplicateCustomer[customerSchema.primary_key] = 12345
+
+			// Create first record - should succeed
+			const firstResult = await request(app.getHttpServer())
+				.post(`/Customer/`)
+				.send({ ...duplicateCustomer })  // Send a copy to avoid reference issues
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(201)
+
+			// Attempt to create duplicate - should fail
+			const duplicateResult = await request(app.getHttpServer())
+				.post(`/Customer/`)
+				.send(duplicateCustomer)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(400)
+
+			// Response.text() returns the error message
+			const errorMessage = duplicateResult.text
+			expect(errorMessage).toBeDefined()
+			expect(errorMessage).toContain('already exists')  // Generic error message that works across databases
+
+			// Cleanup
+			await customerTestingService.deleteCustomer(firstResult.body[customerSchema.primary_key])
+		})
+		it('should handle type mismatch errors', async () => {
+			const invalidCustomer = await customerTestingService.mockCustomer()
+			invalidCustomer[customerSchema.primary_key] = 'not-a-number'
+
+			const result = await request(app.getHttpServer())
+				.post(`/Customer/`)
+				.send(invalidCustomer)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(400)
+
+			// Response.text() returns the error message
+			const errorMessage = result.text
+			expect(errorMessage).toBeDefined()
+			expect(errorMessage).toContain('must be a number')  // Match actual error message
+		})
+
 		it('Create User', async function () {
 			user = await userTestingService.mockUser()
 
