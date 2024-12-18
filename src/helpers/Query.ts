@@ -30,6 +30,7 @@ import {
 } from '../types/datasource.types'
 import { Env } from '../utils/Env'
 import { Encryption } from './Encryption'
+import { ErrorHandler } from './ErrorHandler'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
 
@@ -45,6 +46,7 @@ export class Query {
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
 		private readonly airtable: Airtable,
+		private readonly errorHandler: ErrorHandler,
 	) {}
 
 	async perform(
@@ -152,33 +154,34 @@ export class Query {
 		} catch (e) {
 			this.logger.error(`[Query][${action.toUpperCase()}][${table_name}] ${e.message}`, x_request_id)
 
-			let pluralAction
+			// Get datasource type from schema
+			const schema = await this.schema.getSchema({ table: table_name, x_request_id })
+			const datasourceType = schema?.datasource?.type || DataSourceType.POSTGRES
 
-			switch (action) {
-				case QueryPerform.CREATE:
-					pluralAction = 'creating record'
-					break
-				case QueryPerform.FIND_ONE:
-					pluralAction = 'finding record'
-					break
-				case QueryPerform.FIND_MANY:
-					pluralAction = 'finding records'
-					break
-				case QueryPerform.UPDATE:
-					pluralAction = 'updating record'
-					break
-				case QueryPerform.DELETE:
-					pluralAction = 'deleting record'
-					break
-				case QueryPerform.UNIQUE:
-					pluralAction = 'checking uniqueness'
-					break
-				default:
-					pluralAction = 'performing action'
-					break
-			}
+			// Use ErrorHandler to get descriptive error message
+			const errorMessage = this.errorHandler.handleDatabaseError(e, datasourceType)
 
-			throw new Error(`Error ${pluralAction}`)
+			let pluralAction = this.getActionDescription(action)
+			throw new Error(`Error ${pluralAction}: ${errorMessage}`)
+		}
+	}
+
+	private getActionDescription(action: QueryPerform): string {
+		switch (action) {
+			case QueryPerform.CREATE:
+				return 'creating record'
+			case QueryPerform.FIND_ONE:
+				return 'finding record'
+			case QueryPerform.FIND_MANY:
+				return 'finding records'
+			case QueryPerform.UPDATE:
+				return 'updating record'
+			case QueryPerform.DELETE:
+				return 'deleting record'
+			case QueryPerform.UNIQUE:
+				return 'checking uniqueness'
+			default:
+				return 'performing action'
 		}
 	}
 

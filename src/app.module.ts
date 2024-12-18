@@ -28,6 +28,7 @@ import { Postgres } from './datasources/postgres.datasource'
 import { Authentication } from './helpers/Authentication'
 import { Documentation } from './helpers/Documentation'
 import { Encryption } from './helpers/Encryption'
+import { ErrorHandler } from './helpers/ErrorHandler'
 import { Logger } from './helpers/Logger'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
@@ -81,6 +82,7 @@ function createPubSubOnlyRedisClient() {
 		Authentication,
 		Documentation,
 		Encryption,
+		ErrorHandler,
 		HostCheckMiddleware,
 		Logger,
 		Mongo,
@@ -112,6 +114,7 @@ function createPubSubOnlyRedisClient() {
 		Authentication,
 		Documentation,
 		Encryption,
+		ErrorHandler,
 		HostCheckMiddleware,
 		Logger,
 		Mongo,

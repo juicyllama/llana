@@ -52,7 +52,7 @@ export class GetController {
 
 		return res.status(200).send(await this.query.perform(QueryPerform.LIST_TABLES, undefined, x_request_id))
 	}
-	
+
 	@Get('*/schema')
 	async getSchema(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<ListTablesResponseObject> {
 		const x_request_id = headers['x-request-id']
