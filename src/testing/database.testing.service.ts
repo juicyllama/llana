@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-
+import { Logger } from '../helpers/Logger'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
 import type { DataSourceSchema } from '../types/datasource.types'
@@ -14,40 +14,47 @@ export class DatabaseTestingService {
 		private readonly schema: Schema,
 		private readonly customerTestingService: CustomerTestingService,
 		private readonly userTestingService: UserTestingService,
+		private readonly logger: Logger,
 	) {}
 
 	async createDuplicateError(): Promise<any> {
-		const customerSchema = await this.schema.getSchema({ table: 'Customer' })
-		if (!customerSchema) {
-			throw new Error('Failed to load Customer schema')
-		}
-
-		// Create a generic customer record with mock data
-		const mockData = this.customerTestingService.mockCustomer()
-		const customer = await this.customerTestingService.createCustomer(mockData)
-
 		try {
-			// Attempt to create duplicate record with same data
-			await this.query.perform(
-				QueryPerform.CREATE,
-				{
-					schema: customerSchema,
-					data: {
-						...mockData,
-						email: mockData.email, // Ensure email is duplicated to trigger unique constraint
-					},
-				},
-				'testing',
-			)
-		} catch (error) {
-			// Clean up the original record
-			await this.customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
-			return error
-		}
+			this.logger.log('Attempting to create duplicate error test case', 'database-testing')
+			const customerSchema = await this.schema.getSchema({ table: 'Customer' })
+			if (!customerSchema) {
+				throw new Error('Failed to load Customer schema')
+			}
 
-		// If no error occurred, clean up and throw
-		await this.customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
-		throw new Error('Expected duplicate error was not thrown')
+			// Create a generic customer record with mock data
+			const mockData = this.customerTestingService.mockCustomer()
+			const customer = await this.customerTestingService.createCustomer(mockData)
+
+			try {
+				// Attempt to create duplicate record with same data
+				await this.query.perform(
+					QueryPerform.CREATE,
+					{
+						schema: customerSchema,
+						data: {
+							...mockData,
+							email: mockData.email, // Ensure email is duplicated to trigger unique constraint
+						},
+					},
+					'testing',
+				)
+			} catch (error) {
+				// Clean up the original record and return the error
+				await this.customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
+				return error
+			}
+
+			// If no error occurred, clean up and throw
+			await this.customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
+			throw new Error('Expected duplicate error was not thrown')
+		} catch (error) {
+			this.logger.error(`Failed to create duplicate error test: ${error.message}`, 'database-testing')
+			throw new Error(`Failed to create duplicate error test: ${error.message}`)
+		}
 	}
 
 	async createTypeMismatchError(): Promise<any> {

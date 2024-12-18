@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker'
 import { Injectable } from '@nestjs/common'
+import { Logger } from '../helpers/Logger'
 
 import { FindOneResponseObject } from '../dtos/response.dto'
 import { Query } from '../helpers/Query'
@@ -13,6 +14,7 @@ export class CustomerTestingService {
 	constructor(
 		private readonly query: Query,
 		private readonly schema: Schema,
+		private readonly logger: Logger,
 	) {}
 
 	mockCustomer(): any {
@@ -33,32 +35,49 @@ export class CustomerTestingService {
 	}
 
 	async getSchema(): Promise<any> {
-		return await this.schema.getSchema({ table })
+		try {
+			this.logger.log('Getting Customer schema', 'customer-testing')
+			return await this.schema.getSchema({ table })
+		} catch (error) {
+			this.logger.error(`Failed to get Customer schema: ${error.message}`, 'customer-testing')
+			throw new Error(`Failed to get Customer schema: ${error.message}`)
+		}
 	}
 
 	async createCustomer(customer: any = this.mockCustomer()): Promise<any> {
-		const customerTableSchema = await this.schema.getSchema({ table })
+		try {
+			this.logger.log('Creating test customer', 'customer-testing')
+			const customerTableSchema = await this.schema.getSchema({ table })
 
-		// Don't try to handle custId as it's an auto-increment field
-		return (await this.query.perform(
-			QueryPerform.CREATE,
-			{
-				schema: customerTableSchema,
-				data: customer,
-			},
-			'testing',
-		)) as FindOneResponseObject
+			return (await this.query.perform(
+				QueryPerform.CREATE,
+				{
+					schema: customerTableSchema,
+					data: customer,
+				},
+				'testing',
+			)) as FindOneResponseObject
+		} catch (error) {
+			this.logger.error(`Failed to create test customer: ${error.message}`, 'customer-testing')
+			throw new Error(`Failed to create test customer: ${error.message}`)
+		}
 	}
 
 	async deleteCustomer(customer_id: any): Promise<void> {
-		const customerTableSchema = await this.schema.getSchema({ table })
-		await this.query.perform(
-			QueryPerform.DELETE,
-			{
-				schema: customerTableSchema,
-				id: customer_id,
-			},
-			'testing',
-		)
+		try {
+			this.logger.log(`Deleting test customer: ${customer_id}`, 'customer-testing')
+			const customerTableSchema = await this.schema.getSchema({ table })
+			await this.query.perform(
+				QueryPerform.DELETE,
+				{
+					schema: customerTableSchema,
+					id: customer_id,
+				},
+				'testing',
+			)
+		} catch (error) {
+			this.logger.error(`Failed to delete test customer: ${error.message}`, 'customer-testing')
+			throw new Error(`Failed to delete test customer: ${error.message}`)
+		}
 	}
 }

@@ -50,10 +50,10 @@ export class AppBootup implements OnApplicationBootstrap {
 	async onApplicationBootstrap() {
 		this.logger.log('Bootstrapping Application', APP_BOOT_CONTEXT)
 
-		this.logger.log(
-			`Datasource is ${this.configService.get<string>('database.type').toUpperCase()}`,
-			APP_BOOT_CONTEXT,
-		)
+		// Log database configuration
+		const dbType = this.configService.get<string>('database.type')
+		const dbUri = this.configService.get<string>('database.uri')
+		this.logger.log(`Database Configuration - Type: ${dbType}, URI: ${dbUri}`, APP_BOOT_CONTEXT)
 
 		this.logger.log('Resetting Cache', APP_BOOT_CONTEXT)
 		await this.cacheManager.reset()
@@ -61,9 +61,11 @@ export class AppBootup implements OnApplicationBootstrap {
 		let database: ListTablesResponseObject
 
 		try {
+			this.logger.log('Checking database connection...', APP_BOOT_CONTEXT)
 			await this.query.perform(QueryPerform.CHECK_CONNECTION, undefined, APP_BOOT_CONTEXT)
 			this.logger.log('Database Connection Successful', APP_BOOT_CONTEXT)
 
+			this.logger.log('Retrieving database tables...', APP_BOOT_CONTEXT)
 			database = (await this.query.perform(
 				QueryPerform.LIST_TABLES,
 				{ include_system: true },
@@ -73,6 +75,7 @@ export class AppBootup implements OnApplicationBootstrap {
 			if (!database || !database.tables) {
 				throw new Error('Failed to retrieve database tables')
 			}
+			this.logger.log(`Found tables: ${database.tables.join(', ')}`, APP_BOOT_CONTEXT)
 		} catch (e) {
 			const datasourceType =
 				(this.configService.get<string>('database.type') as DataSourceType) || DataSourceType.POSTGRES
@@ -216,12 +219,23 @@ export class AppBootup implements OnApplicationBootstrap {
 			// Example Auth Table - For example allowing external API access to see Employee data
 
 			if (!this.authentication.skipAuth()) {
-				// Log schema details for debugging
-				console.log('Creating _llana_auth table with schema:', JSON.stringify(schema, null, 2))
-
-				const example_auth: any[] = [
+				// Create test credentials for testing environment
+				const test_credentials = [
 					{
-						id: undefined, // Let database handle auto-increment
+						id: undefined,
+						email: 'test@test.com',
+						password: 'test',
+						role: 'admin',
+						active: true,
+						auth: AuthType.JWT,
+						type: 'EXCLUDE',
+						table: '*',
+						public_records: RolePermission.READ,
+						created_at: new Date(),
+						updated_at: new Date(),
+					},
+					{
+						id: undefined,
 						email: 'api@example.com',
 						password: 'api123',
 						role: 'api',
@@ -230,11 +244,11 @@ export class AppBootup implements OnApplicationBootstrap {
 						type: 'EXCLUDE',
 						table: 'Employee',
 						public_records: RolePermission.READ,
-						created_at: undefined, // Let database use CURRENT_TIMESTAMP
-						updated_at: undefined, // Let database use CURRENT_TIMESTAMP
+						created_at: new Date(),
+						updated_at: new Date(),
 					},
 					{
-						id: undefined, // Let database handle auto-increment
+						id: undefined,
 						email: 'jwt@example.com',
 						password: 'jwt123',
 						role: 'jwt',
@@ -243,25 +257,22 @@ export class AppBootup implements OnApplicationBootstrap {
 						type: 'EXCLUDE',
 						table: 'Employee',
 						public_records: RolePermission.READ,
-						created_at: undefined, // Let database use CURRENT_TIMESTAMP
-						updated_at: undefined, // Let database use CURRENT_TIMESTAMP
+						created_at: new Date(),
+						updated_at: new Date(),
 					},
 				]
 
-				// Log record creation attempts
-				console.log('Attempting to create _llana_auth records:', JSON.stringify(example_auth, null, 2))
-
-				for (const record of example_auth) {
+				for (const record of test_credentials) {
 					try {
 						await this.query.perform(QueryPerform.CREATE, { schema, data: record }, 'bootup')
-						console.log('Successfully created _llana_auth record:', record.email)
+						this.logger.log(`Successfully created auth record for: ${record.email}`, APP_BOOT_CONTEXT)
 					} catch (error) {
-						console.error('Failed to create _llana_auth record:', record.email, error.message)
+						this.logger.error(`Failed to create auth record for ${record.email}: ${error.message}`, APP_BOOT_CONTEXT)
 						throw error
 					}
 				}
 			}
-		} // Add missing closing brace for LLANA_AUTH_TABLE check
+		}
 
 		if (!database.tables.includes(LLANA_ROLES_TABLE)) {
 			this.logger.log(`Creating ${LLANA_ROLES_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
