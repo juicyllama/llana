@@ -23,10 +23,7 @@ describe('DatabaseTestingService', () => {
 
 	beforeAll(async () => {
 		const moduleRef = await Test.createTestingModule({
-			imports: [
-				ConfigModule.forRoot({ load: [configs] }),
-				CacheModule.register(),
-			],
+			imports: [ConfigModule.forRoot({ load: [configs] }), CacheModule.register()],
 			providers: [
 				DatabaseTestingService,
 				Query,

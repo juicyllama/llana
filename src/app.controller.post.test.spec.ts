@@ -124,7 +124,7 @@ describe('App > Controller > Post', () => {
 			// Create first record - should succeed
 			const firstResult = await request(app.getHttpServer())
 				.post(`/Customer/`)
-				.send({ ...duplicateCustomer })  // Send a copy to avoid reference issues
+				.send({ ...duplicateCustomer }) // Send a copy to avoid reference issues
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(201)
 
@@ -138,7 +138,7 @@ describe('App > Controller > Post', () => {
 			// Response.text() returns the error message
 			const errorMessage = duplicateResult.text
 			expect(errorMessage).toBeDefined()
-			expect(errorMessage).toContain('already exists')  // Generic error message that works across databases
+			expect(errorMessage).toContain('already exists') // Generic error message that works across databases
 
 			// Cleanup
 			await customerTestingService.deleteCustomer(firstResult.body[customerSchema.primary_key])
@@ -156,7 +156,7 @@ describe('App > Controller > Post', () => {
 			// Response.text() returns the error message
 			const errorMessage = result.text
 			expect(errorMessage).toBeDefined()
-			expect(errorMessage).toContain('must be a number')  // Match actual error message
+			expect(errorMessage).toContain('must be a number') // Match actual error message
 		})
 
 		it('Create User', async function () {

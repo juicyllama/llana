@@ -9,6 +9,7 @@ import {
 	FindOneResponseObject,
 	IsUniqueResponse,
 } from '../dtos/response.dto'
+import { ErrorHandler } from '../helpers/ErrorHandler'
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
 import {
@@ -29,7 +30,6 @@ import {
 import { MySQLColumnType } from '../types/datasources/mysql.types'
 import { SortCondition } from '../types/schema.types'
 import { replaceQ } from '../utils/String'
-import { ErrorHandler } from '../helpers/ErrorHandler'
 
 const DATABASE_TYPE = DataSourceType.MYSQL
 
