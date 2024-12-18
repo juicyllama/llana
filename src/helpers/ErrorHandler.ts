@@ -42,14 +42,19 @@ export class ErrorHandler {
 		if (error.code === 'ER_DUP_ENTRY') {
 			const match = error.message.match(/'(.+?)' for key '(.+?)'/)
 			if (match) {
-				return `Record already exists`
+				const [_, value, field] = match
+				return `Unique constraint violation: ${field} already exists with value '${value}'`
 			}
 		}
 		if (error.code === 'ER_TRUNCATED_WRONG_VALUE' || error.code === 'ER_BAD_FIELD_ERROR') {
-			return `Field must be a number`
+			return `Invalid type: ${error.message}`
 		}
 		if (error.message?.includes('Duplicate entry')) {
-			return `Record already exists`
+			const match = error.message.match(/Duplicate entry '(.+?)' for key '(.+?)'/)
+			if (match) {
+				const [_, value, field] = match
+				return `Unique constraint violation: ${field} already exists with value '${value}'`
+			}
 		}
 		return error.message || 'Unknown MySQL error'
 	}
