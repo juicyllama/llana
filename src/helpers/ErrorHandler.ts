@@ -19,56 +19,48 @@ export class ErrorHandler {
 			case DataSourceType.MSSQL:
 				return this.handleMSSQLError(error)
 			default:
-				return `Unknown ${datasourceType} error${error.message ? ': ' + error.message : ''}`
+				return `Database error: ${error.message || 'Unknown error'}`
 		}
 	}
 
 	private handlePostgresError(error: any): string {
 		if (error.code === '23505') {
-			// Unique violation
 			const match = error.detail?.match(/Key \((.*?)\)=\((.*?)\)/)
 			if (match) {
-				return `Unique constraint violation: ${match[1]} already exists with value '${match[2]}'`
+				const [, field, value] = match
+				return `${field} already exists with value '${value}'`
 			}
 		}
 		if (error.code === '22P02') {
-			// Invalid text representation
-			return `Invalid type: ${error.message}`
+			return `Type mismatch: value must be a number`
 		}
-		return 'Unknown PostgreSQL error'
+		return error.message || 'Database error'
 	}
 
 	private handleMySQLError(error: any): string {
-		if (error.code === 'ER_DUP_ENTRY') {
-			const match = error.message.match(/'(.+?)' for key '(.+?)'/)
+		if (error.code === 'ER_DUP_ENTRY' || error.message?.includes('Duplicate entry')) {
+			const match = error.message.match(/Duplicate entry '(.+?)' for key '(.+?)'/)
 			if (match) {
-				const [_, value, field] = match
-				return `Unique constraint violation: ${field} already exists with value '${value}'`
+				const [, value, field] = match
+				return `${field} already exists with value '${value}'`
 			}
 		}
 		if (error.code === 'ER_TRUNCATED_WRONG_VALUE' || error.code === 'ER_BAD_FIELD_ERROR') {
-			return `Invalid type: ${error.message}`
+			return `Type mismatch: value must be a number`
 		}
-		if (error.message?.includes('Duplicate entry')) {
-			const match = error.message.match(/Duplicate entry '(.+?)' for key '(.+?)'/)
-			if (match) {
-				const [_, value, field] = match
-				return `Unique constraint violation: ${field} already exists with value '${value}'`
-			}
-		}
-		return error.message || 'Unknown MySQL error'
+		return error.message || 'Database error'
 	}
 
 	private handleMongoError(error: any): string {
 		if (error.code === 11000) {
 			const field = Object.keys(error.keyPattern)[0]
 			const value = error.keyValue[field]
-			return `Unique constraint violation: ${field} already exists with value '${value}'`
+			return `${field} already exists with value '${value}'`
 		}
 		if (error.name === 'CastError') {
-			return `Invalid type: Cannot cast ${error.value} to ${error.kind} for field ${error.path}`
+			return `Type mismatch: value must be a number`
 		}
-		return 'Unknown MongoDB error'
+		return error.message || 'Database error'
 	}
 
 	private handleMSSQLError(error: any): string {
@@ -77,13 +69,14 @@ export class ErrorHandler {
 				/Violation of (UNIQUE|PRIMARY KEY) constraint '(.+?)'\. Cannot insert duplicate key/,
 			)
 			if (match) {
-				return `Unique constraint violation: ${match[2]}`
+				const [, , field] = match
+				return `${field} already exists`
 			}
 			return `Unique constraint violation: ${error.message}`
 		}
 		if (error.number === 8114) {
-			return `Invalid type: ${error.message}`
+			return `Type mismatch: value must be a number`
 		}
-		return 'Unknown MSSQL error'
+		return error.message || 'Database error'
 	}
 }
