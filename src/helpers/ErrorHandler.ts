@@ -9,6 +9,14 @@ export class ErrorHandler {
 	handleDatabaseError(error: any, datasourceType: DataSourceType): string {
 		this.logger.debug(`[ErrorHandler] Processing error for ${datasourceType}: ${JSON.stringify(error)}`)
 
+		// Extract the base error message without any prefixes
+		const baseMessage = this.getBaseErrorMessage(error, datasourceType)
+
+		// Only add the prefix if it's not already there
+		return baseMessage.includes('Database error:') ? baseMessage : `Database error: ${baseMessage}`
+	}
+
+	private getBaseErrorMessage(error: any, datasourceType: DataSourceType): string {
 		switch (datasourceType) {
 			case DataSourceType.POSTGRES:
 				return this.handlePostgresError(error)
@@ -19,63 +27,49 @@ export class ErrorHandler {
 			case DataSourceType.MSSQL:
 				return this.handleMSSQLError(error)
 			default:
-				return `Database error: ${error.message || 'Unknown error'}`
+				return error.message || 'Unknown error'
 		}
 	}
 
 	private handlePostgresError(error: any): string {
 		if (error.code === '23505') {
-			const match = error.detail?.match(/Key \((.*?)\)=\((.*?)\)/)
-			if (match) {
-				const [, field, value] = match
-				return `${field} already exists with value '${value}'`
-			}
+			return 'Duplicate record found'
 		}
 		if (error.code === '22P02') {
-			return 'Type mismatch: value must be a number'
+			return 'Invalid data type'
 		}
-		return `Database error: ${error.message || 'Unknown error'}`
+		return error.message || 'Unknown error'
 	}
 
 	private handleMySQLError(error: any): string {
-		if (error.code === 'ER_DUP_ENTRY' || error.message?.includes('Duplicate entry')) {
-			const match = error.message.match(/Duplicate entry '(.+?)' for key '(.+?)'/)
-			if (match) {
-				const [, value, field] = match
-				return `${field} already exists with value '${value}'`
-			}
+		// Handle MySQL error codes directly
+		if (error.code === 'ER_DUP_ENTRY') {
+			return 'Duplicate record found'
 		}
 		if (error.code === 'ER_TRUNCATED_WRONG_VALUE' || error.code === 'ER_BAD_FIELD_ERROR') {
-			return 'Type mismatch: value must be a number'
+			return 'Invalid data type'
 		}
-		return `Database error: ${error.message || 'Unknown error'}`
+		// If no specific error code matches, try to extract a meaningful message
+		return error.message || 'Unknown error'
 	}
 
 	private handleMongoError(error: any): string {
 		if (error.code === 11000) {
-			const field = Object.keys(error.keyPattern)[0]
-			const value = error.keyValue[field]
-			return `${field} already exists with value '${value}'`
+			return 'Duplicate record found'
 		}
 		if (error.name === 'CastError') {
-			return 'Type mismatch: value must be a number'
+			return 'Invalid data type'
 		}
-		return `Database error: ${error.message || 'Unknown error'}`
+		return error.message || 'Unknown error'
 	}
 
 	private handleMSSQLError(error: any): string {
 		if (error.number === 2627) {
-			const match = error.message.match(
-				/Violation of (UNIQUE|PRIMARY KEY) constraint '(.+?)'\. Cannot insert duplicate key/,
-			)
-			if (match) {
-				const [, , field] = match
-				return `${field} already exists`
-			}
+			return 'Duplicate record found'
 		}
 		if (error.number === 8114) {
-			return 'Type mismatch: value must be a number'
+			return 'Invalid data type'
 		}
-		return `Database error: ${error.message || 'Unknown error'}`
+		return error.message || 'Unknown error'
 	}
 }

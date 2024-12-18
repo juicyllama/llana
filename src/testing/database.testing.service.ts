@@ -16,32 +16,26 @@ export class DatabaseTestingService {
 		private readonly userTestingService: UserTestingService,
 	) {}
 
-	async createDuplicateError(dbType?: DataSourceType): Promise<any> {
+	async createDuplicateError(): Promise<any> {
 		const customerSchema = await this.schema.getSchema({ table: 'Customer' })
+		if (!customerSchema) {
+			throw new Error('Failed to load Customer schema')
+		}
 
-		// Use specific field based on database type
-		const uniqueField = dbType === DataSourceType.MONGODB ? '_id' : 'custId'
-		const customer = await this.customerTestingService.createCustomer({
-			[uniqueField]: 'test-duplicate-id',
-		})
+		// Create a generic customer record with mock data
+		const mockData = this.customerTestingService.mockCustomer()
+		const customer = await this.customerTestingService.createCustomer(mockData)
 
 		try {
-			// Create first record
+			// Attempt to create duplicate record with same data
 			await this.query.perform(
 				QueryPerform.CREATE,
 				{
 					schema: customerSchema,
-					data: customer,
-				},
-				'testing',
-			)
-
-			// Attempt to create duplicate record to trigger error
-			await this.query.perform(
-				QueryPerform.CREATE,
-				{
-					schema: customerSchema,
-					data: customer,
+					data: {
+						...mockData,
+						email: mockData.email, // Ensure email is duplicated to trigger unique constraint
+					},
 				},
 				'testing',
 			)
@@ -56,16 +50,17 @@ export class DatabaseTestingService {
 		throw new Error('Expected duplicate error was not thrown')
 	}
 
-	async createTypeMismatchError(dbType?: DataSourceType): Promise<any> {
+	async createTypeMismatchError(): Promise<any> {
 		const customerSchema = await this.schema.getSchema({ table: 'Customer' })
+		if (!customerSchema) {
+			throw new Error('Failed to load Customer schema')
+		}
 
-		// Create type mismatch based on database type
-		const invalidValue =
-			dbType === DataSourceType.MONGODB ? { $invalid: 'mongodb-specific-invalid-operator' } : 'not-a-number'
-
+		// Create invalid data with wrong type for string field
+		const mockData = this.customerTestingService.mockCustomer()
 		const invalidData = {
-			...(await this.customerTestingService.mockCustomer()),
-			custId: invalidValue,
+			...mockData,
+			companyName: 12345, // Use number for string field to trigger type mismatch
 		}
 
 		try {

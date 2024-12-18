@@ -161,8 +161,12 @@ export class Query {
 			// Use ErrorHandler to get descriptive error message
 			const errorMessage = this.errorHandler.handleDatabaseError(e, datasourceType)
 
-			const pluralAction = this.getActionDescription(action)
-			throw new Error(`Error ${pluralAction}: ${errorMessage}`)
+			// Ensure consistent error message format
+			const formattedError = errorMessage.includes('Database error:')
+				? errorMessage
+				: `Database error: ${errorMessage}`
+
+			throw new Error(formattedError)
 		}
 	}
 
