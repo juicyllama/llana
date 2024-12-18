@@ -198,17 +198,39 @@ export class MySQL {
 		try {
 			const columns = schema.columns.map(column => {
 				let column_string = `\`${column.field}\``
+				const columnType = this.columnTypeToDataSource(column.type)
+
+				this.logger.debug(
+					`[${DATABASE_TYPE}][createTable] Mapping column ${column.field}: ${column.type} -> ${columnType}`,
+					x_request_id,
+				)
 
 				if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
-					column_string += ` ${MySQLColumnType.ENUM}(${column.enums.map(e => `'${e.replace(/'/g, "''")}'`).join(', ')})`
+					const enumValues = column.enums.map(e => `'${e.replace(/'/g, "''")}'`).join(', ')
+					column_string += ` ${columnType}(${enumValues})`
+
+					this.logger.debug(
+						`[${DATABASE_TYPE}][createTable] Creating ENUM column ${column.field} with values: ${enumValues}`,
+						x_request_id,
+					)
 				} else if (column.type === DataSourceColumnType.STRING) {
-					column_string += ` ${MySQLColumnType.VARCHAR}(${column.extra?.length ?? 255})`
+					column_string += ` ${columnType}(${column.extra?.length ?? 255})`
+				} else if (column.type === DataSourceColumnType.DATE) {
+					column_string += ` ${columnType}`
+					if (column.default === 'CURRENT_TIMESTAMP') {
+						column_string += ' DEFAULT CURRENT_TIMESTAMP'
+						if (column.field === 'updated_at') {
+							column_string += ' ON UPDATE CURRENT_TIMESTAMP'
+						}
+					}
 				} else {
-					column_string += ` ${this.columnTypeToDataSource(column.type)}`
+					column_string += ` ${columnType}`
 				}
 
 				if (column.required) {
 					column_string += ' NOT NULL'
+				} else {
+					column_string += ' NULL'
 				}
 
 				if (column.unique_key) {
@@ -219,18 +241,11 @@ export class MySQL {
 					column_string += ' PRIMARY KEY'
 				}
 
-				if (column.default !== undefined) {
-					if (column.type === DataSourceColumnType.DATE) {
-						if (column.default === 'CURRENT_TIMESTAMP') {
-							column_string += ' DEFAULT CURRENT_TIMESTAMP'
-							if (column.field === 'updated_at') {
-								column_string += ' ON UPDATE CURRENT_TIMESTAMP'
-							}
-						} else {
-							column_string += ` DEFAULT '${column.default}'`
-						}
-					} else if (typeof column.default === 'string' && column.default !== 'CURRENT_TIMESTAMP') {
+				if (column.default !== undefined && column.type !== DataSourceColumnType.DATE) {
+					if (column.type === DataSourceColumnType.STRING || column.type === DataSourceColumnType.ENUM) {
 						column_string += ` DEFAULT '${column.default}'`
+					} else if (column.type === DataSourceColumnType.BOOLEAN) {
+						column_string += ` DEFAULT ${column.default ? 1 : 0}`
 					} else {
 						column_string += ` DEFAULT ${column.default}`
 					}
@@ -243,7 +258,7 @@ export class MySQL {
 				return column_string
 			})
 
-			command = `CREATE TABLE IF NOT EXISTS ${schema.table} (${columns.join(', ')})`
+			command = `CREATE TABLE IF NOT EXISTS \`${schema.table}\` (${columns.join(', ')})`
 
 			this.logger.debug(
 				`[${DATABASE_TYPE}][createTable] Creating table with command:\n${command}`,
@@ -254,7 +269,7 @@ export class MySQL {
 
 			if (schema.relations?.length) {
 				for (const relation of schema.relations) {
-					const relationCommand = `ALTER TABLE ${schema.table} ADD FOREIGN KEY (${relation.column}) REFERENCES ${relation.org_table}(${relation.org_column})`
+					const relationCommand = `ALTER TABLE \`${schema.table}\` ADD FOREIGN KEY (\`${relation.column}\`) REFERENCES \`${relation.org_table}\`(\`${relation.org_column}\`)`
 					await this.query({ sql: relationCommand })
 				}
 			}
@@ -568,7 +583,7 @@ export class MySQL {
 	 * Convert DataSourceColumnType to MySQL column type
 	 */
 
-	private columnTypeToDataSource(type: DataSourceColumnType): MySQLColumnType {
+	private columnTypeToDataSource(type: DataSourceColumnType): string {
 		switch (type) {
 			case DataSourceColumnType.STRING:
 				return MySQLColumnType.VARCHAR
