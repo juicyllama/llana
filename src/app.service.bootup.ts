@@ -180,6 +180,9 @@ export class AppBootup implements OnApplicationBootstrap {
 			// Example Auth Table - For example allowing external API access to see Employee data
 
 			if (!this.authentication.skipAuth()) {
+				// Log schema details for debugging
+				console.log('Creating _llana_auth table with schema:', JSON.stringify(schema, null, 2))
+
 				const example_auth: any[] = [
 					{
 						id: undefined, // Let database handle auto-increment
@@ -209,18 +212,20 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 				]
 
-				for (const example of example_auth) {
-					await this.query.perform(
-						QueryPerform.CREATE,
-						{
-							schema,
-							data: example,
-						},
-						APP_BOOT_CONTEXT,
-					)
+				// Log record creation attempts
+				console.log('Attempting to create _llana_auth records:', JSON.stringify(example_auth, null, 2))
+
+				for (const record of example_auth) {
+					try {
+						await this.query.perform(QueryPerform.CREATE, { schema, data: record }, 'bootup')
+						console.log('Successfully created _llana_auth record:', record.email)
+					} catch (error) {
+						console.error('Failed to create _llana_auth record:', record.email, error.message)
+						throw error
+					}
 				}
 			}
-		}
+		} // Add missing closing brace for LLANA_AUTH_TABLE check
 
 		if (!database.tables.includes(LLANA_ROLES_TABLE)) {
 			this.logger.log(`Creating ${LLANA_ROLES_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
