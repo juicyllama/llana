@@ -207,23 +207,18 @@ export class MySQL {
 				this.logger.debug(
 					`[${DATABASE_TYPE}][createTable] Processing column ${column.field}:
 					Type: ${column.type}
-					Enums: ${column.enums ? JSON.stringify(column.enums) : 'none'}`,
+					Primary Key: ${column.primary_key}
+					Auto Increment: ${column.auto_increment}`,
 					x_request_id,
 				)
 
 				const columnType = this.columnTypeToDataSource(column.type)
 
 				if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
-					// Properly format enum values with escaped quotes
 					const enumValues = column.enums
 						.map(e => `'${e.replace(/'/g, "''")}'`)
 						.join(',')
 					column_string += ` ${columnType}(${enumValues})`
-
-					this.logger.debug(
-						`[${DATABASE_TYPE}][createTable] Created ENUM column ${column.field} with values: ${enumValues}`,
-						x_request_id,
-					)
 				} else if (column.type === DataSourceColumnType.STRING) {
 					column_string += ` ${columnType}(${column.extra?.length ?? 255})`
 				} else if (column.type === DataSourceColumnType.DATE) {
@@ -246,8 +241,11 @@ export class MySQL {
 					column_string += ' NULL'
 				}
 
+				// For auto_increment columns, we must define them as primary key
 				if (column.auto_increment) {
-					column_string += ' AUTO_INCREMENT'
+					column_string += ' PRIMARY KEY AUTO_INCREMENT'
+				} else if (column.primary_key) {
+					column_string += ' PRIMARY KEY'
 				}
 
 				if (column.default !== undefined && column.type !== DataSourceColumnType.DATE) {
@@ -263,12 +261,9 @@ export class MySQL {
 				return column_string
 			})
 
-			command = `CREATE TABLE IF NOT EXISTS \`${schema.table}\` (${columns.join(', ')})`
+			command = `CREATE TABLE IF NOT EXISTS \`${schema.table}\` (${columns.join(', ')}) ENGINE=INNODB`
 
-			this.logger.debug(
-				`[${DATABASE_TYPE}][createTable] Creating table with command:\n${command}`,
-				x_request_id,
-			)
+			this.logger.debug(`[${DATABASE_TYPE}][createTable] SQL: ${command}`, x_request_id)
 
 			await this.query({ sql: command, x_request_id })
 
@@ -290,26 +285,6 @@ export class MySQL {
 		}
 	}
 
-	/**
-	 * List all tables in the database
-	 */
-
-	async listTables(options: { x_request_id?: string }): Promise<string[]> {
-		try {
-			const results = await this.query({ sql: 'SHOW TABLES', x_request_id: options.x_request_id })
-			const tables = results.map(row => Object.values(row)[0]) as string[]
-			this.logger.debug(`[${DATABASE_TYPE}] Tables: ${tables} ${options.x_request_id ?? ''}`)
-			return tables
-		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}] Error listing tables ${options.x_request_id ?? ''}`)
-			throw new Error(e)
-		}
-	}
-
-	/**
-	 * Insert a record
-	 */
-
 	async createOne(options: DataSourceCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
 		try {
 			// Skip validation for auto-increment primary keys during creation
@@ -323,36 +298,34 @@ export class MySQL {
 			const table_name = options.schema.table
 			const columns = Object.keys(processedOptions.data)
 			const values = Object.values(processedOptions.data)
+			const placeholders = columns.map(() => '?').join(', ')
 
-			const command = `INSERT INTO ${table_name} (\`${columns.join('`, `')}\`) VALUES (${values.map(() => '?').join(', ')})`
+			const command = `INSERT INTO \`${table_name}\` (\`${columns.join('`, `')}\`) VALUES (${placeholders})`
 
 			const result = await this.query({ sql: command, values, x_request_id })
 
-			return await this.findOne(
-				{
-					schema: options.schema,
-					where: [
-						{
-							column: options.schema.primary_key,
-							operator: WhereOperator.equals,
-							value: result.insertId,
-						},
-					],
-				},
-				x_request_id,
-			)
+			if (result.insertId) {
+				return this.findOne(
+					{
+						schema: options.schema,
+						where: [
+							{
+								column: options.schema.primary_key,
+								operator: WhereOperator.equals,
+								value: result.insertId,
+							},
+						],
+					},
+					x_request_id,
+				)
+			}
+
+			return result
 		} catch (e) {
-			this.logger.warn('[mysql] Error executing query')
-			this.logger.warn('Object:', {
-				error: e,
-			})
-			throw new Error(this.errorHandler.handleDatabaseError(e, DataSourceType.MYSQL))
+			this.logger.error(`[${DATABASE_TYPE}][createOne] Error creating record: ${e.message}`, x_request_id)
+			throw e
 		}
 	}
-
-	/**
-	 * Find single record
-	 */
 
 	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
 		let [command, values] = this.find(options)
@@ -366,10 +339,6 @@ export class MySQL {
 
 		return this.pipeObjectFromDataSource(options, results[0])
 	}
-
-	/**
-	 * Find multiple records
-	 */
 
 	async findMany(options: DataSourceFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
 		const total = await this.findTotalRecords(options, x_request_id)
@@ -423,19 +392,11 @@ export class MySQL {
 		}
 	}
 
-	/**
-	 * Get total records with where conditions
-	 */
-
 	async findTotalRecords(options: DataSourceFindTotalRecords, x_request_id: string): Promise<number> {
 		let [command, values] = this.find(options, true)
 		const results = await this.query({ sql: command, values, x_request_id })
 		return Number(results[0].total)
 	}
-
-	/**
-	 * Update one records
-	 */
 
 	async updateOne(options: DataSourceUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
@@ -467,10 +428,6 @@ export class MySQL {
 			x_request_id,
 		)
 	}
-
-	/**
-	 * Delete single record
-	 */
 
 	async deleteOne(options: DataSourceDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
 		if (options.softDelete) {
@@ -506,17 +463,9 @@ export class MySQL {
 		}
 	}
 
-	/**
-	 * Truncate table
-	 */
-
 	async truncate(table: string): Promise<void> {
 		return await this.query({ sql: 'TRUNCATE TABLE ' + table })
 	}
-
-	/**
-	 * Convert MySQL column type to DataSourceColumnType
-	 */
 
 	private columnTypeFromDataSource(type: MySQLColumnType): DataSourceColumnType {
 		if (type.includes('enum')) {
@@ -584,10 +533,6 @@ export class MySQL {
 		}
 	}
 
-	/**
-	 * Convert DataSourceColumnType to MySQL column type
-	 */
-
 	private columnTypeToDataSource(type: DataSourceColumnType): MySQLColumnType {
 		this.logger.debug(
 			`[${DATABASE_TYPE}][columnTypeToDataSource] Converting type:
@@ -641,10 +586,6 @@ export class MySQL {
 
 		return mysqlType
 	}
-
-	/**
-	 * Pipe object to DataSource
-	 */
 
 	private pipeObjectToDataSource(
 		options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions,
