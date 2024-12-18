@@ -605,10 +605,12 @@ export class MySQL {
 				case DataSourceColumnType.DATE:
 					if (options.data[column.field]) {
 						try {
-							options.data[column.field] = new Date(options.data[column.field])
-								.toISOString()
-								.slice(0, 19)
-								.replace('T', ' ')
+							// Standardize date handling to use ISO strings consistently
+							const date = new Date(options.data[column.field]);
+							if (isNaN(date.getTime())) {
+								throw new Error(`Invalid date format for field ${column.field}`);
+							}
+							options.data[column.field] = date.toISOString();
 						} catch {
 							throw new Error(`Invalid date format for field ${column.field}`)
 						}
@@ -652,7 +654,12 @@ export class MySQL {
 					break
 				case DataSourceColumnType.DATE:
 					if (data[key]) {
-						data[key] = new Date(data[key])
+						try {
+							// Ensure consistent date handling when reading from database
+							data[key] = new Date(data[key]).toISOString();
+						} catch (error) {
+							throw new Error(`Invalid date format for field ${key}: ${error.message}`);
+						}
 					}
 					break
 				case DataSourceColumnType.NUMBER:
