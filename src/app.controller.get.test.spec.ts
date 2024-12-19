@@ -69,7 +69,7 @@ describe('App > Controller > Get', () => {
 
             // Create test data
             logger.log('Creating test data...', 'test')
-            customer = await customerTestingService.createCustomer({})
+            customer = await customerTestingService.createCustomer() // Use default mockCustomer data
             employee = await employeeTestingService.createEmployee({})
             shipper = await shipperTestingService.createShipper({})
 

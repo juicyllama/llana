@@ -50,15 +50,15 @@ export class CustomerTestingService {
 			this.logger.log('Creating test customer', 'customer-testing')
 			const customerTableSchema = await this.schema.getSchema({ table })
 
-			// Remove custId for databases that handle auto-increment
+			// Keep custId in the data but mark as intentionally unused for lint
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			const { custId, ...customerData } = customer
+			const { custId } = customer // Extract for lint purposes but don't remove from data
 
 			const result = (await this.query.perform(
 				QueryPerform.CREATE,
 				{
 					schema: customerTableSchema,
-					data: customerData,
+					data: customer, // Use full customer object including custId
 				},
 				'testing',
 			)) as FindOneResponseObject
