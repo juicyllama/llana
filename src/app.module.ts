@@ -28,6 +28,7 @@ import { Postgres } from './datasources/postgres.datasource'
 import { Authentication } from './helpers/Authentication'
 import { Documentation } from './helpers/Documentation'
 import { Encryption } from './helpers/Encryption'
+import { ErrorHandler } from './helpers/ErrorHandler'
 import { Logger } from './helpers/Logger'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
@@ -40,6 +41,13 @@ import { RedisMockWithPubSub } from './modules/websocket/redis-mock-with-pub-sub
 import { REDIS_PUB_CLIENT_TOKEN, REDIS_SUB_CLIENT_TOKEN } from './modules/websocket/websocket.constants'
 import { WebsocketGateway } from './modules/websocket/websocket.gateway'
 import { WebsocketService } from './modules/websocket/websocket.service'
+import { AuthTestingService } from './testing/auth.testing.service'
+import { CustomerTestingService } from './testing/customer.testing.service'
+import { DatabaseTestingService } from './testing/database.testing.service'
+import { EmployeeTestingService } from './testing/employee.testing.service'
+import { SalesOrderTestingService } from './testing/salesorder.testing.service'
+import { ShipperTestingService } from './testing/shipper.testing.service'
+import { UserTestingService } from './testing/user.testing.service'
 import { Env } from './utils/Env'
 
 const singleServerRedisPubsub = new RedisMockWithPubSub() // in-memory pubsub for testing or single server setup
@@ -79,8 +87,13 @@ function createPubSubOnlyRedisClient() {
 		AppBootup,
 		AuthService,
 		Authentication,
+		AuthTestingService,
+		CustomerTestingService,
+		DatabaseTestingService,
 		Documentation,
+		EmployeeTestingService,
 		Encryption,
+		ErrorHandler,
 		HostCheckMiddleware,
 		Logger,
 		Mongo,
@@ -91,8 +104,11 @@ function createPubSubOnlyRedisClient() {
 		Query,
 		Response,
 		Roles,
+		SalesOrderTestingService,
 		Schema,
+		ShipperTestingService,
 		TasksService,
+		UserTestingService,
 		Webhook,
 		WebsocketGateway,
 		WebsocketService,
@@ -110,8 +126,13 @@ function createPubSubOnlyRedisClient() {
 		AppBootup,
 		AuthService,
 		Authentication,
+		AuthTestingService,
+		CustomerTestingService,
+		DatabaseTestingService,
 		Documentation,
+		EmployeeTestingService,
 		Encryption,
+		ErrorHandler,
 		HostCheckMiddleware,
 		Logger,
 		Mongo,
@@ -122,7 +143,11 @@ function createPubSubOnlyRedisClient() {
 		Query,
 		Response,
 		Roles,
+		SalesOrderTestingService,
 		Schema,
+		ShipperTestingService,
+		TasksService,
+		UserTestingService,
 		Webhook,
 		WebsocketService,
 		WebsocketGateway,

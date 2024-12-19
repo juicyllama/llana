@@ -85,30 +85,45 @@ export class WebsocketGateway
 			return
 		}
 		this.logger.debug(`[WebsocketGateway${this.testInstanceId}] Connected users: ${JSON.stringify(userSockets)}`)
-		for (const [sub, socketId] of Object.entries(userSockets)) {
-			const auth = await this.authentication.auth({
-				table: msg.tableName,
-				access: RolePermission.READ,
-				user_identifier: sub,
-			})
-			if (auth.valid) {
-				this.logger.debug(
-					`[WebsocketGateway${this.testInstanceId}] Emitting ${msg.tableName} ${msg.publishType} for #${msg.id} to ${socketId} (User: ${sub})`,
-				)
-				this.server.to(socketId).emit(msg.tableName, {
-					type: msg.publishType,
-					[msg.primaryKey]: msg.id,
+
+		const emitPromises = Object.entries(userSockets).map(async ([sub, socketId]) => {
+			try {
+				const auth = await this.authentication.auth({
+					table: msg.tableName,
+					access: RolePermission.READ,
+					user_identifier: sub,
 				})
-			} else {
-				this.logger.debug(
-					`[WebsocketGateway${this.testInstanceId}] User ${sub} not authorized to receive event for table ${msg.tableName}`,
-				)
+				if (auth.valid) {
+					this.logger.debug(
+						`[WebsocketGateway${this.testInstanceId}] Emitting ${msg.tableName} ${msg.publishType} for #${msg.id} to ${socketId} (User: ${sub})`,
+					)
+					const socket = this.server.sockets.sockets.get(socketId)
+					if (socket) {
+						socket.emit(msg.tableName, {
+							type: msg.publishType,
+							[msg.primaryKey]: msg.id,
+						})
+					}
+				} else {
+					this.logger.debug(
+						`[WebsocketGateway${this.testInstanceId}] User ${sub} not authorized to receive event for table ${msg.tableName}`,
+					)
+				}
+			} catch (err) {
+				this.logger.error(`[WebsocketGateway${this.testInstanceId}] Error emitting to socket ${socketId}:`, err)
 			}
-		}
-		return
+		})
+
+		await Promise.all(emitPromises)
 	}
 
 	handleConnection(client: any) {
+		if (!client.user?.table || !client.user?.sub) {
+			this.logger.error(`[WebsocketGateway${this.testInstanceId}] Client missing user data`, client.user)
+			client.disconnect()
+			return
+		}
+
 		this.tablesToConnectedUserSockets[client.user.table] ||= {}
 		const existingSocket = this.tablesToConnectedUserSockets[client.user.table][client.user.sub]
 		if (existingSocket) {
@@ -124,10 +139,12 @@ export class WebsocketGateway
 	}
 
 	handleDisconnect(client: any) {
-		delete this.tablesToConnectedUserSockets[client.user.table][client.user.sub]
-		this.logger.debug(
-			`[WebsocketGateway${this.testInstanceId}] Cliend id: ${client.id} disconnected. sub=${client.user.sub}. Number of connected clients: ${this.server.sockets.sockets.size}`,
-		)
+		if (client.user?.table && client.user?.sub) {
+			delete this.tablesToConnectedUserSockets[client.user.table][client.user.sub]
+			this.logger.debug(
+				`[WebsocketGateway${this.testInstanceId}] Client id: ${client.id} disconnected. sub=${client.user.sub}. Number of connected clients: ${this.server.sockets.sockets.size}`,
+			)
+		}
 	}
 
 	@SubscribeMessage('message')

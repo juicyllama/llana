@@ -9,6 +9,7 @@ import {
 	FindOneResponseObject,
 	IsUniqueResponse,
 } from '../dtos/response.dto'
+import { ErrorHandler } from '../helpers/ErrorHandler'
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
 import {
@@ -18,6 +19,7 @@ import {
 	DataSourceFindManyOptions,
 	DataSourceFindOneOptions,
 	DataSourceFindTotalRecords,
+	DataSourceoinType,
 	DataSourceSchema,
 	DataSourceSchemaColumn,
 	DataSourceSchemaRelation,
@@ -38,6 +40,7 @@ export class MySQL {
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
 		private readonly pagination: Pagination,
+		private readonly errorHandler: ErrorHandler,
 	) {}
 
 	/**
@@ -94,10 +97,11 @@ export class MySQL {
 				sql: replaceQ(options.sql, options.values),
 				error: {
 					message: e.message,
+					code: e.code,
 				},
 			})
 			connection.end()
-			throw new Error(e)
+			throw e // Pass the raw error to ErrorHandler for proper handling
 		}
 	}
 
@@ -190,115 +194,155 @@ export class MySQL {
 	 */
 
 	async createTable(schema: DataSourceSchema, x_request_id?: string): Promise<boolean> {
+		let command: string
 		try {
+			this.logger.debug(
+				`[${DATABASE_TYPE}][createTable] Creating table ${schema.table} with schema:\n${JSON.stringify(schema, null, 2)}`,
+				x_request_id,
+			)
+
 			const columns = schema.columns.map(column => {
-				let column_string = `\`${column.field}\` ${this.columnTypeToDataSource(column.type)}`
+				let column_string = `\`${column.field}\``
 
-				if (column.type === DataSourceColumnType.STRING) {
-					column_string += `(${column.extra?.length ?? 255})`
-				}
+				this.logger.debug(
+					`[${DATABASE_TYPE}][createTable] Processing column ${column.field}:
+					Type: ${column.type}
+					Primary Key: ${column.primary_key}
+					Auto Increment: ${column.auto_increment}`,
+					x_request_id,
+				)
 
-				if (column.type === DataSourceColumnType.ENUM) {
-					column_string += `(${column.enums?.map(e => `'${e}'`).join(', ')})`
+				const columnType = this.columnTypeToDataSource(column.type)
+
+				if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
+					const enumValues = column.enums
+						.map(e => `'${e.replace(/'/g, "''")}'`)
+						.join(',')
+					column_string += ` ${columnType}(${enumValues})`
+				} else if (column.type === DataSourceColumnType.STRING) {
+					column_string += ` ${columnType}(${column.extra?.length ?? 255})`
+				} else if (column.type === DataSourceColumnType.DATE) {
+					column_string += ` ${columnType}`
+					if (column.default === 'CURRENT_TIMESTAMP') {
+						column_string += ' DEFAULT CURRENT_TIMESTAMP'
+						if (column.field === 'updated_at') {
+							column_string += ' ON UPDATE CURRENT_TIMESTAMP'
+						}
+					}
+				} else if (column.type === DataSourceColumnType.BOOLEAN) {
+					column_string += ` ${columnType}(1)`
+				} else {
+					column_string += ` ${columnType}`
 				}
 
 				if (column.required) {
 					column_string += ' NOT NULL'
+				} else {
+					column_string += ' NULL'
 				}
 
-				if (column.unique_key) {
-					column_string += ' UNIQUE'
-				}
-
-				if (column.primary_key) {
+				// For auto_increment columns, we must define them as primary key
+				if (column.auto_increment) {
+					column_string += ' PRIMARY KEY AUTO_INCREMENT'
+				} else if (column.primary_key) {
 					column_string += ' PRIMARY KEY'
 				}
 
-				if (column.default) {
-					column_string += ` DEFAULT ${column.default}`
-				}
-
-				if (column.auto_increment) {
-					column_string += ' AUTO_INCREMENT'
+				if (column.default !== undefined && column.type !== DataSourceColumnType.DATE) {
+					if (column.type === DataSourceColumnType.STRING || column.type === DataSourceColumnType.ENUM) {
+						column_string += ` DEFAULT '${column.default}'`
+					} else if (column.type === DataSourceColumnType.BOOLEAN) {
+						column_string += ` DEFAULT ${column.default ? 1 : 0}`
+					} else {
+						column_string += ` DEFAULT ${column.default}`
+					}
 				}
 
 				return column_string
 			})
 
-			const command = `CREATE TABLE ${schema.table} (${columns.join(', ')})`
+			command = `CREATE TABLE IF NOT EXISTS \`${schema.table}\` (${columns.join(', ')}) ENGINE=INNODB`
 
-			await this.query({ sql: command })
+			this.logger.debug(`[${DATABASE_TYPE}][createTable] SQL: ${command}`, x_request_id)
+
+			await this.query({ sql: command, x_request_id })
 
 			if (schema.relations?.length) {
 				for (const relation of schema.relations) {
-					const command = `ALTER TABLE ${schema.table} ADD FOREIGN KEY (${relation.column}) REFERENCES ${relation.org_table}(${relation.org_column})`
-					await this.query({ sql: command })
+					const relationCommand = `ALTER TABLE \`${schema.table}\` ADD FOREIGN KEY (\`${relation.column}\`) REFERENCES \`${relation.org_table}\`(\`${relation.org_column}\`)`
+					await this.query({ sql: relationCommand })
 				}
 			}
 
 			return true
 		} catch (e) {
+			const errorMessage = e instanceof Error ? e.message : String(e)
 			this.logger.error(
-				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`,
+				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${errorMessage}\nSQL: ${command}`,
 				x_request_id,
 			)
-			return false
+			throw new Error(`Database error: ${errorMessage}`)
 		}
 	}
 
 	/**
 	 * List all tables in the database
 	 */
-
 	async listTables(options: { x_request_id?: string }): Promise<string[]> {
 		try {
 			const results = await this.query({ sql: 'SHOW TABLES', x_request_id: options.x_request_id })
 			const tables = results.map(row => Object.values(row)[0]) as string[]
-			this.logger.debug(`[${DATABASE_TYPE}] Tables: ${tables} ${options.x_request_id ?? ''}`)
+			this.logger.debug(`[${DATABASE_TYPE}] Tables: ${tables.join(', ')} ${options.x_request_id ?? ''}`)
 			return tables
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}] Error listing tables ${options.x_request_id ?? ''}`)
-			throw new Error(e)
+			this.logger.error(
+				`[${DATABASE_TYPE}] Error listing tables: ${e.message} ${options.x_request_id ?? ''}`,
+			)
+			throw e
 		}
 	}
 
-	/**
-	 * Insert a record
-	 */
-
 	async createOne(options: DataSourceCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
-		const table_name = options.schema.table
-		const values: any[] = []
+		try {
+			// Skip validation for auto-increment primary keys during creation
+			const primaryKeyColumn = options.schema.columns.find(col => col.primary_key && col.auto_increment)
 
-		options = this.pipeObjectToDataSource(options) as DataSourceCreateOneOptions
+			if (primaryKeyColumn) {
+				delete options.data[primaryKeyColumn.field]
+			}
 
-		const columns = Object.keys(options.data)
-		const dataValues = Object.values(options.data)
+			const processedOptions = this.pipeObjectToDataSource(options) as DataSourceCreateOneOptions
+			const table_name = options.schema.table
+			const columns = Object.keys(processedOptions.data)
+			const values = Object.values(processedOptions.data)
+			const placeholders = columns.map(() => '?').join(', ')
 
-		values.push(...dataValues)
+			const command = `INSERT INTO \`${table_name}\` (\`${columns.join('`, `')}\`) VALUES (${placeholders})`
 
-		const command = `INSERT INTO ${table_name} (\`${columns.join('`, `')}\`) VALUES ( ?${values.map(() => ``).join(', ?')} )`
+			const result = await this.query({ sql: command, values, x_request_id })
 
-		const result = await this.query({ sql: command, values, x_request_id })
-
-		return await this.findOne(
-			{
-				schema: options.schema,
-				where: [
+			if (result.insertId) {
+				return this.findOne(
 					{
-						column: options.schema.primary_key,
-						operator: WhereOperator.equals,
-						value: result.insertId,
+						schema: options.schema,
+						where: [
+							{
+								column: options.schema.primary_key,
+								operator: WhereOperator.equals,
+								value: result.insertId,
+							},
+						],
 					},
-				],
-			},
-			x_request_id,
-		)
-	}
+					x_request_id,
+				)
+			}
 
-	/**
-	 * Find single record
-	 */
+			return result
+		} catch (e) {
+			this.logger.error(`[${DATABASE_TYPE}][createOne] Error creating record: ${e.message}`, x_request_id)
+			throw e
+		}
+	}
 
 	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
 		let [command, values] = this.find(options)
@@ -312,10 +356,6 @@ export class MySQL {
 
 		return this.pipeObjectFromDataSource(options, results[0])
 	}
-
-	/**
-	 * Find multiple records
-	 */
 
 	async findMany(options: DataSourceFindManyOptions, x_request_id: string): Promise<FindManyResponseObject> {
 		const total = await this.findTotalRecords(options, x_request_id)
@@ -369,19 +409,11 @@ export class MySQL {
 		}
 	}
 
-	/**
-	 * Get total records with where conditions
-	 */
-
 	async findTotalRecords(options: DataSourceFindTotalRecords, x_request_id: string): Promise<number> {
 		let [command, values] = this.find(options, true)
 		const results = await this.query({ sql: command, values, x_request_id })
 		return Number(results[0].total)
 	}
-
-	/**
-	 * Update one records
-	 */
 
 	async updateOne(options: DataSourceUpdateOneOptions, x_request_id: string): Promise<FindOneResponseObject> {
 		const table_name = options.schema.table
@@ -413,10 +445,6 @@ export class MySQL {
 			x_request_id,
 		)
 	}
-
-	/**
-	 * Delete single record
-	 */
 
 	async deleteOne(options: DataSourceDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
 		if (options.softDelete) {
@@ -452,17 +480,9 @@ export class MySQL {
 		}
 	}
 
-	/**
-	 * Truncate table
-	 */
-
 	async truncate(table: string): Promise<void> {
 		return await this.query({ sql: 'TRUNCATE TABLE ' + table })
 	}
-
-	/**
-	 * Convert MySQL column type to DataSourceColumnType
-	 */
 
 	private columnTypeFromDataSource(type: MySQLColumnType): DataSourceColumnType {
 		if (type.includes('enum')) {
@@ -530,37 +550,79 @@ export class MySQL {
 		}
 	}
 
-	/**
-	 * Convert DataSourceColumnType to MySQL column type
-	 */
-
 	private columnTypeToDataSource(type: DataSourceColumnType): MySQLColumnType {
+		this.logger.debug(
+			`[${DATABASE_TYPE}][columnTypeToDataSource] Converting type:
+			Input type: ${type}
+			Type of input: ${typeof type}
+			Valid types: ${Object.values(DataSourceColumnType).join(', ')}
+			Is valid type: ${Object.values(DataSourceColumnType).includes(type)}`,
+		)
+
+		const validTypes = Object.values(DataSourceColumnType)
+		if (!validTypes.includes(type)) {
+			this.logger.error(
+				`[${DATABASE_TYPE}][columnTypeToDataSource] Invalid DataSourceColumnType:
+				Received: ${type}
+				Type of received: ${typeof type}
+				Expected one of: ${validTypes.join(', ')}`,
+			)
+			throw new Error(`Invalid data type: ${type}`)
+		}
+
+		let mysqlType: MySQLColumnType
 		switch (type) {
 			case DataSourceColumnType.STRING:
-				return MySQLColumnType.VARCHAR
+				mysqlType = MySQLColumnType.VARCHAR
+				break
 			case DataSourceColumnType.NUMBER:
-				return MySQLColumnType.INT
+				mysqlType = MySQLColumnType.INT
+				break
 			case DataSourceColumnType.BOOLEAN:
-				return MySQLColumnType.BOOLEAN
+				mysqlType = MySQLColumnType.TINYINT
+				break
 			case DataSourceColumnType.DATE:
-				return MySQLColumnType.DATETIME
+				mysqlType = MySQLColumnType.DATETIME
+				break
 			case DataSourceColumnType.JSON:
-				return MySQLColumnType.JSON
+				mysqlType = MySQLColumnType.JSON
+				break
 			case DataSourceColumnType.ENUM:
-				return MySQLColumnType.ENUM
+				mysqlType = MySQLColumnType.ENUM
+				break
 			default:
-				return MySQLColumnType.VARCHAR
+				this.logger.error(
+					`[${DATABASE_TYPE}][columnTypeToDataSource] Unhandled DataSourceColumnType: ${type}`,
+				)
+				throw new Error(`Invalid data type: ${type}`)
 		}
-	}
 
-	/**
-	 * Pipe object to DataSource
-	 */
+		this.logger.debug(
+			`[${DATABASE_TYPE}][columnTypeToDataSource] Successfully mapped ${type} to MySQL type ${mysqlType}`,
+		)
+
+		return mysqlType
+	}
 
 	private pipeObjectToDataSource(
 		options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions,
 	): DataSourceCreateOneOptions | DataSourceUpdateOneOptions {
 		for (const column of options.schema.columns) {
+			// Skip validation for auto-increment primary keys during creation
+			if (column.primary_key && column.auto_increment) {
+				continue;
+			}
+
+			// Check required fields (skip validation if value is 0 or false)
+			if (
+				column.required &&
+				!options.data[column.field] &&
+				options.data[column.field] !== 0 &&
+				options.data[column.field] !== false
+			) {
+				throw new Error(`Required field ${column.field} is missing`)
+			}
+
 			if (!options.data[column.field]) {
 				continue
 			}
@@ -575,68 +637,83 @@ export class MySQL {
 					break
 				case DataSourceColumnType.DATE:
 					if (options.data[column.field]) {
-						options.data[column.field] = new Date(options.data[column.field])
-							.toISOString()
-							.slice(0, 19)
-							.replace('T', ' ')
+						try {
+							// Standardize date handling to use ISO strings consistently
+							const date = new Date(options.data[column.field]);
+							if (isNaN(date.getTime())) {
+								throw new Error(`Invalid date format for field ${column.field}`);
+							}
+							options.data[column.field] = date.toISOString();
+						} catch {
+							throw new Error(`Invalid date format for field ${column.field}`)
+						}
 					}
 					break
-
+				case DataSourceColumnType.NUMBER:
+					const num = Number(options.data[column.field])
+					if (isNaN(num)) {
+						throw new Error(`Invalid number format for field ${column.field}`)
+					}
+					options.data[column.field] = num
+					break
+				case DataSourceColumnType.STRING:
+					if (typeof options.data[column.field] !== 'string') {
+						options.data[column.field] = String(options.data[column.field])
+					}
+					if (column.extra?.length && options.data[column.field].length > column.extra.length) {
+						options.data[column.field] = options.data[column.field].substring(0, column.extra.length)
+					}
+					break
+				case DataSourceColumnType.ENUM:
+					if (!column.enums?.includes(options.data[column.field])) {
+						throw new Error(`Invalid enum value for field ${column.field}`)
+					}
+					break
 				default:
 					continue
 			}
 		}
-
 		return options
 	}
 
-	/**
-	 * Pipe DataSource object to object
-	 */
-
 	private pipeObjectFromDataSource(options: DataSourceFindOneOptions, data: { [key: string]: any }): object {
 		for (const key in data) {
-			let column
-
-			if (key.includes('.')) {
-				const [table, field] = key.split('.')
-				const relation = options.relations.find(r => r.table === table)
-				column = relation.schema.columns.find(c => c.field === field)
-			} else {
-				column = options.schema.columns.find(c => c.field === key)
-			}
+			let column = options.schema.columns.find(col => col.field === key)
+			if (!column) continue
 
 			switch (column.type) {
 				case DataSourceColumnType.BOOLEAN:
 					data[key] = data[key] === 1
+					break
 				case DataSourceColumnType.DATE:
-					data[key] = new Date(data[key]).toISOString()
+					if (data[key]) {
+						try {
+							// Ensure consistent date handling when reading from database
+							data[key] = new Date(data[key]).toISOString();
+						} catch (error) {
+							throw new Error(`Invalid date format for field ${key}: ${error.message}`);
+						}
+					}
+					break
 				case DataSourceColumnType.NUMBER:
 					data[key] = Number(data[key])
+					break
+				case DataSourceColumnType.STRING:
+					data[key] = String(data[key])
+					break
 			}
 		}
-
 		return data
 	}
 
-	/**
-	 * Mysql speicific helper function to build the find query
-	 */
-
-	private find(
-		options: DataSourceFindOneOptions | DataSourceFindManyOptions,
-		count: boolean = false,
-	): [string, string[]] {
+	private find(options: DataSourceFindOneOptions | DataSourceFindManyOptions, count = false): [string, any[]] {
 		const table_name = options.schema.table
-		let values: any[] = []
-
-		let command
+		let command = 'SELECT '
+		const values: any[] = []
 
 		if (count) {
-			command = `SELECT COUNT(*) as total `
+			command += ' COUNT(*) as count '
 		} else {
-			command = `SELECT `
-
 			if (options.fields?.length) {
 				for (const f in options.fields) {
 					command += ` \`${options.schema.table}\`.\`${options.fields[f]}\` as \`${options.fields[f]}\`,`
@@ -645,28 +722,18 @@ export class MySQL {
 			} else {
 				command += ` \`${options.schema.table}\`.* `
 			}
-
-			if (options.relations?.length) {
-				for (const r in options.relations) {
-					if (options.relations[r].columns?.length) {
-						for (const c in options.relations[r].columns) {
-							command += `, \`${options.relations[r].table}\`.\`${options.relations[r].columns[c]}\` as \`${options.relations[r].table}.${options.relations[r].columns[c]}\` `
-						}
-					}
-				}
-			}
 		}
 
-		command += ` FROM ${table_name} `
+		command += ` FROM \`${table_name}\` `
 
 		if (options.relations?.length) {
 			for (const relation of options.relations) {
-				command += `${relation.join.type ?? 'INNER JOIN'} ${relation.join.table} ON ${relation.join.org_table}.${relation.join.org_column} = ${relation.join.table}.${relation.join.column} `
+				command += ` ${relation.join?.type || DataSourceoinType.INNER} \`${relation.table}\` ON \`${relation.join.org_table}\`.\`${relation.join.org_column}\` = \`${relation.table}\`.\`${relation.join.column}\` `
 			}
 		}
 
 		if (options.where?.length) {
-			command += `WHERE `
+			command += ' WHERE '
 
 			for (const w in options.where) {
 				if (options.where[w].operator === WhereOperator.search) {
@@ -676,36 +743,19 @@ export class MySQL {
 
 			command += `${options.where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}  `).join(' AND ')} `
 			const where_values = options.where.map(w => w.value)
-			if (where_values.length) {
-				for (const w in where_values) {
-					if (where_values[w] === undefined) {
-						continue
-					}
-					values.push(where_values[w])
-				}
-			}
+			values.push(...where_values.filter(v => v !== undefined))
 		}
 
-		for (const r in options.relations) {
-			if (options.relations[r].where) {
-				const items = options.relations[r].where.column.split('.')
+		if ('sort' in options && options.sort?.length) {
+			command += ` ORDER BY ${options.sort.map(s => `\`${table_name}\`.\`${s.column}\` ${s.operator}`).join(', ')} `
+		}
 
-				switch (items.length) {
-					case 1:
-						command += `AND \`${options.relations[r].table}\`.\`${options.relations[r].where.column}\` ${options.relations[r].where.operator} ? `
-						break
-					case 2:
-						command += `AND \`${items[0]}\`.\`${items[1]}\` ${options.relations[r].where.operator} ? `
-						break
-					default:
-						command += `AND \`${items[items.length - 2]}\`.\`${items[items.length - 1]}\` ${options.relations[r].where.operator} ? `
-						break
-				}
+		if ('limit' in options && options.limit) {
+			command += ` LIMIT ${options.limit} `
+		}
 
-				if (options.relations[r].where.value) {
-					values.push(options.relations[r].where.value)
-				}
-			}
+		if ('offset' in options && options.offset) {
+			command += ` OFFSET ${options.offset} `
 		}
 
 		return [command.trim(), values]

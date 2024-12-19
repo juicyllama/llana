@@ -269,9 +269,11 @@ export class Schema {
 		data: { [key: string]: any },
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
 		try {
-			for (const key in data) {
+			const validatedData = { ...data }
+			for (const key in validatedData) {
 				const column = schema.columns.find(col => col.field === key)
 
+				// Skip validation for unknown columns and auto-increment primary keys
 				if (!column) {
 					return {
 						valid: false,
@@ -279,45 +281,56 @@ export class Schema {
 					}
 				}
 
+				if (column.primary_key && column.auto_increment) {
+					continue;
+				}
+
+				// Handle type conversions before validation
 				switch (column.type) {
 					case DataSourceColumnType.NUMBER:
-						if (isNaN(data[key])) {
+						// Handle numeric conversions
+						if (typeof validatedData[key] === 'string') {
+							const num = Number(validatedData[key])
+							if (isNaN(num)) {
+								return {
+									valid: false,
+									message: `${key} must be a number`,
+								}
+							}
+							validatedData[key] = num
+						} else if (typeof validatedData[key] === 'boolean') {
+							validatedData[key] = validatedData[key] ? 1 : 0
+						} else if (typeof validatedData[key] !== 'number' || isNaN(validatedData[key])) {
 							return {
 								valid: false,
 								message: `${key} must be a number`,
 							}
 						}
-
-						if (typeof data[key] === 'boolean') {
-							data[key] = data[key] ? 1 : 0
-						}
-
-						data[key] = Number(data[key])
 						break
 					default:
 						break
 				}
 			}
 
-			const DynamicClass = this.schemaToClass(schema, data)
-			const instance: object = plainToInstance(DynamicClass, data)
+			const DynamicClass = this.schemaToClass(schema, validatedData)
+			const instance: object = plainToInstance(DynamicClass, validatedData)
 			const errors = await validate(instance)
 
 			if (errors.length > 0) {
 				return {
 					valid: false,
-					message: errors.map(error => Object.values(error.constraints)).join(', '),
+					message: Object.values(errors[0].constraints).join(', '),
 				}
-			} else {
-				return {
-					valid: true,
-					instance,
-				}
+			}
+
+			return {
+				valid: true,
+				instance: validatedData,
 			}
 		} catch (e) {
 			return {
 				valid: false,
-				message: e.message,
+				message: e.message || 'Validation error',
 			}
 		}
 	}

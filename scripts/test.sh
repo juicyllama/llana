@@ -11,7 +11,7 @@ errored=false
 for data_source in $data_sources
 do
     echo "Running tests for $data_source"
-
+    
     if [ "$errored" = true ]; then
         echo "Skipping $data_source as already errored"
         continue
@@ -24,7 +24,6 @@ do
 
         errored=true
     fi
-
 done
 
 if [ "$errored" = true ]; then

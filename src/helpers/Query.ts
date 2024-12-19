@@ -30,21 +30,23 @@ import {
 } from '../types/datasource.types'
 import { Env } from '../utils/Env'
 import { Encryption } from './Encryption'
+import { ErrorHandler } from './ErrorHandler'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
 
 @Injectable()
 export class Query {
 	constructor(
-		private readonly configService: ConfigService,
-		private readonly encryption: Encryption,
 		private readonly logger: Logger,
+		private readonly configService: ConfigService,
 		private readonly schema: Schema,
+		private readonly encryption: Encryption,
 		private readonly mysql: MySQL,
 		private readonly mssql: MSSQL,
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
 		private readonly airtable: Airtable,
+		private readonly errorHandler: ErrorHandler,
 	) {}
 
 	async perform(
@@ -152,33 +154,38 @@ export class Query {
 		} catch (e) {
 			this.logger.error(`[Query][${action.toUpperCase()}][${table_name}] ${e.message}`, x_request_id)
 
-			let pluralAction
+			// Get datasource type from config
+			const datasourceType =
+				(this.configService.get<string>('database.type') as DataSourceType) || DataSourceType.POSTGRES
 
-			switch (action) {
-				case QueryPerform.CREATE:
-					pluralAction = 'creating record'
-					break
-				case QueryPerform.FIND_ONE:
-					pluralAction = 'finding record'
-					break
-				case QueryPerform.FIND_MANY:
-					pluralAction = 'finding records'
-					break
-				case QueryPerform.UPDATE:
-					pluralAction = 'updating record'
-					break
-				case QueryPerform.DELETE:
-					pluralAction = 'deleting record'
-					break
-				case QueryPerform.UNIQUE:
-					pluralAction = 'checking uniqueness'
-					break
-				default:
-					pluralAction = 'performing action'
-					break
-			}
+			// Use ErrorHandler to get descriptive error message
+			const errorMessage = this.errorHandler.handleDatabaseError(e, datasourceType)
 
-			throw new Error(`Error ${pluralAction}`)
+			// Ensure consistent error message format
+			const formattedError = errorMessage.includes('Database error:')
+				? errorMessage
+				: `Database error: ${errorMessage}`
+
+			throw new Error(formattedError)
+		}
+	}
+
+	private getActionDescription(action: QueryPerform): string {
+		switch (action) {
+			case QueryPerform.CREATE:
+				return 'creating record'
+			case QueryPerform.FIND_ONE:
+				return 'finding record'
+			case QueryPerform.FIND_MANY:
+				return 'finding records'
+			case QueryPerform.UPDATE:
+				return 'updating record'
+			case QueryPerform.DELETE:
+				return 'deleting record'
+			case QueryPerform.UNIQUE:
+				return 'checking uniqueness'
+			default:
+				return 'performing action'
 		}
 	}
 
@@ -480,6 +487,10 @@ export class Query {
 	/**
 	 * Check if connection is alive
 	 */
+
+	async getDatabaseType(): Promise<DataSourceType> {
+		return this.configService.get<DataSourceType>('database.type') || DataSourceType.POSTGRES
+	}
 
 	private async checkConnection(options: { x_request_id?: string }): Promise<boolean> {
 		switch (this.configService.get<string>('database.type')) {
