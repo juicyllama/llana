@@ -160,7 +160,7 @@ export class PostController {
 		const insertResult = await this.createOneRecord(options, body, auth.user_identifier, x_request_id)
 
 		if (!insertResult.valid) {
-			return res.status(400).send(insertResult.message)
+			return res.status(400).send(this.response.text(insertResult.message))
 		}
 		return res.status(201).send(insertResult.result)
 	}
@@ -225,7 +225,7 @@ export class PostController {
 		} catch (e) {
 			return {
 				valid: false,
-				message: e.message || 'Unknown error',
+				message: e.message,
 			}
 		}
 	}

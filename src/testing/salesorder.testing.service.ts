@@ -37,41 +37,33 @@ export class SalesOrderTestingService {
 		return await this.schema.getSchema({ table })
 	}
 
-	async createOrder(order: { custId?: any; employeeId?: any; shipperId?: any; orderId?: any } = this.mockOrder()): Promise<any> {
-		const salesOrderTableSchema = await this.schema.getSchema({ table })
+	async createOrder(order: { custId; employeeId; shipperId; orderId? }): Promise<any> {
+		const salesOrderTableSchema = await this.schema.getSchema({ table, x_request_id: 'testing' })
 
 		const ORDER = this.mockOrder()
 
-		try {
-			return (await this.query.perform(
-				QueryPerform.CREATE,
-				{
-					schema: salesOrderTableSchema,
-					data: {
-						...ORDER,
-						...order,
-					},
+		return (await this.query.perform(
+			QueryPerform.CREATE,
+			{
+				schema: salesOrderTableSchema,
+				data: {
+					...ORDER,
+					...order,
 				},
-				'testing',
-			)) as FindOneResponseObject
-		} catch (error) {
-			throw new Error(`Database error: Failed to create sales order - ${error.message}`)
-		}
+			},
+			'testing',
+		)) as FindOneResponseObject
 	}
 
 	async deleteOrder(id: any): Promise<void> {
-		const salesOrderTableSchema = await this.schema.getSchema({ table })
-		try {
-			await this.query.perform(
-				QueryPerform.DELETE,
-				{
-					schema: salesOrderTableSchema,
-					id,
-				},
-				'testing',
-			)
-		} catch (error) {
-			throw new Error(`Database error: Failed to delete sales order - ${error.message}`)
-		}
+		const customerTableSchema = await this.schema.getSchema({ table })
+		await this.query.perform(
+			QueryPerform.DELETE,
+			{
+				schema: customerTableSchema,
+				id,
+			},
+			'testing',
+		)
 	}
 }
