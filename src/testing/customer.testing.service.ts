@@ -51,7 +51,8 @@ export class CustomerTestingService {
 			const customerTableSchema = await this.schema.getSchema({ table })
 
 			// Remove custId for databases that handle auto-increment
-			const { custId: _custId, ...customerData } = customer
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { custId, ...customerData } = customer
 
 			const result = (await this.query.perform(
 				QueryPerform.CREATE,
