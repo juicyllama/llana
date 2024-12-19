@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker'
 import { Injectable } from '@nestjs/common'
-import { Logger } from '../helpers/Logger'
 
 import { FindOneResponseObject } from '../dtos/response.dto'
+import { Logger } from '../helpers/Logger'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
@@ -51,16 +51,16 @@ export class CustomerTestingService {
 			const customerTableSchema = await this.schema.getSchema({ table })
 
 			// Remove custId for databases that handle auto-increment
-			const { custId, ...customerData } = customer
+			const { custId: _custId, ...customerData } = customer
 
-			const result = await this.query.perform(
+			const result = (await this.query.perform(
 				QueryPerform.CREATE,
 				{
 					schema: customerTableSchema,
 					data: customerData,
 				},
 				'testing',
-			) as FindOneResponseObject
+			)) as FindOneResponseObject
 
 			this.logger.debug(
 				`[customer-testing] Created customer with result: ${JSON.stringify(result)}`,
