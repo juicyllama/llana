@@ -10,7 +10,7 @@ import {
 	DataSourceType
 } from '../types/datasource.types'
 import { FindOneResponseObject } from '../dtos/response.dto'
-const { assert } = require('chai')
+import { assert } from 'chai'
 
 @Injectable()
 export class RoleRestrictedFieldsTestingService {
@@ -41,7 +41,7 @@ export class RoleRestrictedFieldsTestingService {
 		}
 	}
 
-	private async _testRestrictedFields(dbType: DataSourceType): Promise<void> {
+	private async _testRestrictedFields(_dbType: DataSourceType): Promise<void> {
 		// Create test table schema with database-specific configuration
 		const testSchema: DataSourceSchema = {
 			table: this.TEST_TABLE,
@@ -151,7 +151,7 @@ export class RoleRestrictedFieldsTestingService {
 		}
 	}
 
-	private async _testRestrictedFieldsWithRelations(dbType: DataSourceType): Promise<void> {
+	private async _testRestrictedFieldsWithRelations(_dbType: DataSourceType): Promise<void> {
 		// Create main table schema
 		const mainSchema: DataSourceSchema = {
 			table: this.TEST_MAIN_TABLE,
