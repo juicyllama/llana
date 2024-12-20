@@ -232,15 +232,43 @@ export class MSSQL {
 			}
 
 			relations.push(relation)
+		}
 
-			const relation_back: DataSourceSchemaRelation = {
-				table: r.org_table,
-				column: r.org_column,
-				org_table: r.table,
-				org_column: r.column,
+		const relation_query_back = `select tab.name as [table],
+			col.name as [column],
+			pk_tab.name as org_table,
+			pk_col.name as org_column
+		from sys.tables tab
+			inner join sys.columns col 
+				on col.object_id = tab.object_id
+			left outer join sys.foreign_key_columns fk_cols
+				on fk_cols.parent_object_id = tab.object_id
+				and fk_cols.parent_column_id = col.column_id
+			left outer join sys.foreign_keys fk
+				on fk.object_id = fk_cols.constraint_object_id
+			left outer join sys.tables pk_tab
+				on pk_tab.object_id = fk_cols.referenced_object_id
+			left outer join sys.columns pk_col
+				on pk_col.column_id = fk_cols.referenced_column_id
+				and pk_col.object_id = fk_cols.referenced_object_id
+		where pk_tab.name = '${options.table}' AND fk_cols.constraint_column_id = 1;`
+
+		const relation_result_back = (
+			await this.performQuery({
+				sql: relation_query_back,
+				x_request_id: options.x_request_id,
+			})
+		).recordset
+
+		for (const r of relation_result_back) {
+			const relation: DataSourceSchemaRelation = {
+				table: r.table,
+				column: r.column,
+				org_table: r.org_table,
+				org_column: r.org_column,
 			}
 
-			relations.push(relation_back)
+			relations.push(relation)
 		}
 
 		return {
@@ -605,25 +633,9 @@ export class MSSQL {
 			} else {
 				command += ` ${this.reserveWordFix(options.schema.table)}.* `
 			}
-
-			if (options.relations?.length) {
-				for (const r in options.relations) {
-					if (options.relations[r].columns?.length) {
-						for (const c in options.relations[r].columns) {
-							command += `, ${this.reserveWordFix(options.relations[r].table)}.${options.relations[r].columns[c]} as ${this.reserveWordFix(options.relations[r].table)}.${options.relations[r].columns[c]} `
-						}
-					}
-				}
-			}
 		}
 
 		command += ` FROM ${this.reserveWordFix(table_name)} `
-
-		if (options.relations?.length) {
-			for (const relation of options.relations) {
-				command += `${relation.join?.type ?? 'INNER JOIN'} ${this.reserveWordFix(relation.join.table)} ON ${this.reserveWordFix(relation.join.org_table)}.${this.reserveWordFix(relation.join.org_column)} = ${this.reserveWordFix(relation.join.table)}.${this.reserveWordFix(relation.join.column)} `
-			}
-		}
 
 		if (options.where?.length) {
 			command += `WHERE `
@@ -642,28 +654,6 @@ export class MSSQL {
 						continue
 					}
 					values.push(where_values[w])
-				}
-			}
-		}
-
-		for (const r in options.relations) {
-			if (options.relations[r].where) {
-				const items = options.relations[r].where.column.split('.')
-
-				switch (items.length) {
-					case 1:
-						command += `AND \`${this.reserveWordFix(options.relations[r].table)}\`.\`${this.reserveWordFix(options.relations[r].where.column)}\` ${options.relations[r].where.operator} ? `
-						break
-					case 2:
-						command += `AND \`${items[0]}\`.\`${items[1]}\` ${options.relations[r].where.operator} ? `
-						break
-					default:
-						command += `AND \`${items[items.length - 2]}\`.\`${items[items.length - 1]}\` ${options.relations[r].where.operator} ? `
-						break
-				}
-
-				if (options.relations[r].where.value) {
-					values.push(options.relations[r].where.value)
 				}
 			}
 		}

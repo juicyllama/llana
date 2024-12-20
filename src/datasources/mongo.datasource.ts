@@ -186,6 +186,20 @@ export class Mongo {
 				})
 			}
 
+			const relations_back = await mongo.db
+				.collection(LLANA_RELATION_TABLE)
+				.find({ table: options.table })
+				.toArray()
+
+			for (const relation of relations_back) {
+				relations.push({
+					table: relation.org_table,
+					column: relation.org_column,
+					org_table: relation.table,
+					org_column: relation.column,
+				})
+			}
+
 			this.logger.debug(
 				`[${DATABASE_TYPE}] Relations built for collection ${options.table}, relations: ${JSON.stringify(relations.map(r => r.table))}`,
 			)

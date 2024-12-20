@@ -63,8 +63,8 @@ export class Authentication {
 		}
 
 		// Check if table exists first
-		
-		if(!options.skip_table_checks){
+
+		if (!options.skip_table_checks) {
 			try {
 				await this.schema.getSchema({ table: options.table, x_request_id: options.x_request_id })
 			} catch (error) {
@@ -73,15 +73,14 @@ export class Authentication {
 			}
 		}
 
-			const authentications = this.configService.get<Auth[]>('auth')
-			const auth_schema = await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: options.x_request_id })
+		const authentications = this.configService.get<Auth[]>('auth')
+		const auth_schema = await this.schema.getSchema({ table: LLANA_AUTH_TABLE, x_request_id: options.x_request_id })
 
-			let auth_passed: AuthRestrictionsResponse = {
-				valid: false,
-				message: 'Unauthorized',
-			}
+		let auth_passed: AuthRestrictionsResponse = {
+			valid: false,
+			message: 'Unauthorized',
+		}
 
-	
 		for (const auth of authentications) {
 			if (auth_passed.valid) continue
 
@@ -121,8 +120,7 @@ export class Authentication {
 				)
 			}
 
-			if(!options.skip_table_checks){
-
+			if (!options.skip_table_checks) {
 				const excludes = rules.data.filter(rule => rule.type === 'EXCLUDE')
 				const includes = rules.data.filter(rule => rule.type === 'INCLUDE')
 
@@ -151,7 +149,9 @@ export class Authentication {
 							} else {
 								// For non-READ operations on excluded tables, require authentication
 								const authHeader = options.headers['Authorization'] || options.headers['authorization']
-								this.logger.debug(`[Authentication][auth] Auth header for write operation: ${authHeader}`)
+								this.logger.debug(
+									`[Authentication][auth] Auth header for write operation: ${authHeader}`,
+								)
 
 								if (!authHeader) {
 									return {
@@ -180,7 +180,9 @@ export class Authentication {
 										return auth_passed
 									}
 								} catch (error) {
-									this.logger.debug(`[Authentication][auth] JWT verification failed: ${error.message}`)
+									this.logger.debug(
+										`[Authentication][auth] JWT verification failed: ${error.message}`,
+									)
 									return {
 										valid: false,
 										message: 'JWT Authentication Failed',
@@ -199,7 +201,6 @@ export class Authentication {
 						}
 					}
 				}
-
 			}
 
 			if (!check_required) continue
@@ -214,8 +215,7 @@ export class Authentication {
 			let schema: DataSourceSchema | null = null
 			let identity_column: string | null = null
 
-			if(!options.skip_table_checks){
-
+			if (!options.skip_table_checks) {
 				try {
 					schema = await this.schema.getSchema({ table: options.table, x_request_id: options.x_request_id })
 					if (!schema) {
@@ -241,7 +241,6 @@ export class Authentication {
 					this.logger.debug(`[Authentication][auth] No identity column found for table ${options.table}`)
 					return { valid: false, message: `No identity column found for table ${options.table}` }
 				}
-
 			}
 
 			switch (auth.type) {

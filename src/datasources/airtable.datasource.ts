@@ -189,6 +189,22 @@ export class Airtable {
 				})
 			}
 
+			//Build reverse relations
+			for (const table of response.tables) {
+				for (const field of table.fields) {
+					if (field.type === AirtableColumnType.MULTIPLE_RECORD_LINKS) {
+						if (field.options.linkedTableId === table.id) {
+							relations.push({
+								table: options.table,
+								column: field.name,
+								org_table: table.name,
+								org_column: 'id',
+							})
+						}
+					}
+				}
+			}
+
 			const schema = {
 				table: options.table,
 				columns,

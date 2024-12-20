@@ -76,17 +76,6 @@ export declare enum ChartsPeriod {
 	YEAR = 'YEAR',
 }
 
-export enum DataSourceoinType {
-	INNER = 'INNER JOIN',
-	LEFT = 'LEFT JOIN',
-	RIGHT = 'RIGHT JOIN',
-}
-
-export enum DataSourceJoinStage {
-	WITH_QUERY = 'WITH_QUERY',
-	POST_QUERY = 'POST_QUERY',
-}
-
 export interface ChartResult {
 	count: number
 	[key: string]: any
@@ -137,13 +126,14 @@ export interface DataSourceCreateOneOptions {
 	data: object
 }
 
-export interface DataSourceJoin extends DataSourceSchemaRelation {
-	type?: DataSourceoinType
-}
-
 export interface DataSourceRelations {
 	table: string
-	join: DataSourceJoin
+	join: {
+		table: string
+		column: string
+		org_table: string
+		org_column: string
+	}
 	columns?: string[]
 	where?: DataSourceWhere
 	schema: DataSourceSchema

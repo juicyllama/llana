@@ -286,12 +286,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						custom: false,
-						role: 'EDITOR',
-						records: RolePermission.WRITE,
-					},
-					{
-						custom: false,
-						role: 'VIEWER',
+						role: 'USER',
 						records: RolePermission.READ,
 					},
 				]
@@ -305,14 +300,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						custom: true,
-						role: 'EDITOR',
-						table: this.authentication.getIdentityTable(),
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
-					},
-					{
-						custom: true,
-						role: 'VIEWER',
+						role: 'USER',
 						table: this.authentication.getIdentityTable(),
 						records: RolePermission.NONE,
 						own_records: RolePermission.WRITE,
@@ -328,16 +316,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						custom: true,
-						role: 'EDITOR',
-						table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
-						identity_column:
-							this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
-					},
-					{
-						custom: true,
-						role: 'VIEWER',
+						role: 'USER',
 						table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
 						identity_column:
 							this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
