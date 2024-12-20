@@ -8,11 +8,12 @@ import { CustomerTestingService } from './testing/customer.testing.service'
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
 import { SalesOrderTestingService } from './testing/salesorder.testing.service'
-import { DataSourceSchema } from './types/datasource.types'
+import { DataSourceSchema, QueryPerform, DataSourceColumnType, WhereOperator } from './types/datasource.types'
 import { EmployeeTestingService } from './testing/employee.testing.service'
 import { ShipperTestingService } from './testing/shipper.testing.service'
 import { TIMEOUT } from './testing/testing.const'
 import { Logger } from './helpers/Logger'
+import { Query } from './helpers/Query'
 
 // Import configs
 import auth from './config/auth.config'
@@ -274,13 +275,103 @@ describe('App > Controller > Get', () => {
 		})
 	})
 
+	describe('Role-based Column Visibility', () => {
+		let query: Query
+		let llanaRolesTableSchema: DataSourceSchema
+
+		beforeAll(async () => {
+			query = app.get<Query>(Query)
+			llanaRolesTableSchema = {
+				table: 'llana_roles',
+				primary_key: 'id',
+				columns: [
+					{ field: 'id', type: DataSourceColumnType.NUMBER, nullable: false, required: true, primary_key: true, unique_key: true, foreign_key: false },
+					{ field: 'role', type: DataSourceColumnType.STRING, nullable: false, required: true, primary_key: false, unique_key: false, foreign_key: false },
+					{ field: 'records', type: DataSourceColumnType.STRING, nullable: false, required: true, primary_key: false, unique_key: false, foreign_key: false },
+					{ field: 'restricted_fields', type: DataSourceColumnType.STRING, nullable: false, required: true, primary_key: false, unique_key: false, foreign_key: false },
+					{ field: 'custom', type: DataSourceColumnType.BOOLEAN, nullable: false, required: true, primary_key: false, unique_key: false, foreign_key: false }
+				]
+			}
+		})
+
+		it('should hide restricted fields for user role in single record', async function () {
+			// Create role with restricted fields
+			const role = await query.perform(QueryPerform.CREATE, {
+				schema: llanaRolesTableSchema,
+				data: {
+					custom: true,
+					role: 'RESTRICTED_USER',
+					records: 'READ',
+					restricted_fields: JSON.stringify(['freight', 'shipCity'])
+				}
+			})
+
+			const result = await request(app.getHttpServer())
+				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+
+			expect(result.body.freight).toBeUndefined()
+			expect(result.body.shipCity).toBeUndefined()
+			expect(result.body.shipName).toBeDefined()
+		})
+
+		it('should hide restricted fields for user role in list', async function () {
+			const result = await request(app.getHttpServer())
+				.get('/SalesOrder/')
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+
+			expect(result.body.data[0].freight).toBeUndefined()
+			expect(result.body.data[0].shipCity).toBeUndefined()
+			expect(result.body.data[0].shipName).toBeDefined()
+		})
+
+		it('should show all fields for admin role in single record', async function () {
+			// Create admin role without restrictions
+			const role = await query.perform(QueryPerform.CREATE, {
+				schema: llanaRolesTableSchema,
+				data: {
+					custom: true,
+					role: 'ADMIN',
+					records: 'READ',
+					restricted_fields: '[]'
+				}
+			})
+
+			const result = await request(app.getHttpServer())
+				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+
+			expect(result.body.freight).toBeDefined()
+			expect(result.body.shipCity).toBeDefined()
+			expect(result.body.shipName).toBeDefined()
+		})
+
+		it('should show all fields for admin role in list', async function () {
+			const result = await request(app.getHttpServer())
+				.get('/SalesOrder/')
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+
+			expect(result.body.data[0].freight).toBeDefined()
+			expect(result.body.data[0].shipCity).toBeDefined()
+			expect(result.body.data[0].shipName).toBeDefined()
+		})
+
+		afterAll(async () => {
+			// Clean up test roles
+			await query.perform(QueryPerform.DELETE, {
+				schema: llanaRolesTableSchema,
+				where: [
+					{ column: 'role', operator: WhereOperator.in, value: ['RESTRICTED_USER', 'ADMIN'] }
+				]
+			})
+		})
+	}) // Close List describe block
+
 	afterAll(async () => {
-		for (let i = 0; i < 10; i++) {
-			await salesOrderTestingService.deleteOrder(orders[i][salesOrderSchema.primary_key])
-		}
-		await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
-		await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])
-		await shipperTestingService.deleteShipper(shipper[shipperSchema.primary_key])
 		await app.close()
-	}, TIMEOUT)
-})
+	})
+}) // Close main describe block for 'App > Controller > Get'

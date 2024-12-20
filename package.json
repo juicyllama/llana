@@ -96,14 +96,12 @@
 		"@swc/cli": "^0.5.2",
 		"@swc/core": "^1.10.0",
 		"@types/bcrypt": "5.0.2",
-		"@types/chai": "^4.3.11",
 		"@types/express": "5.0.0",
 		"@types/jest": "29.5.14",
 		"@types/node": "22.10.1",
 		"@types/supertest": "6.0.2",
 		"@typescript-eslint/eslint-plugin": "^8.17.0",
 		"@typescript-eslint/parser": "^8.17.0",
-		"chai": "^4.3.7",
 		"eslint": "^9.16.0",
 		"eslint-config-prettier": "^9.1.0",
 		"eslint-plugin-prettier": "^5.2.1",
@@ -132,9 +130,6 @@
 		"transform": {
 			"^.+\\.(t|j)s$": "ts-jest"
 		},
-		"transformIgnorePatterns": [
-			"node_modules/(?!(chai)/)"
-		],
 		"collectCoverageFrom": [
 			"**/*.(t|j)s"
 		],
