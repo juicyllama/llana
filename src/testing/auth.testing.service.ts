@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-
 import { AuthService } from '../app.service.auth'
-import { Encryption } from '../helpers/Encryption'
+import { RolePermission } from '../types/roles.types'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
+import { LLANA_AUTH_TABLE, LLANA_ROLES_TABLE } from '../app.constants'
+import { QueryPerform, DataSourceColumnType } from '../types/datasource.types'
+import { ConfigService } from '@nestjs/config'
 import { Auth, AuthJWT, AuthPasswordEncryption, AuthType } from '../types/auth.types'
-import { DataSourceColumnType, QueryPerform } from '../types/datasource.types'
-import { RolePermission } from '../types/roles.types'
+import { Encryption } from '../helpers/Encryption'
 
 @Injectable()
 export class AuthTestingService {
@@ -21,6 +21,7 @@ export class AuthTestingService {
 
 	async login(role?: string): Promise<string> {
 		try {
+			// Generate a unique email using timestamp
 			const timestamp = Date.now()
 			const username = role ? `test_${role}_${timestamp}@test.com` : `test_${timestamp}@test.com`
 			const password = 'test'
@@ -34,20 +35,34 @@ export class AuthTestingService {
 	}
 
 	async loginWithRestrictedFields(restrictedFields: string[]): Promise<string> {
-		const role = 'RESTRICTED_USER'
-		const schema = await this.schema.getSchema({ table: 'llana_roles' })
+		try {
+			const username = 'test_restricted@test.com'
+			const password = 'test'
 
-		await this.query.perform(QueryPerform.CREATE, {
-			schema,
-			data: {
-				custom: true,
-				role,
-				records: RolePermission.READ,
-				restricted_fields: restrictedFields,
-			},
-		})
+			// Create test user
+			await this.createTestUser(username, password)
 
-		return this.login(role)
+			// Get the roles table schema
+			const schema = await this.schema.getSchema({ table: LLANA_ROLES_TABLE })
+
+			// Create role with restricted fields
+			await this.query.perform(QueryPerform.CREATE, {
+				schema,
+				data: {
+					custom: true,
+					role: 'RESTRICTED_USER',
+					records: RolePermission.READ,
+					restricted_fields: restrictedFields.join(','),
+					table: 'SalesOrder' // Default to SalesOrder table for testing
+				}
+			})
+
+			const payload = await this.authService.signIn(username, password)
+			return payload.access_token
+		} catch (error) {
+			console.error('Login failed:', error)
+			throw error
+		}
 	}
 
 	private async createTestUser(username: string, password: string): Promise<void> {
@@ -70,7 +85,7 @@ export class AuthTestingService {
 		const hashedPassword = await this.encryption.encrypt(
 			jwtAuthConfig.password.encryption || AuthPasswordEncryption.BCRYPT,
 			password,
-			jwtAuthConfig.password.salt,
+			jwtAuthConfig.password.salt
 		)
 
 		await this.query.perform(QueryPerform.CREATE, {
@@ -78,10 +93,10 @@ export class AuthTestingService {
 			data: {
 				email: username,
 				password: hashedPassword,
-				role: 'USER', // Use default USER role
+				role: 'USER',  // Use default USER role
 				firstName: 'Test',
-				lastName: 'User',
-			},
+				lastName: 'User'
+			}
 		})
 	}
 }
