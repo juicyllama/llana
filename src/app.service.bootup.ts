@@ -143,9 +143,10 @@ export class AppBootup implements OnApplicationBootstrap {
 			}
 
 			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+			this.logger.debug(`[${APP_BOOT_CONTEXT}] Table creation result: ${created}`, APP_BOOT_CONTEXT)
 
 			if (!created) {
-				throw new Error(`Failed to create ${LLANA_AUTH_TABLE} table`)
+				throw new Error(`Failed to create ${schema.table} table`)
 			}
 
 			// Example Auth Table - For example allowing external API access to see Employee data
@@ -180,6 +181,7 @@ export class AppBootup implements OnApplicationBootstrap {
 		}
 
 		if (!database.tables.includes(LLANA_ROLES_TABLE)) {
+			this.logger.debug(`[${APP_BOOT_CONTEXT}] Tables in database: ${JSON.stringify(database.tables)}`, APP_BOOT_CONTEXT)
 			this.logger.log(`Creating ${LLANA_ROLES_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
 
 			/**
