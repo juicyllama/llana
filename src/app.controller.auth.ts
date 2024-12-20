@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Headers, Post, Req, Res } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Get, Headers, Post, Req, Res, Query as QueryParams, ParseArrayPipe } from '@nestjs/common'
 
 import { AuthService } from './app.service.auth'
 import { HeaderParams } from './dtos/requests.dto'
@@ -8,6 +8,7 @@ import { Response } from './helpers/Response'
 import { Schema } from './helpers/Schema'
 import { DataSourceFindOneOptions, QueryPerform, WhereOperator } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
+import { FindOneResponseObject } from './dtos/response.dto'
 
 @Controller('auth')
 export class AuthController {
@@ -42,7 +43,12 @@ export class AuthController {
 	 */
 
 	@Get('/profile')
-	async profile(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<any> {
+	async profile(
+		@Req() req, 
+		@Res() res, 
+		@Headers() headers: HeaderParams,
+		@QueryParams('relations', new ParseArrayPipe({ items: String, separator: ',', optional: true })) queryRelations?: string[],
+	): Promise<any> {
 		if (this.authentication.skipAuth()) {
 			throw new BadRequestException('Authentication is disabled')
 		}
@@ -65,6 +71,31 @@ export class AuthController {
 		const schema = await this.schema.getSchema({ table, x_request_id })
 		const identity_column = await this.authentication.getIdentityColumn(x_request_id)
 
+		const postQueryRelations = []
+
+		try{
+			if (queryRelations?.length) {
+				const { valid, message, relations } = await this.schema.validateRelations({
+					schema,
+					relation_query: queryRelations,
+					existing_relations: [],
+					x_request_id,
+				})
+
+				if (!valid) {
+					return res.status(400).send(this.response.text(message))
+				}
+
+				for (const relation of relations) {
+					if (!postQueryRelations.find(r => r.table === relation.table)) {
+						postQueryRelations.push(relation)
+					}
+				}
+			}
+		} catch (e) {
+			return res.status(400).send(this.response.text(e.message))
+		}
+
 		const databaseQuery: DataSourceFindOneOptions = {
 			schema,
 			where: [
@@ -74,9 +105,19 @@ export class AuthController {
 					value: auth.user_identifier,
 				},
 			],
+			relations: postQueryRelations,
 		}
 
-		const user = await this.query.perform(QueryPerform.FIND_ONE, databaseQuery, x_request_id)
+		let user = await this.query.perform(QueryPerform.FIND_ONE, databaseQuery, x_request_id) as FindOneResponseObject
+		
+		if (postQueryRelations?.length) {
+			user = await this.query.buildRelations({
+				schema,
+				relations: postQueryRelations,
+			}as DataSourceFindOneOptions, user, x_request_id)
+		}
+
+		
 		return res.status(200).send(user)
 	}
 }
