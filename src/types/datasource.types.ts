@@ -162,6 +162,7 @@ export interface DataSourceFindOptions {
 	fields?: string[]
 	where?: DataSourceWhere[]
 	relations?: DataSourceRelations[]
+	restricted_fields?: string[]
 }
 
 export interface DataSourceUpdateOneOptions {
@@ -220,4 +221,27 @@ export interface DataSourceInterface {
 	truncate(schema: DataSourceSchema): Promise<void>
 	checkConnection(): Promise<boolean>
 	listTables(): Promise<string[]>
+}
+
+export interface ListTablesResponseObject {
+    tables: string[]
+}
+
+export interface FindOneResponseObject {
+    [key: string]: any
+    role?: string
+    restricted_fields?: string
+    records?: string
+}
+
+export interface FindManyResponseObject {
+    [key: string]: any[]
+}
+
+export interface IsUniqueResponse {
+    isUnique: boolean
+}
+
+export interface DeleteResponseObject {
+    success: boolean
 }

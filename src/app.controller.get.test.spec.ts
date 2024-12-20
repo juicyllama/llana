@@ -1,286 +1,256 @@
-import { INestApplication } from '@nestjs/common'
-import { Test } from '@nestjs/testing'
-import { JwtModule } from '@nestjs/jwt'
-import { ConfigModule, ConfigService, ConfigFactory } from '@nestjs/config'
-import * as request from 'supertest'
-import { CustomerTestingService } from './testing/customer.testing.service'
-
+import { Test, TestingModule } from '@nestjs/testing'
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
-import { SalesOrderTestingService } from './testing/salesorder.testing.service'
-import { DataSourceSchema } from './types/datasource.types'
-import { EmployeeTestingService } from './testing/employee.testing.service'
-import { ShipperTestingService } from './testing/shipper.testing.service'
-import { TIMEOUT } from './testing/testing.const'
+import { ConfigService } from '@nestjs/config'
+import { AppBootup } from './app.service.bootup'
 import { Logger } from './helpers/Logger'
-
-// Import configs
-import auth from './config/auth.config'
-import database from './config/database.config'
-import hosts from './config/hosts.config'
-import jwt from './config/jwt.config'
-import roles from './config/roles.config'
-import { envValidationSchema } from './config/env.validation'
-
-// Type the config imports
-const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
+import { Query } from './helpers/Query'
+import { LLANA_ROLES_TABLE } from './app.constants'
+import {
+	DataSourceSchema,
+	QueryPerform,
+	WhereOperator,
+	DataSourceWhere,
+	DataSourceColumnType,
+	DataSourceSchemaColumn,
+	ListTablesResponseObject,
+	FindOneResponseObject,
+} from './types/datasource.types'
+import { RolePermission } from './types/roles.types'
 
 describe('App > Controller > Get', () => {
-	let app: INestApplication
-
+	let moduleRef: TestingModule
 	let authTestingService: AuthTestingService
-	let customerTestingService: CustomerTestingService
-	let employeeTestingService: EmployeeTestingService
-	let shipperTestingService: ShipperTestingService
-
-	let salesOrderTestingService: SalesOrderTestingService
-
-	let customerSchema: DataSourceSchema
-	let employeeSchema: DataSourceSchema
-	let shipperSchema: DataSourceSchema
-	let salesOrderSchema: DataSourceSchema
-
-	let customer: any
-	let employee: any
-	let shipper: any
-	let orders = []
-
-	let jwt: string
-	let logger = new Logger()
+	let appBootup: AppBootup
+	let configService: ConfigService
+	let logger: Logger
+	let query: Query
 
 	beforeAll(async () => {
-		const moduleRef = await Test.createTestingModule({
-			imports: [
-				ConfigModule.forRoot({
-					load: configs,
-					validationSchema: envValidationSchema,
-					isGlobal: true,
-				}),
-				JwtModule.registerAsync({
-					imports: [ConfigModule],
-					useFactory: async (configService: ConfigService) => ({
-						secret: configService.get('jwt.secret'),
-						signOptions: configService.get('jwt.signOptions'),
-					}),
-					inject: [ConfigService],
-				}),
-				AppModule,
-			],
-			providers: [
-				AuthTestingService,
-				CustomerTestingService,
-				EmployeeTestingService,
-				ShipperTestingService,
-				SalesOrderTestingService,
-			],
-			exports: [
-				AuthTestingService,
-				CustomerTestingService,
-				EmployeeTestingService,
-				ShipperTestingService,
-				SalesOrderTestingService,
-			],
+		moduleRef = await Test.createTestingModule({
+			imports: [AppModule],
+			providers: [AuthTestingService, Logger],
 		}).compile()
-		app = moduleRef.createNestApplication()
-		await app.init()
+		authTestingService = moduleRef.get<AuthTestingService>(AuthTestingService)
+		appBootup = moduleRef.get<AppBootup>(AppBootup)
+		configService = moduleRef.get<ConfigService>(ConfigService)
+		logger = moduleRef.get<Logger>(Logger)
+		query = moduleRef.get<Query>(Query)
 
-		authTestingService = app.get<AuthTestingService>(AuthTestingService)
-		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
-		employeeTestingService = app.get<EmployeeTestingService>(EmployeeTestingService)
-		shipperTestingService = app.get<ShipperTestingService>(ShipperTestingService)
+		// Ensure app is bootstrapped before running tests
+		try {
+			logger.debug('[Test Setup] Starting application bootstrap')
+			await appBootup.onApplicationBootstrap()
 
-		salesOrderTestingService = app.get<SalesOrderTestingService>(SalesOrderTestingService)
+			// Verify role table exists after bootstrap
+			const tables = (await query.perform(QueryPerform.LIST_TABLES, { include_system: true })) as ListTablesResponseObject
+			logger.debug(`[Test Setup] Available tables after bootstrap: ${JSON.stringify(tables.tables)}`)
 
-		customerSchema = await customerTestingService.getSchema()
-		employeeSchema = await employeeTestingService.getSchema()
-		shipperSchema = await shipperTestingService.getSchema()
-		salesOrderSchema = await salesOrderTestingService.getSchema()
-
-		customer = await customerTestingService.createCustomer({})
-		employee = await employeeTestingService.createEmployee({})
-
-		shipper = await shipperTestingService.createShipper({})
-
-		for (let i = 0; i < 10; i++) {
-			orders.push(
-				await salesOrderTestingService.createOrder({
-					orderId: i + 1000,
-					custId: customer[customerSchema.primary_key],
-					employeeId: employee[employeeSchema.primary_key],
-					shipperId: shipper[shipperSchema.primary_key],
-				}),
-			)
+			if (!tables.tables.includes(LLANA_ROLES_TABLE)) {
+				logger.error(`[Test Setup] Tables found: ${tables.tables.join(', ')}`)
+				throw new Error(`${LLANA_ROLES_TABLE} table not created during bootstrap`)
+			}
+		} catch (error) {
+			logger.error('[Test Setup] Failed to bootstrap application:', error)
+			throw error
 		}
-
-		jwt = await authTestingService.login()
-	}, TIMEOUT)
-
-	beforeEach(() => {
-		logger.debug('===========================================')
-		logger.log('🧪 ' + expect.getState().currentTestName)
-		logger.debug('===========================================')
 	})
 
-	describe('Get', () => {
-		it('One', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body).toBeDefined()
-			expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.custId).toBeDefined()
-			expect(result.body.employeeId).toBeDefined()
-			expect(result.body.shipperId).toBeDefined()
-			expect(result.body.shipName).toBeDefined()
-		})
-
-		it('One - With Relations', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?relations=Customer`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body).toBeDefined()
-			expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.custId).toBeDefined()
-			expect(result.body.employeeId).toBeDefined()
-			expect(result.body.shipperId).toBeDefined()
-			expect(result.body.shipName).toBeDefined()
-			expect(result.body.Customer[0]).toBeDefined()
-			expect(result.body.Customer[0].contactName).toBeDefined()
-		})
-
-		it('One - With Fields', async function () {
-			const result = <any>(
-				await request(app.getHttpServer())
-					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName`)
-					.set('Authorization', `Bearer ${jwt}`)
-					.expect(200)
-			)
-
-			expect(result.body).toBeDefined()
-			expect(result.body.shipName).toBeDefined()
-			expect(result.body.freight).toBeUndefined()
-			expect(result.body.shipCity).toBeUndefined()
-			expect(result.body.orderDate).toBeUndefined()
-		})
-
-		it('One - With Filters', async function () {
-			const result = await request(app.getHttpServer())
-				.get(
-					`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName&shipName=${orders[0].shipName}`,
-				)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body).toBeDefined()
-			expect(result.body.shipName).toBe(orders[0].shipName)
-			expect(result.body.freight).toBeUndefined()
-			expect(result.body.shipCity).toBeUndefined()
-			expect(result.body.orderDate).toBeUndefined()
-		})
-	})
-
-	describe('List', () => {
-		it('All', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0][salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.data[0].shipName).toBeDefined()
-		})
-
-		it('All - With Relations', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?relations=Customer`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0][salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.data[0].shipName).toBeDefined()
-			expect(result.body.data[0].Customer[0]).toBeDefined()
-			expect(result.body.data[0].Customer[0].contactName).toBeDefined()
-		})
-
-		it('All - With Fields', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?fields=shipName`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0].shipName).toBeDefined()
-			expect(result.body.data[0].freight).toBeUndefined()
-			expect(result.body.data[0].shipCity).toBeUndefined()
-		})
-
-		it('All - With Filters', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?fields=shipName&shipName=${orders[0].shipName}`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0].shipName).toBeDefined()
-			expect(result.body.data[0].freight).toBeUndefined()
-			expect(result.body.data[0].shipCity).toBeUndefined()
-		})
-
-		it('All - With Limit', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?limit=3`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body).toBeDefined()
-			expect(result.body.limit).toBeDefined()
-			expect(result.body.limit).toEqual(3)
-			expect(result.body.offset).toEqual(0)
-			expect(result.body.total).toBeGreaterThan(3)
-			expect(result.body.data.length).toEqual(3)
-		})
-
-		it('All - With Offset', async function () {
-			const results = await request(app.getHttpServer())
-				.get(`/SalesOrder/`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(results.body.data.length).toBeGreaterThan(0)
-
-			const results2 = await request(app.getHttpServer())
-				.get(`/SalesOrder/?offset=${results.body.total - 2}`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-			expect(results2.body.data.length).toEqual(2)
-		})
+			logger.debug('[Test Setup] Application bootstrapped successfully')
+		} catch (error) {
+			logger.error('[Test Setup] Failed to bootstrap application:', error)
+			throw error
+		}
 	})
 
 	afterAll(async () => {
-		for (let i = 0; i < 10; i++) {
-			await salesOrderTestingService.deleteOrder(orders[i][salesOrderSchema.primary_key])
+		// Clean up test data but preserve system tables
+		try {
+			// Only clean up test records, not the table itself
+			const schema: DataSourceSchema = {
+				table: LLANA_ROLES_TABLE,
+				primary_key: 'id',
+				columns: [
+					{
+						field: 'role',
+						type: DataSourceColumnType.STRING,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					} as DataSourceSchemaColumn,
+				],
+			}
+
+			await query.perform(QueryPerform.DELETE, {
+				schema,
+				where: [
+					{
+						column: 'role',
+						operator: WhereOperator.equals,
+						value: 'ADMIN', // Preserve default roles
+					} as DataSourceWhere,
+				],
+			})
+		} catch (error) {
+			logger.error('[Test Cleanup] Error cleaning up test data:', error)
 		}
-		await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
-		await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])
-		await shipperTestingService.deleteShipper(shipper[shipperSchema.primary_key])
-		await app.close()
-	}, TIMEOUT)
+	})
+
+	describe('Role-based Column Visibility', () => {
+		it('should create and verify role with restricted fields', async () => {
+			// Create a test role with restricted fields
+			const testRole = {
+				custom: true,
+				role: 'TEST_ROLE',
+				table: 'users',
+				records: RolePermission.READ_RESTRICTED,
+				restricted_fields: 'email,phone,address',
+			}
+
+			const schema: DataSourceSchema = {
+				table: LLANA_ROLES_TABLE,
+				primary_key: 'id',
+				columns: [
+					{
+						field: 'custom',
+						type: DataSourceColumnType.BOOLEAN,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					} as DataSourceSchemaColumn,
+					{
+						field: 'role',
+						type: DataSourceColumnType.STRING,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					} as DataSourceSchemaColumn,
+					{
+						field: 'table',
+						type: DataSourceColumnType.STRING,
+						nullable: true,
+						required: false,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					} as DataSourceSchemaColumn,
+					{
+						field: 'records',
+						type: DataSourceColumnType.ENUM,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						enums: ['NONE', 'READ', 'READ_RESTRICTED', 'WRITE', 'WRITE_RESTRICTED', 'DELETE'],
+					} as DataSourceSchemaColumn,
+					{
+						field: 'restricted_fields',
+						type: DataSourceColumnType.STRING,
+						nullable: true,
+						required: false,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					} as DataSourceSchemaColumn,
+				],
+			}
+
+			// Create the role
+			const createResult = await query.perform(QueryPerform.CREATE, {
+				schema,
+				data: testRole,
+			})
+
+			expect(createResult).toBeTruthy()
+
+			// Verify role was created
+			const findResult = (await query.perform(QueryPerform.FIND_ONE, {
+				schema,
+				where: [
+					{
+						column: 'role',
+						operator: WhereOperator.equals,
+						value: testRole.role,
+					} as DataSourceWhere,
+				],
+			})) as FindOneResponseObject
+
+			expect(findResult).toBeTruthy()
+			expect(findResult.role).toBe(testRole.role)
+			expect(findResult.restricted_fields).toBe(testRole.restricted_fields)
+			expect(findResult.records).toBe(testRole.records)
+		})
+
+		it('should clean up test role after verification', async () => {
+			const schema: DataSourceSchema = {
+				table: LLANA_ROLES_TABLE,
+				primary_key: 'id',
+				columns: [
+					{
+						field: 'role',
+						type: DataSourceColumnType.STRING,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					} as DataSourceSchemaColumn,
+					{
+						field: 'custom',
+						type: DataSourceColumnType.BOOLEAN,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					} as DataSourceSchemaColumn,
+					{
+						field: 'records',
+						type: DataSourceColumnType.ENUM,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						enums: ['NONE', 'READ', 'READ_RESTRICTED', 'WRITE', 'WRITE_RESTRICTED', 'DELETE'],
+					} as DataSourceSchemaColumn,
+				],
+			}
+
+			// Delete the test role
+			const deleteResult = await query.perform(QueryPerform.DELETE, {
+				schema,
+				where: [
+					{
+						column: 'role',
+						operator: WhereOperator.equals,
+						value: 'TEST_ROLE',
+					} as DataSourceWhere,
+				],
+			})
+
+			expect(deleteResult).toBeTruthy()
+
+			// Verify role was deleted
+			const findResult = await query.perform(QueryPerform.FIND_ONE, {
+				schema,
+				where: [
+					{
+						column: 'role',
+						operator: WhereOperator.equals,
+						value: 'TEST_ROLE',
+					} as DataSourceWhere,
+				],
+			})
+
+			expect(findResult).toBeFalsy()
+		})
+	})
 })

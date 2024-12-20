@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import * as bcrypt from 'bcrypt'
 
 import { Airtable } from '../datasources/airtable.datasource'
 import { Mongo } from '../datasources/mongo.datasource'
@@ -29,7 +30,6 @@ import {
 	WhereOperator,
 } from '../types/datasource.types'
 import { Env } from '../utils/Env'
-import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
 
@@ -37,7 +37,6 @@ import { Schema } from './Schema'
 export class Query {
 	constructor(
 		private readonly configService: ConfigService,
-		private readonly encryption: Encryption,
 		private readonly logger: Logger,
 		private readonly schema: Schema,
 		private readonly mysql: MySQL,
@@ -150,7 +149,7 @@ export class Query {
 					throw new Error(`Action ${action} not supported`)
 			}
 		} catch (e) {
-			this.logger.error(`[Query][${action.toUpperCase()}][${table_name}] ${e.message}`, x_request_id)
+			this.logger.error(`[Query][${action.toUpperCase()}][\`${table_name}\`] ${e.message}`, x_request_id)
 
 			let pluralAction
 
@@ -189,20 +188,25 @@ export class Query {
 	 */
 
 	private async createTable(schema: DataSourceSchema, x_request_id: string): Promise<boolean> {
-		switch (this.configService.get<string>('database.type')) {
-			case DataSourceType.MYSQL:
-				return await this.mysql.createTable(schema, x_request_id)
-			case DataSourceType.POSTGRES:
-				return await this.postgres.createTable(schema, x_request_id)
-			case DataSourceType.MONGODB:
-				return await this.mongo.createTable(schema, x_request_id)
-			case DataSourceType.MSSQL:
-				return await this.mssql.createTable(schema, x_request_id)
-			case DataSourceType.AIRTABLE:
-				return await this.airtable.createTable(schema, x_request_id)
-			default:
-				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
-				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		try {
+			switch (this.configService.get<string>('database.type')) {
+				case DataSourceType.MYSQL:
+					return await this.mysql.createTable(schema, x_request_id)
+				case DataSourceType.POSTGRES:
+					return await this.postgres.createTable(schema, x_request_id)
+				case DataSourceType.MONGODB:
+					return await this.mongo.createTable(schema, x_request_id)
+				case DataSourceType.MSSQL:
+					return await this.mssql.createTable(schema, x_request_id)
+				case DataSourceType.AIRTABLE:
+					return await this.airtable.createTable(schema, x_request_id)
+				default:
+					this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
+					throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+			}
+		} catch (e) {
+			this.logger.error(`[Query][CreateTable] Error creating table ${schema.table}: ${e.message}`, x_request_id)
+			throw e
 		}
 	}
 
@@ -276,6 +280,16 @@ export class Query {
 			return null
 		}
 
+		// Filter restricted fields if specified
+		if (options.restricted_fields?.length) {
+			result = Object.keys(result)
+				.filter(key => options.restricted_fields.includes(key))
+				.reduce((obj, key) => {
+					obj[key] = result[key]
+					return obj
+				}, {})
+		}
+
 		return {
 			...result,
 			_x_request_id: x_request_id,
@@ -310,6 +324,18 @@ export class Query {
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+
+		// Filter restricted fields if specified
+		if (options.restricted_fields?.length) {
+			result.data = result.data.map(item =>
+				Object.keys(item)
+					.filter(key => options.restricted_fields.includes(key))
+					.reduce((obj, key) => {
+						obj[key] = item[key]
+						return obj
+					}, {}),
+			)
 		}
 
 		return {
@@ -359,6 +385,12 @@ export class Query {
 	 */
 
 	private async deleteOne(options: DataSourceDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
+		// Add debug logging for table name
+		this.logger.debug(
+			`[Query][deleteOne] Attempting to delete from table: ${options.schema.table}`,
+			x_request_id,
+		)
+
 		let result: DeleteResponseObject
 
 		switch (this.configService.get<string>('database.type')) {
@@ -466,10 +498,11 @@ export class Query {
 
 		if (options.data[jwt_config.table.columns.password]) {
 			if (options.schema.table === jwt_config.table.name) {
-				options.data[jwt_config.table.columns.password] = await this.encryption.encrypt(
-					jwt_config.table.password.encryption,
+				// Ensure salt rounds is a number and default to 10 if not set
+				const saltRounds = Number(jwt_config.table.password.salt) || 10
+				options.data[jwt_config.table.columns.password] = await bcrypt.hash(
 					options.data[jwt_config.table.columns.password],
-					jwt_config.table.password.salt,
+					saltRounds,
 				)
 			}
 		}
@@ -593,6 +626,7 @@ export class Query {
 				where: where,
 				limit: 9999,
 				offset: 0,
+				restricted_fields: options.restricted_fields, // Pass restricted fields to relation queries
 			}
 
 			const relationResults = await this.findMany(relationOptions, x_request_id)

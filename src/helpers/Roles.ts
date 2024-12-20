@@ -130,6 +130,11 @@ export class Roles {
 				if (this.rolePass(options.access, permission.records)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
+						restricted_fields:
+							permission.records === RolePermission.READ_RESTRICTED ||
+							permission.records === RolePermission.WRITE_RESTRICTED
+								? permission.restricted_fields?.split(',')
+								: undefined,
 					}
 					await this.cacheManager.set(
 						`roles:${options.identifier}:${options.table}:${options.access}`,
@@ -142,6 +147,11 @@ export class Roles {
 				if (this.rolePass(options.access, permission.own_records)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
+						restricted_fields:
+							permission.own_records === RolePermission.READ_RESTRICTED ||
+							permission.own_records === RolePermission.WRITE_RESTRICTED
+								? permission.restricted_fields?.split(',')
+								: undefined,
 						restriction: {
 							column: permission.identity_column ?? schema.primary_key,
 							operator: WhereOperator.equals,
@@ -183,6 +193,11 @@ export class Roles {
 				if (this.rolePass(options.access, permission.records)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
+						restricted_fields:
+							permission.records === RolePermission.READ_RESTRICTED ||
+							permission.records === RolePermission.WRITE_RESTRICTED
+								? permission.restricted_fields?.split(',')
+								: undefined,
 					}
 					await this.cacheManager.set(
 						`roles:${options.identifier}:${options.table}:${options.access}`,
@@ -249,11 +264,22 @@ export class Roles {
 			case RolePermission.READ:
 				return (
 					permission === RolePermission.READ ||
+					permission === RolePermission.READ_RESTRICTED ||
 					permission === RolePermission.WRITE ||
+					permission === RolePermission.WRITE_RESTRICTED ||
+					permission === RolePermission.DELETE
+				)
+			case RolePermission.READ_RESTRICTED:
+				return (
+					permission === RolePermission.READ_RESTRICTED ||
+					permission === RolePermission.WRITE ||
+					permission === RolePermission.WRITE_RESTRICTED ||
 					permission === RolePermission.DELETE
 				)
 			case RolePermission.WRITE:
 				return permission === RolePermission.WRITE || permission === RolePermission.DELETE
+			case RolePermission.WRITE_RESTRICTED:
+				return permission === RolePermission.WRITE_RESTRICTED || permission === RolePermission.DELETE
 			case RolePermission.DELETE:
 				return permission === RolePermission.DELETE
 		}
