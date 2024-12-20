@@ -44,9 +44,10 @@ describe('App > Controller > Get', () => {
 
 			// Verify role table exists after bootstrap
 			const tables = (await query.perform(QueryPerform.LIST_TABLES, { include_system: true })) as ListTablesResponseObject
-			logger.debug(`[Test Setup] Available tables after bootstrap: ${JSON.stringify(tables)}`)
+			logger.debug(`[Test Setup] Available tables after bootstrap: ${JSON.stringify(tables.tables)}`)
 
 			if (!tables.tables.includes(LLANA_ROLES_TABLE)) {
+				logger.error(`[Test Setup] Tables found: ${tables.tables.join(', ')}`)
 				throw new Error(`${LLANA_ROLES_TABLE} table not created during bootstrap`)
 			}
 
