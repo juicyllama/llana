@@ -162,6 +162,7 @@ export interface DataSourceFindOptions {
 	fields?: string[]
 	where?: DataSourceWhere[]
 	relations?: DataSourceRelations[]
+	restricted_fields?: string[]
 }
 
 export interface DataSourceUpdateOneOptions {

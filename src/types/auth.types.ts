@@ -55,6 +55,7 @@ export interface AuthRestrictionsResponse {
 
 export interface AuthTablePermissionSuccessResponse extends AuthTablePermissionResponse {
 	restriction?: DataSourceWhere
+	restricted_fields?: string[]
 }
 
 export interface AuthTablePermissionFailResponse extends AuthTablePermissionResponse {

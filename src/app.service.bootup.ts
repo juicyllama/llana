@@ -256,7 +256,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
-						enums: ['NONE', 'READ', 'WRITE', 'DELETE'],
+						enums: ['NONE', 'READ', 'READ_RESTRICTED', 'WRITE', 'WRITE_RESTRICTED', 'DELETE'],
 					},
 					{
 						field: 'own_records',
@@ -266,7 +266,16 @@ export class AppBootup implements OnApplicationBootstrap {
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
-						enums: ['NONE', 'READ', 'WRITE', 'DELETE'],
+						enums: ['NONE', 'READ', 'READ_RESTRICTED', 'WRITE', 'WRITE_RESTRICTED', 'DELETE'],
+					},
+					{
+						field: 'restricted_fields',
+						type: DataSourceColumnType.STRING,
+						nullable: true,
+						required: false,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
 					},
 				],
 			}

@@ -276,6 +276,16 @@ export class Query {
 			return null
 		}
 
+		// Filter restricted fields if specified
+		if (options.restricted_fields?.length) {
+			result = Object.keys(result)
+				.filter(key => options.restricted_fields.includes(key))
+				.reduce((obj, key) => {
+					obj[key] = result[key]
+					return obj
+				}, {})
+		}
+
 		return {
 			...result,
 			_x_request_id: x_request_id,
@@ -310,6 +320,18 @@ export class Query {
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
 				)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
+		}
+
+		// Filter restricted fields if specified
+		if (options.restricted_fields?.length) {
+			result.data = result.data.map(item =>
+				Object.keys(item)
+					.filter(key => options.restricted_fields.includes(key))
+					.reduce((obj, key) => {
+						obj[key] = item[key]
+						return obj
+					}, {}),
+			)
 		}
 
 		return {
@@ -593,6 +615,7 @@ export class Query {
 				where: where,
 				limit: 9999,
 				offset: 0,
+				restricted_fields: options.restricted_fields, // Pass restricted fields to relation queries
 			}
 
 			const relationResults = await this.findMany(relationOptions, x_request_id)

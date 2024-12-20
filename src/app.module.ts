@@ -40,6 +40,7 @@ import { RedisMockWithPubSub } from './modules/websocket/redis-mock-with-pub-sub
 import { REDIS_PUB_CLIENT_TOKEN, REDIS_SUB_CLIENT_TOKEN } from './modules/websocket/websocket.constants'
 import { WebsocketGateway } from './modules/websocket/websocket.gateway'
 import { WebsocketService } from './modules/websocket/websocket.service'
+import { RoleRestrictedFieldsTestingService } from './testing/role.restricted.fields.testing.service'
 import { Env } from './utils/Env'
 
 const singleServerRedisPubsub = new RedisMockWithPubSub() // in-memory pubsub for testing or single server setup
@@ -83,6 +84,7 @@ function createPubSubOnlyRedisClient() {
 		Encryption,
 		HostCheckMiddleware,
 		Logger,
+		RoleRestrictedFieldsTestingService,
 		Mongo,
 		MySQL,
 		MSSQL,
@@ -96,6 +98,7 @@ function createPubSubOnlyRedisClient() {
 		Webhook,
 		WebsocketGateway,
 		WebsocketService,
+		RoleRestrictedFieldsTestingService,
 		{
 			provide: REDIS_PUB_CLIENT_TOKEN,
 			useFactory: createPubSubOnlyRedisClient,
@@ -126,6 +129,7 @@ function createPubSubOnlyRedisClient() {
 		Webhook,
 		WebsocketService,
 		WebsocketGateway,
+		RoleRestrictedFieldsTestingService,
 	],
 })
 export class AppModule implements NestModule {

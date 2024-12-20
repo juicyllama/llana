@@ -1,7 +1,9 @@
 export enum RolePermission {
 	NONE = 'NONE',
 	READ = 'READ',
+	READ_RESTRICTED = 'READ_RESTRICTED',
 	WRITE = 'WRITE',
+	WRITE_RESTRICTED = 'WRITE_RESTRICTED',
 	DELETE = 'DELETE',
 }
 
