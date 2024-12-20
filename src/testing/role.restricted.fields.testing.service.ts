@@ -1,16 +1,17 @@
 import { Injectable } from '@nestjs/common'
+import { assert } from 'chai'
+
+import { FindOneResponseObject } from '../dtos/response.dto'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
-import { RolePermission } from '../types/roles.types'
 import {
-	QueryPerform,
-	DataSourceSchema,
 	DataSourceColumnType,
+	DataSourceSchema,
+	DataSourceType,
+	QueryPerform,
 	WhereOperator,
-	DataSourceType
 } from '../types/datasource.types'
-import { FindOneResponseObject } from '../dtos/response.dto'
-import { assert } from 'chai'
+import { RolePermission } from '../types/roles.types'
 
 @Injectable()
 export class RoleRestrictedFieldsTestingService {
@@ -37,11 +38,11 @@ export class RoleRestrictedFieldsTestingService {
 
 		for (const db of databases) {
 			console.log(`Testing with ${db.name}...`)
-			await this._testRestrictedFields(db.type)
+			await this._testRestrictedFields()
 		}
 	}
 
-	private async _testRestrictedFields(_dbType: DataSourceType): Promise<void> {
+	private async _testRestrictedFields(): Promise<void> {
 		// Create test table schema with database-specific configuration
 		const testSchema: DataSourceSchema = {
 			table: this.TEST_TABLE,
@@ -143,7 +144,7 @@ export class RoleRestrictedFieldsTestingService {
 		for (const db of databases) {
 			console.log(`Testing with ${db.name}...`)
 			try {
-				await this._testRestrictedFieldsWithRelations(db.type)
+				await this._testRestrictedFieldsWithRelations()
 			} catch (error) {
 				console.error(`Test failed for ${db.name}:`, error)
 				throw error
@@ -151,7 +152,7 @@ export class RoleRestrictedFieldsTestingService {
 		}
 	}
 
-	private async _testRestrictedFieldsWithRelations(_dbType: DataSourceType): Promise<void> {
+	private async _testRestrictedFieldsWithRelations(): Promise<void> {
 		// Create main table schema
 		const mainSchema: DataSourceSchema = {
 			table: this.TEST_MAIN_TABLE,
