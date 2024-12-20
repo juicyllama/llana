@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import * as bcrypt from 'bcrypt'
 
 import { Airtable } from '../datasources/airtable.datasource'
 import { Mongo } from '../datasources/mongo.datasource'
@@ -29,7 +30,6 @@ import {
 	WhereOperator,
 } from '../types/datasource.types'
 import { Env } from '../utils/Env'
-import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
 
@@ -37,7 +37,6 @@ import { Schema } from './Schema'
 export class Query {
 	constructor(
 		private readonly configService: ConfigService,
-		private readonly encryption: Encryption,
 		private readonly logger: Logger,
 		private readonly schema: Schema,
 		private readonly mysql: MySQL,
@@ -150,7 +149,7 @@ export class Query {
 					throw new Error(`Action ${action} not supported`)
 			}
 		} catch (e) {
-			this.logger.error(`[Query][${action.toUpperCase()}][${table_name}] ${e.message}`, x_request_id)
+			this.logger.error(`[Query][${action.toUpperCase()}][\`${table_name}\`] ${e.message}`, x_request_id)
 
 			let pluralAction
 
@@ -386,6 +385,12 @@ export class Query {
 	 */
 
 	private async deleteOne(options: DataSourceDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
+		// Add debug logging for table name
+		this.logger.debug(
+			`[Query][deleteOne] Attempting to delete from table: ${options.schema.table}`,
+			x_request_id,
+		)
+
 		let result: DeleteResponseObject
 
 		switch (this.configService.get<string>('database.type')) {
@@ -493,10 +498,11 @@ export class Query {
 
 		if (options.data[jwt_config.table.columns.password]) {
 			if (options.schema.table === jwt_config.table.name) {
-				options.data[jwt_config.table.columns.password] = await this.encryption.encrypt(
-					jwt_config.table.password.encryption,
+				// Ensure salt rounds is a number and default to 10 if not set
+				const saltRounds = Number(jwt_config.table.password.salt) || 10
+				options.data[jwt_config.table.columns.password] = await bcrypt.hash(
 					options.data[jwt_config.table.columns.password],
-					jwt_config.table.password.salt,
+					saltRounds,
 				)
 			}
 		}

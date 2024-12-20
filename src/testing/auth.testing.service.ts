@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import * as bcrypt from 'bcrypt'
 
 import { LLANA_ROLES_TABLE } from '../app.constants'
 import { AuthService } from '../app.service.auth'
-import { Encryption } from '../helpers/Encryption'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
-import { Auth, AuthJWT, AuthPasswordEncryption, AuthType } from '../types/auth.types'
+import { Auth, AuthJWT, AuthType } from '../types/auth.types'
 import { DataSourceColumnType, QueryPerform } from '../types/datasource.types'
 import { RolePermission } from '../types/roles.types'
 
@@ -17,7 +17,6 @@ export class AuthTestingService {
 		private readonly query: Query,
 		private readonly schema: Schema,
 		private readonly configService: ConfigService,
-		private readonly encryption: Encryption,
 	) {}
 
 	async login(role?: string): Promise<string> {
@@ -26,7 +25,11 @@ export class AuthTestingService {
 			const timestamp = Date.now()
 			const username = role ? `test_${role}_${timestamp}@test.com` : `test_${timestamp}@test.com`
 			const password = 'test'
+
+			// Create test user first
 			await this.createTestUser(username, password)
+
+			// Then attempt login with same password
 			const payload = await this.authService.signIn(username, password)
 			return payload.access_token
 		} catch (error) {
@@ -83,11 +86,12 @@ export class AuthTestingService {
 			throw new Error('Role column not properly configured in User table')
 		}
 
-		const hashedPassword = await this.encryption.encrypt(
-			jwtAuthConfig.password.encryption || AuthPasswordEncryption.BCRYPT,
-			password,
-			jwtAuthConfig.password.salt,
-		)
+		// Clean password before hashing
+		const cleanPassword = String(password).trim()
+
+		// Use salt rounds from config, defaulting to 10 if not set
+		const saltRounds = Number(jwtAuthConfig.password.salt) || 10
+		const hashedPassword = await bcrypt.hash(cleanPassword, saltRounds)
 
 		await this.query.perform(QueryPerform.CREATE, {
 			schema,

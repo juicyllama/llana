@@ -181,7 +181,7 @@ export class AppBootup implements OnApplicationBootstrap {
 		}
 
 		if (!database.tables.includes(LLANA_ROLES_TABLE)) {
-			this.logger.debug(`[${APP_BOOT_CONTEXT}] Tables in database: ${JSON.stringify(database.tables)}`, APP_BOOT_CONTEXT)
+			this.logger.debug(`[${APP_BOOT_CONTEXT}] Tables in database before bootstrap: ${JSON.stringify(database.tables)}`, APP_BOOT_CONTEXT)
 			this.logger.log(`Creating ${LLANA_ROLES_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
 
 			/**
@@ -282,102 +282,129 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
-			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+			this.logger.debug(`[${APP_BOOT_CONTEXT}] Creating table with schema: ${JSON.stringify(schema)}`, APP_BOOT_CONTEXT)
 
-			if (!created) {
-				throw new Error(`Failed to create ${LLANA_ROLES_TABLE} table`)
-			}
+			try {
+				const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema, x_request_id: APP_BOOT_CONTEXT }, APP_BOOT_CONTEXT)
 
-			if (!this.authentication.skipAuth()) {
-				const default_roles: DefaultRole[] = [
-					{
-						custom: false,
-						role: 'ADMIN',
-						records: RolePermission.DELETE,
-					},
-					{
-						custom: false,
-						role: 'EDITOR',
-						records: RolePermission.WRITE,
-					},
-					{
-						custom: false,
-						role: 'VIEWER',
-						records: RolePermission.READ,
-					},
-				]
-				const custom_roles: CustomRole[] = [
-					{
-						custom: true,
-						role: 'ADMIN',
-						table: this.authentication.getIdentityTable(),
-						records: RolePermission.DELETE,
-						own_records: RolePermission.DELETE,
-					},
-					{
-						custom: true,
-						role: 'EDITOR',
-						table: this.authentication.getIdentityTable(),
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
-					},
-					{
-						custom: true,
-						role: 'VIEWER',
-						table: this.authentication.getIdentityTable(),
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
-					},
-					{
-						custom: true,
-						role: 'ADMIN',
-						table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
-						identity_column:
-							this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
-						records: RolePermission.DELETE,
-						own_records: RolePermission.DELETE,
-					},
-					{
-						custom: true,
-						role: 'EDITOR',
-						table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
-						identity_column:
-							this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
-					},
-					{
-						custom: true,
-						role: 'VIEWER',
-						table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
-						identity_column:
-							this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
-					},
-				]
+				this.logger.debug(`[${APP_BOOT_CONTEXT}] Table creation result for ${schema.table}: ${created}`, APP_BOOT_CONTEXT)
 
-				for (const default_role of default_roles) {
-					await this.query.perform(
-						QueryPerform.CREATE,
-						{
-							schema,
-							data: default_role,
-						},
-						APP_BOOT_CONTEXT,
-					)
+				if (!created) {
+					this.logger.error(`[${APP_BOOT_CONTEXT}] Failed to create ${LLANA_ROLES_TABLE} table`, APP_BOOT_CONTEXT)
+					throw new Error(`Failed to create ${LLANA_ROLES_TABLE} table`)
 				}
 
-				for (const custom_role of custom_roles) {
-					await this.query.perform(
-						QueryPerform.CREATE,
-						{
-							schema,
-							data: custom_role,
-						},
-						APP_BOOT_CONTEXT,
-					)
+				// Verify table was actually created
+				const tablesAfterCreate = (await this.query.perform(
+					QueryPerform.LIST_TABLES,
+					{ include_system: true },
+					APP_BOOT_CONTEXT,
+				)) as ListTablesResponseObject
+
+				this.logger.debug(`[${APP_BOOT_CONTEXT}] Tables after creation attempt: ${JSON.stringify(tablesAfterCreate.tables)}`, APP_BOOT_CONTEXT)
+
+				if (!tablesAfterCreate.tables.includes(LLANA_ROLES_TABLE)) {
+					this.logger.error(`[${APP_BOOT_CONTEXT}] Table ${LLANA_ROLES_TABLE} not found after creation`, APP_BOOT_CONTEXT)
+					throw new Error(`Table ${LLANA_ROLES_TABLE} not found after creation`)
 				}
+
+				this.logger.debug(`[${APP_BOOT_CONTEXT}] Successfully created ${LLANA_ROLES_TABLE} table`, APP_BOOT_CONTEXT)
+
+				// Create default roles if auth is enabled
+				if (!this.authentication.skipAuth()) {
+					const default_roles: DefaultRole[] = [
+						{
+							custom: false,
+							role: 'ADMIN',
+							records: RolePermission.DELETE,
+						},
+						{
+							custom: false,
+							role: 'EDITOR',
+							records: RolePermission.WRITE,
+						},
+						{
+							custom: false,
+							role: 'VIEWER',
+							records: RolePermission.READ,
+						},
+					]
+
+					const custom_roles: CustomRole[] = [
+						{
+							custom: true,
+							role: 'ADMIN',
+							table: this.authentication.getIdentityTable(),
+							records: RolePermission.DELETE,
+							own_records: RolePermission.DELETE,
+						},
+						{
+							custom: true,
+							role: 'EDITOR',
+							table: this.authentication.getIdentityTable(),
+							records: RolePermission.NONE,
+							own_records: RolePermission.WRITE,
+						},
+						{
+							custom: true,
+							role: 'VIEWER',
+							table: this.authentication.getIdentityTable(),
+							records: RolePermission.NONE,
+							own_records: RolePermission.WRITE,
+						},
+						{
+							custom: true,
+							role: 'ADMIN',
+							table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
+							identity_column: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
+							records: RolePermission.DELETE,
+							own_records: RolePermission.DELETE,
+						},
+						{
+							custom: true,
+							role: 'EDITOR',
+							table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
+							identity_column: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
+							records: RolePermission.NONE,
+							own_records: RolePermission.WRITE,
+						},
+						{
+							custom: true,
+							role: 'VIEWER',
+							table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
+							identity_column: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
+							records: RolePermission.NONE,
+							own_records: RolePermission.WRITE,
+						},
+					]
+
+					// Create default roles
+					for (const default_role of default_roles) {
+						await this.query.perform(
+							QueryPerform.CREATE,
+							{
+								schema,
+								data: default_role,
+							},
+							APP_BOOT_CONTEXT,
+						)
+					}
+
+					// Create custom roles
+					for (const custom_role of custom_roles) {
+						await this.query.perform(
+							QueryPerform.CREATE,
+							{
+								schema,
+								data: custom_role,
+							},
+							APP_BOOT_CONTEXT,
+						)
+					}
+				}
+			} catch (error) {
+				this.logger.error(`[${APP_BOOT_CONTEXT}] Error creating ${LLANA_ROLES_TABLE} table: ${error.message}`, APP_BOOT_CONTEXT)
+				throw error
 			}
 		}
 

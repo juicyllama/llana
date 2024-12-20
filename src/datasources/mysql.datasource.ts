@@ -46,7 +46,15 @@ export class MySQL {
 
 	async checkDataSource(options: { x_request_id?: string }): Promise<boolean> {
 		try {
-			await mysql.createConnection(this.configService.get('database.host'))
+			const dbConfig = this.configService.get('database')
+			const connectionConfig = {
+				host: dbConfig.host,
+				port: dbConfig.port,
+				user: dbConfig.user,
+				password: dbConfig.password,
+				database: dbConfig.database
+			}
+			await mysql.createConnection(connectionConfig)
 			return true
 		} catch (e) {
 			this.logger.error(
@@ -67,7 +75,17 @@ export class MySQL {
 			if (!mysql) {
 				throw new Error(`${DATABASE_TYPE} library is not initialized`)
 			}
-			connection = await mysql.createConnection(this.configService.get('database.host'))
+
+			const dbConfig = this.configService.get('database')
+			const connectionConfig = {
+				host: dbConfig.host,
+				port: dbConfig.port,
+				user: dbConfig.user,
+				password: dbConfig.password,
+				database: dbConfig.database
+			}
+
+			connection = await mysql.createConnection(connectionConfig)
 		} catch (e) {
 			this.logger.error(`[${DATABASE_TYPE}] Error creating database connection - ${e.message}`)
 			throw new Error('Error creating database connection')
@@ -76,28 +94,36 @@ export class MySQL {
 		try {
 			let results
 			this.logger.debug(
-				`[${DATABASE_TYPE}] ${replaceQ(options.sql, options.values)} ${options.x_request_id ?? ''}`,
+				`[${DATABASE_TYPE}][query] Executing SQL: ${options.sql}`,
+				options.x_request_id,
 			)
+			if (options.values) {
+				this.logger.debug(
+					`[${DATABASE_TYPE}][query] With values: ${JSON.stringify(options.values)}`,
+					options.x_request_id,
+				)
+			}
 
 			if (!options.values || !options.values.length) {
 				;[results] = await connection.query<any[]>(options.sql)
 			} else {
 				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
+			this.logger.debug(`[${DATABASE_TYPE}][query] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
 			connection.end()
 			return results
 		} catch (e) {
-			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`)
-			this.logger.warn({
+			this.logger.error(`[${DATABASE_TYPE}][query] Error executing query: ${e.message}`)
+			this.logger.error({
 				x_request_id: options.x_request_id,
-				sql: replaceQ(options.sql, options.values),
+				sql: options.sql,
 				error: {
 					message: e.message,
+					stack: e.stack,
 				},
 			})
 			connection.end()
-			throw new Error(e)
+			throw e
 		}
 	}
 
@@ -135,7 +161,7 @@ export class MySQL {
 
 	async getSchema(options: { table: string; x_request_id?: string }): Promise<DataSourceSchema> {
 		const columns_result = await this.query({
-			sql: `DESCRIBE ${options.table}`,
+			sql: `DESCRIBE \`${options.table}\``,
 			x_request_id: options.x_request_id,
 		})
 
@@ -191,6 +217,11 @@ export class MySQL {
 
 	async createTable(schema: DataSourceSchema, x_request_id?: string): Promise<boolean> {
 		try {
+			this.logger.debug(
+				`[${DATABASE_TYPE}][createTable] Creating table ${schema.table} with schema: ${JSON.stringify(schema)}`,
+				x_request_id,
+			)
+
 			const columns = schema.columns.map(column => {
 				let column_string = `\`${column.field}\` ${this.columnTypeToDataSource(column.type)}`
 
@@ -225,25 +256,38 @@ export class MySQL {
 				return column_string
 			})
 
-			const command = `CREATE TABLE ${schema.table} (${columns.join(', ')})`
+			const command = `CREATE TABLE IF NOT EXISTS \`${schema.table}\` (${columns.join(', ')})`
 			this.logger.debug(`[${DATABASE_TYPE}][createTable] Creating table with command: ${command}`, x_request_id)
 
-			await this.query({ sql: command })
+			await this.query({ sql: command, x_request_id })
 
 			if (schema.relations?.length) {
 				for (const relation of schema.relations) {
-					const command = `ALTER TABLE ${schema.table} ADD FOREIGN KEY (${relation.column}) REFERENCES ${relation.org_table}(${relation.org_column})`
-					await this.query({ sql: command })
+					const relationCommand = `ALTER TABLE \`${schema.table}\` ADD FOREIGN KEY (${relation.column}) REFERENCES \`${relation.org_table}\`(${relation.org_column})`
+					this.logger.debug(`[${DATABASE_TYPE}][createTable] Adding relation with command: ${relationCommand}`, x_request_id)
+					await this.query({ sql: relationCommand, x_request_id })
 				}
 			}
 
+			// Verify table was created
+			const verifyResult = await this.query({
+				sql: `SHOW TABLES LIKE '${schema.table}'`,
+				x_request_id,
+			})
+
+			if (!verifyResult.length) {
+				this.logger.error(`[${DATABASE_TYPE}][createTable] Table ${schema.table} was not created`, x_request_id)
+				return false
+			}
+
+			this.logger.debug(`[${DATABASE_TYPE}][createTable] Successfully created table ${schema.table}`, x_request_id)
 			return true
 		} catch (e) {
 			this.logger.error(
 				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e.message}`,
 				x_request_id,
 			)
-			throw e
+			return false
 		}
 	}
 
@@ -390,7 +434,7 @@ export class MySQL {
 		options = this.pipeObjectToDataSource(options) as DataSourceUpdateOneOptions
 
 		const values = [...Object.values(options.data), options.id.toString()]
-		let command = `UPDATE ${table_name} SET `
+		let command = `UPDATE \`${table_name}\` SET `
 
 		command += `${Object.keys(options.data)
 			.map(key => `${key} = ?`)
@@ -420,6 +464,12 @@ export class MySQL {
 	 */
 
 	async deleteOne(options: DataSourceDeleteOneOptions, x_request_id: string): Promise<DeleteResponseObject> {
+		// Add debug logging for table name
+		this.logger.debug(
+			`[${DATABASE_TYPE}][deleteOne] Attempting to delete from table: ${options.schema.table}`,
+			x_request_id,
+		)
+
 		if (options.softDelete) {
 			const result = await this.updateOne(
 				{
@@ -442,9 +492,19 @@ export class MySQL {
 		const table_name = options.schema.table
 
 		const values = [options.id]
-		let command = `DELETE FROM ${table_name} `
+		let command = `DELETE FROM \`${table_name}\` `
 
 		command += `WHERE ${options.schema.primary_key} = ?`
+
+		// Add debug logging for final SQL command
+		this.logger.debug(
+			`[${DATABASE_TYPE}][deleteOne] Final SQL command: ${command}`,
+			x_request_id,
+		)
+		this.logger.debug(
+			`[${DATABASE_TYPE}][deleteOne] Values: ${JSON.stringify(values)}`,
+			x_request_id,
+		)
 
 		const result = await this.query({ sql: command, values, x_request_id })
 
@@ -458,7 +518,7 @@ export class MySQL {
 	 */
 
 	async truncate(table: string): Promise<void> {
-		return await this.query({ sql: 'TRUNCATE TABLE ' + table })
+		return await this.query({ sql: `TRUNCATE TABLE \`${table}\`` })
 	}
 
 	/**
@@ -658,11 +718,11 @@ export class MySQL {
 			}
 		}
 
-		command += ` FROM ${table_name} `
+		command += ` FROM \`${table_name}\` `
 
 		if (options.relations?.length) {
 			for (const relation of options.relations) {
-				command += `${relation.join.type ?? 'INNER JOIN'} ${relation.join.table} ON ${relation.join.org_table}.${relation.join.org_column} = ${relation.join.table}.${relation.join.column} `
+				command += `${relation.join.type ?? 'INNER JOIN'} \`${relation.join.table}\` ON \`${relation.join.org_table}\`.\`${relation.join.org_column}\` = \`${relation.join.table}\`.\`${relation.join.column}\` `
 			}
 		}
 
@@ -675,7 +735,7 @@ export class MySQL {
 				}
 			}
 
-			command += `${options.where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}  `).join(' AND ')} `
+			command += `${options.where.map(w => `${w.column.includes('.') ? w.column.replace('.', '`.`') : `\`${table_name}\`.\`${w.column}\``} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}  `).join(' AND ')} `
 			const where_values = options.where.map(w => w.value)
 			if (where_values.length) {
 				for (const w in where_values) {

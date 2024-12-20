@@ -29,8 +29,8 @@ describe('App > Controller > Get', () => {
 	beforeAll(async () => {
 		moduleRef = await Test.createTestingModule({
 			imports: [AppModule],
+			providers: [AuthTestingService, Logger],
 		}).compile()
-
 		authTestingService = moduleRef.get<AuthTestingService>(AuthTestingService)
 		appBootup = moduleRef.get<AppBootup>(AppBootup)
 		configService = moduleRef.get<ConfigService>(ConfigService)
@@ -50,6 +50,11 @@ describe('App > Controller > Get', () => {
 				logger.error(`[Test Setup] Tables found: ${tables.tables.join(', ')}`)
 				throw new Error(`${LLANA_ROLES_TABLE} table not created during bootstrap`)
 			}
+		} catch (error) {
+			logger.error('[Test Setup] Failed to bootstrap application:', error)
+			throw error
+		}
+	})
 
 			logger.debug('[Test Setup] Application bootstrapped successfully')
 		} catch (error) {
@@ -196,6 +201,25 @@ describe('App > Controller > Get', () => {
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
+					} as DataSourceSchemaColumn,
+					{
+						field: 'custom',
+						type: DataSourceColumnType.BOOLEAN,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					} as DataSourceSchemaColumn,
+					{
+						field: 'records',
+						type: DataSourceColumnType.ENUM,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						enums: ['NONE', 'READ', 'READ_RESTRICTED', 'WRITE', 'WRITE_RESTRICTED', 'DELETE'],
 					} as DataSourceSchemaColumn,
 				],
 			}
