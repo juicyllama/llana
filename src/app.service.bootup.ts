@@ -283,7 +283,7 @@ export class AppBootup implements OnApplicationBootstrap {
 			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
 			if (!created) {
-				throw new Error('Failed to create _llana_roles table')
+				throw new Error(`Failed to create ${LLANA_ROLES_TABLE} table`)
 			}
 
 			if (!this.authentication.skipAuth()) {

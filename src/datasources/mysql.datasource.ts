@@ -226,6 +226,7 @@ export class MySQL {
 			})
 
 			const command = `CREATE TABLE ${schema.table} (${columns.join(', ')})`
+			this.logger.debug(`[${DATABASE_TYPE}][createTable] Creating table with command: ${command}`, x_request_id)
 
 			await this.query({ sql: command })
 
@@ -239,10 +240,10 @@ export class MySQL {
 			return true
 		} catch (e) {
 			this.logger.error(
-				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`,
+				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e.message}`,
 				x_request_id,
 			)
-			return false
+			throw e
 		}
 	}
 

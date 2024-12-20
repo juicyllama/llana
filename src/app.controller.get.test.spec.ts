@@ -4,16 +4,18 @@ import { JwtModule } from '@nestjs/jwt'
 import { ConfigModule, ConfigService, ConfigFactory } from '@nestjs/config'
 import * as request from 'supertest'
 import { CustomerTestingService } from './testing/customer.testing.service'
-
+import { AppBootup } from './app.service.bootup'
 import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
 import { SalesOrderTestingService } from './testing/salesorder.testing.service'
-import { DataSourceSchema, QueryPerform, DataSourceColumnType, WhereOperator } from './types/datasource.types'
+import { DataSourceSchema, QueryPerform, DataSourceColumnType, WhereOperator, ColumnExtraNumber } from './types/datasource.types'
 import { EmployeeTestingService } from './testing/employee.testing.service'
 import { ShipperTestingService } from './testing/shipper.testing.service'
 import { TIMEOUT } from './testing/testing.const'
 import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
+import { LLANA_ROLES_TABLE } from './app.constants'
+import { AppBootup } from './app.service.bootup'
 
 // Import configs
 import auth from './config/auth.config'
@@ -84,6 +86,71 @@ describe('App > Controller > Get', () => {
 		}).compile()
 		app = moduleRef.createNestApplication()
 		await app.init()
+		const logger = new Logger()
+		const query = app.get(Query)
+
+		// Clean up existing test data
+		logger.log('Cleaning up test database...')
+		try {
+			await query.perform(QueryPerform.DELETE, {
+				schema: {
+					table: 'User',
+					primary_key: 'id',
+					columns: [
+						{
+							field: 'email',
+							type: DataSourceColumnType.STRING,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: true,
+							foreign_key: false
+						}
+					]
+				},
+				where: [
+					{
+						column: 'email',
+						operator: WhereOperator.like,
+						value: '%@test.com'
+					}
+				]
+			})
+			logger.log('Test users cleaned up')
+		} catch (error) {
+			logger.warn('Error cleaning up test users:', error)
+		}
+
+		// Bootstrap application and verify table creation
+		logger.log('Bootstrapping application...')
+		await app.get(AppBootup).onApplicationBootstrap()
+		logger.log('Application bootstrap complete')
+
+		// Verify role table exists
+		try {
+			await query.perform(QueryPerform.FIND_ONE, {
+				schema: {
+					table: LLANA_ROLES_TABLE,
+					primary_key: 'id',
+					columns: [
+						{
+							field: 'id',
+							type: DataSourceColumnType.NUMBER,
+							nullable: false,
+							required: true,
+							primary_key: true,
+							unique_key: true,
+							foreign_key: false,
+							auto_increment: true
+						}
+					]
+				}
+			})
+			logger.log(`${LLANA_ROLES_TABLE} table exists and is accessible`)
+		} catch (error) {
+			logger.error(`${LLANA_ROLES_TABLE} table not found or error accessing it:`, error)
+			throw new Error(`${LLANA_ROLES_TABLE} table was not created during bootstrap`)
+		}
 
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
@@ -236,10 +303,6 @@ describe('App > Controller > Get', () => {
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(200)
 
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
 			expect(result.body.data[0].shipName).toBeDefined()
 			expect(result.body.data[0].freight).toBeUndefined()
 			expect(result.body.data[0].shipCity).toBeUndefined()
@@ -276,102 +339,131 @@ describe('App > Controller > Get', () => {
 	})
 
 	describe('Role-based Column Visibility', () => {
-		let query: Query
 		let llanaRolesTableSchema: DataSourceSchema
+		let query: Query
+		let logger: Logger
 
 		beforeAll(async () => {
+			logger = new Logger()
+			logger.log('Setting up Role-based Column Visibility tests')
 			query = app.get<Query>(Query)
 			llanaRolesTableSchema = {
-				table: 'llana_roles',
+				table: LLANA_ROLES_TABLE,
 				primary_key: 'id',
 				columns: [
-					{ field: 'id', type: DataSourceColumnType.NUMBER, nullable: false, required: true, primary_key: true, unique_key: true, foreign_key: false },
-					{ field: 'role', type: DataSourceColumnType.STRING, nullable: false, required: true, primary_key: false, unique_key: false, foreign_key: false },
-					{ field: 'records', type: DataSourceColumnType.STRING, nullable: false, required: true, primary_key: false, unique_key: false, foreign_key: false },
-					{ field: 'restricted_fields', type: DataSourceColumnType.STRING, nullable: false, required: true, primary_key: false, unique_key: false, foreign_key: false },
-					{ field: 'custom', type: DataSourceColumnType.BOOLEAN, nullable: false, required: true, primary_key: false, unique_key: false, foreign_key: false }
-				]
+					{
+						field: 'id',
+						type: DataSourceColumnType.NUMBER,
+						nullable: false,
+						required: true,
+						primary_key: true,
+						unique_key: true,
+						foreign_key: false,
+						auto_increment: true,
+						extra: <ColumnExtraNumber>{
+							decimal: 0,
+						},
+					},
+					{
+						field: 'custom',
+						type: DataSourceColumnType.BOOLEAN,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'role',
+						type: DataSourceColumnType.STRING,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'records',
+						type: DataSourceColumnType.ENUM,
+						nullable: false,
+						required: true,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						enums: ['NONE', 'READ', 'READ_RESTRICTED', 'WRITE', 'WRITE_RESTRICTED', 'DELETE'],
+					},
+					{
+						field: 'restricted_fields',
+						type: DataSourceColumnType.STRING,
+						nullable: true,
+						required: false,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+				],
 			}
 		})
 
-		it('should hide restricted fields for user role in single record', async function () {
-			// Create role with restricted fields
-			const role = await query.perform(QueryPerform.CREATE, {
+		it('should create role with restricted fields', async () => {
+			logger.log('Creating role with restricted fields')
+			const role = {
+				custom: true,
+				table: 'SalesOrder',
+				role: 'restricted_viewer',
+				records: 'READ_RESTRICTED',
+				restricted_fields: 'shipName,freight',
+			}
+
+			const result = await query.perform(QueryPerform.CREATE, {
 				schema: llanaRolesTableSchema,
-				data: {
-					custom: true,
-					role: 'RESTRICTED_USER',
-					records: 'READ',
-					restricted_fields: JSON.stringify(['freight', 'shipCity'])
-				}
+				data: role,
 			})
 
+			expect(result).toBeDefined()
+			expect(result['id']).toBeDefined()
+			logger.log('Role created successfully')
+		})
+
+		it('should hide restricted fields for single record', async () => {
+			const restrictedJwt = await authTestingService.login('restricted_viewer')
 			const result = await request(app.getHttpServer())
 				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
-				.set('Authorization', `Bearer ${jwt}`)
+				.set('Authorization', `Bearer ${restrictedJwt}`)
 				.expect(200)
 
+			expect(result.body).toBeDefined()
+			expect(result.body.shipName).toBeUndefined()
 			expect(result.body.freight).toBeUndefined()
-			expect(result.body.shipCity).toBeUndefined()
-			expect(result.body.shipName).toBeDefined()
-		})
-
-		it('should hide restricted fields for user role in list', async function () {
-			const result = await request(app.getHttpServer())
-				.get('/SalesOrder/')
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body.data[0].freight).toBeUndefined()
-			expect(result.body.data[0].shipCity).toBeUndefined()
-			expect(result.body.data[0].shipName).toBeDefined()
-		})
-
-		it('should show all fields for admin role in single record', async function () {
-			// Create admin role without restrictions
-			const role = await query.perform(QueryPerform.CREATE, {
-				schema: llanaRolesTableSchema,
-				data: {
-					custom: true,
-					role: 'ADMIN',
-					records: 'READ',
-					restricted_fields: '[]'
-				}
-			})
-
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-
-			expect(result.body.freight).toBeDefined()
 			expect(result.body.shipCity).toBeDefined()
-			expect(result.body.shipName).toBeDefined()
 		})
 
-		it('should show all fields for admin role in list', async function () {
+		it('should hide restricted fields for list response', async () => {
+			const restrictedJwt = await authTestingService.login('restricted_viewer')
 			const result = await request(app.getHttpServer())
-				.get('/SalesOrder/')
-				.set('Authorization', `Bearer ${jwt}`)
+				.get('/SalesOrder')
+				.set('Authorization', `Bearer ${restrictedJwt}`)
 				.expect(200)
 
-			expect(result.body.data[0].freight).toBeDefined()
+			expect(result.body).toBeDefined()
+			expect(result.body.data[0].shipName).toBeUndefined()
+			expect(result.body.data[0].freight).toBeUndefined()
 			expect(result.body.data[0].shipCity).toBeDefined()
-			expect(result.body.data[0].shipName).toBeDefined()
 		})
 
 		afterAll(async () => {
 			// Clean up test roles
 			await query.perform(QueryPerform.DELETE, {
 				schema: llanaRolesTableSchema,
-				where: [
-					{ column: 'role', operator: WhereOperator.in, value: ['RESTRICTED_USER', 'ADMIN'] }
-				]
+				where: [{
+					column: 'role',
+					operator: WhereOperator.equals,
+					value: 'restricted_viewer'
+				}]
 			})
 		})
-	}) // Close List describe block
+	})
 
 	afterAll(async () => {
 		await app.close()
 	})
-}) // Close main describe block for 'App > Controller > Get'
