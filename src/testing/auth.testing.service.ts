@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+
+import { LLANA_ROLES_TABLE } from '../app.constants'
 import { AuthService } from '../app.service.auth'
-import { RolePermission } from '../types/roles.types'
+import { Encryption } from '../helpers/Encryption'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
-import { LLANA_AUTH_TABLE, LLANA_ROLES_TABLE } from '../app.constants'
-import { QueryPerform, DataSourceColumnType } from '../types/datasource.types'
-import { ConfigService } from '@nestjs/config'
 import { Auth, AuthJWT, AuthPasswordEncryption, AuthType } from '../types/auth.types'
-import { Encryption } from '../helpers/Encryption'
+import { DataSourceColumnType, QueryPerform } from '../types/datasource.types'
+import { RolePermission } from '../types/roles.types'
 
 @Injectable()
 export class AuthTestingService {
@@ -53,8 +54,8 @@ export class AuthTestingService {
 					role: 'RESTRICTED_USER',
 					records: RolePermission.READ,
 					restricted_fields: restrictedFields.join(','),
-					table: 'SalesOrder' // Default to SalesOrder table for testing
-				}
+					table: 'SalesOrder', // Default to SalesOrder table for testing
+				},
 			})
 
 			const payload = await this.authService.signIn(username, password)
@@ -85,7 +86,7 @@ export class AuthTestingService {
 		const hashedPassword = await this.encryption.encrypt(
 			jwtAuthConfig.password.encryption || AuthPasswordEncryption.BCRYPT,
 			password,
-			jwtAuthConfig.password.salt
+			jwtAuthConfig.password.salt,
 		)
 
 		await this.query.perform(QueryPerform.CREATE, {
@@ -93,10 +94,10 @@ export class AuthTestingService {
 			data: {
 				email: username,
 				password: hashedPassword,
-				role: 'USER',  // Use default USER role
+				role: 'USER', // Use default USER role
 				firstName: 'Test',
-				lastName: 'User'
-			}
+				lastName: 'User',
+			},
 		})
 	}
 }
