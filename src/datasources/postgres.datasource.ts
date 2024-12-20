@@ -201,19 +201,21 @@ export class Postgres {
 			.filter((row: DataSourceSchemaRelation) => row.table !== null)
 			.map((row: DataSourceSchemaRelation) => row)
 
-		for (const relation of relations) {
-			const existingRelation = relations.find(
-				r =>
-					r.table === relation.table &&
-					r.column === relation.column &&
-					r.org_table === relation.org_table &&
-					r.org_column === relation.org_column,
-			)
+		const relations_back_query = `SELECT tc.table_name AS "table", kcu.column_name AS "column", ccu.table_name AS "org_table", ccu.column_name AS "org_column"
+		FROM information_schema.table_constraints AS tc
+		JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name
+		JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
+		WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = '${options.table}';`
 
-			if (!existingRelation) {
-				relations.push(relation)
-			}
-		}
+		const relation_back_result = await this.performQuery({
+			sql: relations_back_query,
+			x_request_id: options.x_request_id,
+		})
+		const relations_back = relation_back_result
+			.filter((row: DataSourceSchemaRelation) => row.table !== null)
+			.map((row: DataSourceSchemaRelation) => row)
+
+		relations.push(...relations_back)
 
 		return {
 			table: options.table,
@@ -512,25 +514,9 @@ export class Postgres {
 			} else {
 				command += ` "${options.schema.table}".* `
 			}
-
-			if (options.relations?.length) {
-				for (const r in options.relations) {
-					if (options.relations[r].columns?.length) {
-						for (const c in options.relations[r].columns) {
-							command += `, "${options.relations[r].table}"."${options.relations[r].columns[c]}" as "${options.relations[r].table}.${options.relations[r].columns[c]}" `
-						}
-					}
-				}
-			}
 		}
 
 		command += ` FROM "${table_name}" `
-
-		if (options.relations?.length) {
-			for (const relation of options.relations) {
-				command += `${relation.join.type ?? 'INNER JOIN'} "${relation.join.table}" ON "${relation.join.org_table}"."${relation.join.org_column}" = "${relation.join.table}"."${relation.join.column}" `
-			}
-		}
 
 		if (options.where?.length) {
 			command += `WHERE `
@@ -564,30 +550,6 @@ export class Postgres {
 					}
 					values.push(where_values[w])
 				}
-			}
-		}
-
-		for (const r in options.relations) {
-			if (options.relations[r].where) {
-				const items = options.relations[r].where.column.split('.')
-
-				switch (items.length) {
-					case 1:
-						command += `AND "${options.relations[r].table}"."${options.relations[r].where.column}" ${options.relations[r].where.operator} $${index} `
-						break
-					case 2:
-						command += `AND "${items[0]}"."${items[1]}" ${options.relations[r].where.operator} $${index} `
-						break
-					default:
-						command += `AND "${items[items.length - 2]}"."${items[items.length - 1]}" ${options.relations[r].where.operator} $${index} `
-						break
-				}
-
-				if (options.relations[r].where.value) {
-					values.push(options.relations[r].where.value)
-				}
-
-				index++
 			}
 		}
 

@@ -171,11 +171,11 @@ export class MySQL {
 			sql: relation_back_query,
 			x_request_id: options.x_request_id,
 		})
-		const relation_back = relation_back_result
+		const relations_back = relation_back_result
 			.filter((row: DataSourceSchemaRelation) => row.table !== null)
 			.map((row: DataSourceSchemaRelation) => row)
 
-		relations.push(...relation_back)
+		relations.push(...relations_back)
 
 		return {
 			table: options.table,
@@ -645,25 +645,9 @@ export class MySQL {
 			} else {
 				command += ` \`${options.schema.table}\`.* `
 			}
-
-			if (options.relations?.length) {
-				for (const r in options.relations) {
-					if (options.relations[r].columns?.length) {
-						for (const c in options.relations[r].columns) {
-							command += `, \`${options.relations[r].table}\`.\`${options.relations[r].columns[c]}\` as \`${options.relations[r].table}.${options.relations[r].columns[c]}\` `
-						}
-					}
-				}
-			}
 		}
 
 		command += ` FROM ${table_name} `
-
-		if (options.relations?.length) {
-			for (const relation of options.relations) {
-				command += `${relation.join.type ?? 'INNER JOIN'} ${relation.join.table} ON ${relation.join.org_table}.${relation.join.org_column} = ${relation.join.table}.${relation.join.column} `
-			}
-		}
 
 		if (options.where?.length) {
 			command += `WHERE `
@@ -682,28 +666,6 @@ export class MySQL {
 						continue
 					}
 					values.push(where_values[w])
-				}
-			}
-		}
-
-		for (const r in options.relations) {
-			if (options.relations[r].where) {
-				const items = options.relations[r].where.column.split('.')
-
-				switch (items.length) {
-					case 1:
-						command += `AND \`${options.relations[r].table}\`.\`${options.relations[r].where.column}\` ${options.relations[r].where.operator} ? `
-						break
-					case 2:
-						command += `AND \`${items[0]}\`.\`${items[1]}\` ${options.relations[r].where.operator} ? `
-						break
-					default:
-						command += `AND \`${items[items.length - 2]}\`.\`${items[items.length - 1]}\` ${options.relations[r].where.operator} ? `
-						break
-				}
-
-				if (options.relations[r].where.value) {
-					values.push(options.relations[r].where.value)
 				}
 			}
 		}

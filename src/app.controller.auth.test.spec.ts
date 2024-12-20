@@ -22,7 +22,7 @@ const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
 describe('App > Controller > Auth', () => {
 	let app: INestApplication
 
-    let access_token: string
+	let access_token: string
 	let logger = new Logger()
 
 	beforeAll(async () => {
@@ -46,7 +46,6 @@ describe('App > Controller > Auth', () => {
 		}).compile()
 		app = moduleRef.createNestApplication()
 		await app.init()
-
 	}, TIMEOUT)
 
 	beforeEach(() => {
@@ -59,93 +58,93 @@ describe('App > Controller > Auth', () => {
 		it('Missing username', async function () {
 			const result = await request(app.getHttpServer())
 				.post(`/auth/login`)
-                .send({
-                    password: 'test'
-                })
+				.send({
+					password: 'test',
+				})
 				.expect(400)
 			expect(result.body).toBeDefined()
 			expect(result.body.statusCode).toEqual(400)
-            expect(result.body.message).toEqual('Username is required')
-            expect(result.body.error).toEqual('Bad Request')
+			expect(result.body.message).toEqual('Username is required')
+			expect(result.body.error).toEqual('Bad Request')
 		})
 
-        it('Missing password', async () => {
+		it('Missing password', async () => {
 			const result = await request(app.getHttpServer())
 				.post(`/auth/login`)
-                .send({
-                    username: 'test@test.com'
-                })
+				.send({
+					username: 'test@test.com',
+				})
 				.expect(400)
 			expect(result.body).toBeDefined()
 			expect(result.body.statusCode).toEqual(400)
-            expect(result.body.message).toEqual('Password is required')
-            expect(result.body.error).toEqual('Bad Request')
+			expect(result.body.message).toEqual('Password is required')
+			expect(result.body.error).toEqual('Bad Request')
 		})
 
-        it('Wrong username', async () => {
+		it('Wrong username', async () => {
 			const result = await request(app.getHttpServer())
 				.post(`/auth/login`)
-                .send({
-                    username: 'wrong@username.com',
-                    password: 'test'
-                })
+				.send({
+					username: 'wrong@username.com',
+					password: 'test',
+				})
 				.expect(401)
 			expect(result.body).toBeDefined()
 			expect(result.body.statusCode).toEqual(401)
-            expect(result.body.message).toEqual('Unauthorized')
+			expect(result.body.message).toEqual('Unauthorized')
 		})
 
-        it('Wrong password', async () => {
+		it('Wrong password', async () => {
 			const result = await request(app.getHttpServer())
 				.post(`/auth/login`)
-                .send({
-                    username: 'wrong@username.com',
-                    password: 'wrong'
-                })
+				.send({
+					username: 'wrong@username.com',
+					password: 'wrong',
+				})
 				.expect(401)
 			expect(result.body).toBeDefined()
 			expect(result.body.statusCode).toEqual(401)
-            expect(result.body.message).toEqual('Unauthorized')
-		})		
+			expect(result.body.message).toEqual('Unauthorized')
+		})
 	})
 
-    describe('Successful Login', () => {
-        it('Correct username & password', async () => {
-            const result = await request(app.getHttpServer())
-            .post(`/auth/login`)
-            .send({
-                username: 'test@test.com',
-                password: 'test'
-            })
-            .expect(200)
-            expect(result.body).toBeDefined()
-            expect(result.body.access_token).toBeDefined()
-            access_token = result.body.access_token
-        })
-    })
+	describe('Successful Login', () => {
+		it('Correct username & password', async () => {
+			const result = await request(app.getHttpServer())
+				.post(`/auth/login`)
+				.send({
+					username: 'test@test.com',
+					password: 'test',
+				})
+				.expect(200)
+			expect(result.body).toBeDefined()
+			expect(result.body.access_token).toBeDefined()
+			access_token = result.body.access_token
+		})
+	})
 
-    describe('Access Token Works', () => {
-        it('Get Profile', async () => {
-            const result = await request(app.getHttpServer())
-            .get(`/auth/profile`)
-            .set('Authorization', `Bearer ${access_token}`)
-            .expect(200)
-            expect(result.body).toBeDefined()
-            expect(result.body.id).toBeDefined()
-        })
+	describe('Access Token Works', () => {
+		it('Get Profile', async () => {
+			const result = await request(app.getHttpServer())
+				.get(`/auth/profile`)
+				.set('Authorization', `Bearer ${access_token}`)
+				.expect(200)
+			expect(result.body).toBeDefined()
+			expect(result.body.email).toBeDefined()
+		})
 
-        it('Get Profile With Relations', async () => {
-            const result = await request(app.getHttpServer())
-            .get(`/auth/profile?relations=UserApiKey`)
-            .set('Authorization', `Bearer ${access_token}`)
-            .expect(200)
-            expect(result.body).toBeDefined()
-            expect(result.body.id).toBeDefined()
-            expect(result.body.UserApiKey).toBeDefined()
-            expect(result.body.UserApiKey.length).toBeGreaterThan(0)
-            expect(result.body.UserApiKey[0].id).toBeDefined()
-        })
-    })
+		it('Get Profile With Relations', async () => {
+			const result = await request(app.getHttpServer())
+				.get(`/auth/profile?relations=UserApiKey`)
+				.set('Authorization', `Bearer ${access_token}`)
+				.expect(200)
+			expect(result.body).toBeDefined()
+			expect(result.body.email).toBeDefined()
+			expect(result.body.UserApiKey).toBeDefined()
+			expect(result.body.UserApiKey.length).toBeGreaterThan(0)
+			expect(result.body.UserApiKey[0].apiKey).toBeDefined()
+		})
+	})
 
 	afterAll(async () => {
 		await app.close()

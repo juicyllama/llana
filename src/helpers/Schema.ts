@@ -15,7 +15,6 @@ import { Postgres } from '../datasources/postgres.datasource'
 import {
 	DataSourceColumnType,
 	DataSourceFindOneOptions,
-	DataSourceoinType,
 	DataSourceRelations,
 	DataSourceSchema,
 	DataSourceType,
@@ -402,7 +401,10 @@ export class Schema {
 						validated.push(rel)
 					}
 				} else {
-					if (!options.schema.relations.find(col => col.table === relation)) {
+					if (
+						!options.schema.relations.find(col => col.table === relation) &&
+						!options.schema.relations.find(col => col.org_table === relation)
+					) {
 						return {
 							valid: false,
 							message: `Relation ${relation} not found in table schema for ${options.schema.table} `,
@@ -418,12 +420,17 @@ export class Schema {
 						x_request_id: options.x_request_id,
 					})
 
+					let join
+
+					if (options.schema.relations.find(col => col.table === relation)) {
+						join = options.schema.relations.find(col => col.table === relation)
+					} else if (options.schema.relations.find(col => col.org_table === relation)) {
+						join = options.schema.relations.find(col => col.org_table === relation)
+					}
+
 					validated.push({
 						table: relation,
-						join: {
-							...options.schema.relations.find(col => col.table === relation),
-							type: DataSourceoinType.INNER,
-						},
+						join,
 						columns: relation_schema.columns.map(col => col.field),
 						schema: relation_schema,
 					})
@@ -596,7 +603,6 @@ export class Schema {
 				table: items[i],
 				join: {
 					...options.schema.relations.find(col => col.table === items[i]),
-					type: DataSourceoinType.INNER,
 				},
 				where: i === items.length - 2 ? options.where : undefined,
 				schema: relation_schema,
@@ -641,12 +647,17 @@ export class Schema {
 					options.relations[index].columns.push(items[items.length - 1])
 				}
 			} else {
+				let join
+
+				if (options.schema.relations.find(col => col.table === items[i])) {
+					join = options.schema.relations.find(col => col.table === items[i])
+				} else if (options.schema.relations.find(col => col.org_table === items[i])) {
+					join = options.schema.relations.find(col => col.org_table === items[i])
+				}
+
 				options.relations.push({
 					table: items[i],
-					join: {
-						...options.schema.relations.find(col => col.table === items[i]),
-						type: DataSourceoinType.INNER,
-					},
+					join,
 					columns: i === items.length - 2 ? [items[items.length - 1]] : undefined,
 					schema: relation_schema,
 				})
@@ -684,12 +695,17 @@ export class Schema {
 
 			const relation_schema = await this.getSchema({ table: items[i], x_request_id: options.x_request_id })
 
+			let join
+
+			if (options.schema.relations.find(col => col.table === items[i])) {
+				join = options.schema.relations.find(col => col.table === items[i])
+			} else if (options.schema.relations.find(col => col.org_table === items[i])) {
+				join = options.schema.relations.find(col => col.org_table === items[i])
+			}
+
 			relations.push({
 				table: items[i],
-				join: {
-					...options.schema.relations.find(col => col.table === items[i]),
-					type: DataSourceoinType.INNER,
-				},
+				join,
 				columns: i === items.length - 1 ? [items[items.length]] : undefined,
 				schema: relation_schema,
 			})

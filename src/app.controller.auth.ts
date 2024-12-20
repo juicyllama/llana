@@ -1,14 +1,25 @@
-import { BadRequestException, Body, Controller, Get, Headers, Post, Req, Res, Query as QueryParams, ParseArrayPipe } from '@nestjs/common'
+import {
+	BadRequestException,
+	Body,
+	Controller,
+	Get,
+	Headers,
+	ParseArrayPipe,
+	Post,
+	Query as QueryParams,
+	Req,
+	Res,
+} from '@nestjs/common'
 
 import { AuthService } from './app.service.auth'
 import { HeaderParams } from './dtos/requests.dto'
+import { FindOneResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Schema } from './helpers/Schema'
 import { DataSourceFindOneOptions, QueryPerform, WhereOperator } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
-import { FindOneResponseObject } from './dtos/response.dto'
 
 @Controller('auth')
 export class AuthController {
@@ -44,10 +55,11 @@ export class AuthController {
 
 	@Get('/profile')
 	async profile(
-		@Req() req, 
-		@Res() res, 
+		@Req() req,
+		@Res() res,
 		@Headers() headers: HeaderParams,
-		@QueryParams('relations', new ParseArrayPipe({ items: String, separator: ',', optional: true })) queryRelations?: string[],
+		@QueryParams('relations', new ParseArrayPipe({ items: String, separator: ',', optional: true }))
+		queryRelations?: string[],
 	): Promise<any> {
 		if (this.authentication.skipAuth()) {
 			throw new BadRequestException('Authentication is disabled')
@@ -73,7 +85,7 @@ export class AuthController {
 
 		const postQueryRelations = []
 
-		try{
+		try {
 			if (queryRelations?.length) {
 				const { valid, message, relations } = await this.schema.validateRelations({
 					schema,
@@ -108,16 +120,23 @@ export class AuthController {
 			relations: postQueryRelations,
 		}
 
-		let user = await this.query.perform(QueryPerform.FIND_ONE, databaseQuery, x_request_id) as FindOneResponseObject
-		
+		let user = (await this.query.perform(
+			QueryPerform.FIND_ONE,
+			databaseQuery,
+			x_request_id,
+		)) as FindOneResponseObject
+
 		if (postQueryRelations?.length) {
-			user = await this.query.buildRelations({
-				schema,
-				relations: postQueryRelations,
-			}as DataSourceFindOneOptions, user, x_request_id)
+			user = await this.query.buildRelations(
+				{
+					schema,
+					relations: postQueryRelations,
+				} as DataSourceFindOneOptions,
+				user,
+				x_request_id,
+			)
 		}
 
-		
 		return res.status(200).send(user)
 	}
 }

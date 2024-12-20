@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { Logger } from '../../src/helpers/Logger'
-import axios from 'axios'
+import axios, { AxiosRequestConfig } from 'axios'
 
 // Data
 const Customers = require('./json/Customer.json')
@@ -12,6 +12,15 @@ const AIRTABLE = process.env.DATABASE_URI as string
 const DOMAIN = 'AIRTABLE'
 const [apiKey, baseId] = AIRTABLE.split('://')[1].split('@')
 const logger = new Logger()
+
+const user = {
+	userId: 1,
+	email: 'test@test.com',
+	password: '$2a$10$jm6bM7acpRa18Vdy8FSqIu4yzWAdSgZgRtRrx8zknIeZhSqPJjJU.',
+	role: 'ADMIN',
+	firstName: 'Jon',
+	lastName: 'Doe',
+}
 
 const buildUsers = async () => {
 	const table = 'User'
@@ -54,13 +63,47 @@ const buildUsers = async () => {
 		data: {
 			records: [
 				{
+					fields: user,
+				},
+			],
+		},
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+		},
+	}
+
+	return await build(table, tableRequest, recordsRequest)
+}
+
+const buildUserApiKey = async userTable => {
+	const table = 'UserApiKey'
+
+	const tableRequest = {
+		method: 'POST',
+		url: `${ENDPOINT}/meta/bases/${baseId}/tables`,
+		data: {
+			name: table,
+			fields: [
+				{ name: 'id', type: 'number', options: { precision: 0 } },
+				{ name: 'userId', type: 'multipleRecordLinks', options: { linkedTableId: userTable.id } },
+				{ name: 'apiKey', type: 'singleLineText' },
+			],
+		},
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+		},
+	}
+
+	const recordsRequest = {
+		method: 'POST',
+		url: `${ENDPOINT}/${baseId}/${table}`,
+		data: {
+			records: [
+				{
 					fields: {
-						userId: 1,
-						email: 'test@test.com',
-						password: '$2a$10$jm6bM7acpRa18Vdy8FSqIu4yzWAdSgZgRtRrx8zknIeZhSqPJjJU.',
-						role: 'ADMIN',
-						firstName: 'Jon',
-						lastName: 'Doe',
+						id: 1,
+						userId: [userTable.records[0].id],
+						apiKey: 'Ex@mp1eS$Cu7eAp!K3y',
 					},
 				},
 			],
@@ -724,11 +767,7 @@ const buildSalesOrders = async (shipperTable, customerTable, employeeTable) => {
 	return await build(table, tableRequest, recordsRequest)
 }
 
-const build = async (
-	table: string,
-	tableRequest: axios.AxiosRequestConfig<any>,
-	recordsRequest: axios.AxiosRequestConfig<any>,
-) => {
+const build = async (table: string, tableRequest: AxiosRequestConfig<any>, recordsRequest: AxiosRequestConfig<any>) => {
 	let tableResponse
 
 	try {
@@ -814,7 +853,8 @@ const build = async (
 const seed = async () => {
 	logger.log('Seeding Airtable database', DOMAIN)
 
-	await buildUsers()
+	const userTable = await buildUsers()
+	const userApiKeyTable = await buildUserApiKey(userTable)
 	const customerTable = await buildCustomers()
 	const employeeTable = await buildEmployees()
 	const shipperTable = await buildShippers()
