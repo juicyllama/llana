@@ -595,6 +595,7 @@ export class MySQL {
 	 */
 
 	private pipeObjectFromDataSource(options: DataSourceFindOneOptions, data: { [key: string]: any }): object {
+
 		for (const key in data) {
 			let column
 
@@ -609,10 +610,13 @@ export class MySQL {
 			switch (column.type) {
 				case DataSourceColumnType.BOOLEAN:
 					data[key] = data[key] === 1
+					break
 				case DataSourceColumnType.DATE:
 					data[key] = new Date(data[key]).toISOString()
+					break
 				case DataSourceColumnType.NUMBER:
 					data[key] = Number(data[key])
+					break
 			}
 		}
 
