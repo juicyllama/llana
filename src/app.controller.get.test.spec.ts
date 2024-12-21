@@ -274,6 +274,51 @@ describe('App > Controller > Get', () => {
 		})
 	})
 
+	//TODO expand to test enums, relations, and other fields
+	//validate response according to the schema
+	describe('Validate response types', () => {
+
+		let result: any = {}
+		
+		it('Object', async function () {
+			result = <any>(
+				await request(app.getHttpServer())
+					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+			)
+	
+			expect(result.body).toBeDefined()
+		})	
+
+
+		it('String', function () {
+			expect(result.body.shipName).toBeDefined()
+			expect(result.body.shipName).not.toBeNull()
+			expect(typeof result.body.shipName).toBe("string")
+		})
+
+		it('Number', function () {
+			expect(result.body.freight).toBeDefined()
+			expect(result.body.freight).not.toBeNull()
+			expect(typeof result.body.freight).toBe("number")
+		})
+
+		it('Boolean', function () {
+			//TODO: Add boolean field to the schema
+		})
+
+		it('Date', function () {
+			expect(result.body.orderDate).not.toBeNull()
+			expect(new Date(result.body.orderDate)).toBeInstanceOf(Date)
+		})
+
+		it('Enum', function () {
+			//TODO: Add enum field to the schema
+		})
+
+	})
+
 	afterAll(async () => {
 		for (let i = 0; i < 10; i++) {
 			await salesOrderTestingService.deleteOrder(orders[i][salesOrderSchema.primary_key])
