@@ -79,7 +79,7 @@ export class AuthController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
-		//TODO - add role check here
+		//TODO - handle allowed_fields in role permissions repsonse
 
 		//return the user's profile
 		const schema = await this.schema.getSchema({ table, x_request_id })

@@ -1,4 +1,4 @@
-import { Controller, Headers, Post, Req, Res } from '@nestjs/common'
+import { Body, Controller, Headers, Post, Req, Res } from '@nestjs/common'
 
 import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
@@ -11,8 +11,8 @@ import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { WebsocketService } from './modules/websocket/websocket.service'
-import { AuthTablePermissionFailResponse } from './types/auth.types'
-import { DataSourceCreateOneOptions, PublishType, QueryPerform } from './types/datasource.types'
+import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
+import { DataSourceCreateOneOptions, DataSourceSchema, PublishType, QueryPerform } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 
 @Controller()
@@ -25,7 +25,7 @@ export class PostController {
 		private readonly roles: Roles,
 		private readonly websocket: WebsocketService,
 		private readonly webhook: Webhook,
-	) {}
+	) { }
 
 	/**
 	 * Create new record
@@ -36,83 +36,67 @@ export class PostController {
 		@Req() req,
 		@Res() res,
 		@Headers() headers: HeaderParams,
+		@Body() body: Partial<any> | Partial<any>[],
 	): Promise<FindOneResponseObject | CreateManyResponseObject> {
 		const x_request_id = headers['x-request-id']
 		let table_name = UrlToTable(req.originalUrl, 1)
 
 		if (table_name === 'webhook') {
 			table_name = LLANA_WEBHOOK_TABLE
-//TODO - do public check first (if table is public, skip auth and role check)
-			//perform auth on webhook table
-			const auth = await this.authentication.auth({
-				table: req.body.table,
+		}
+
+		let schema: DataSourceSchema
+		const role_where = []
+
+		try {
+			schema = await this.schema.getSchema({ table: table_name, x_request_id })
+		} catch (e) {
+			return res.status(404).send(this.response.text(e.message))
+		}
+
+		// Is the table public?
+		let auth = await this.authentication.public({
+			table: table_name,
+			access_level: RolePermission.WRITE,
+			x_request_id,
+		})
+
+		console.log('auth', auth)
+
+		// If not public, perform auth
+		if (!auth.valid) {
+			auth = await this.authentication.auth({
+				table: table_name,
 				x_request_id,
-				access: RolePermission.READ,
+				access: RolePermission.WRITE,
 				headers: req.headers,
 				body: req.body,
 				query: req.query,
 			})
 			if (!auth.valid) {
-				return res.status(401).send(auth.message)
+				return res.status(401).send(this.response.text(auth.message))
 			}
-	//TODO - add role check here
+
+
 			//perform role check
 			if (auth.user_identifier) {
-				const { valid, message } = (await this.roles.tablePermission({
+				const permission = await this.roles.tablePermission({
 					identifier: auth.user_identifier,
-					table: req.body.table,
-					access: RolePermission.READ,
+					table: table_name,
+					access: RolePermission.WRITE,
 					x_request_id,
-				})) as AuthTablePermissionFailResponse
+				})
 
-				if (!valid) {
-					return res.status(401).send(this.response.text(message))
+				if (!permission.valid) {
+					return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+				}
+
+				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
+					role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
 				}
 			}
-
-			if (!req.body.user_identifier) {
-				req.body.user_identifier = auth.user_identifier
-			}
 		}
 
-		const body = req.body
-
-		const options: DataSourceCreateOneOptions = {
-			schema: null,
-			data: {},
-		}
-
-		try {
-			options.schema = await this.schema.getSchema({ table: table_name, x_request_id })
-		} catch (e) {
-			return res.status(404).send(this.response.text(e.message))
-		}
-//TODO - do public check first (if table is public, skip auth and role check)
-		const auth = await this.authentication.auth({
-			table: table_name,
-			x_request_id,
-			access: RolePermission.WRITE,
-			headers: req.headers,
-			body: req.body,
-			query: req.query,
-		})
-		if (!auth.valid) {
-			return res.status(401).send(auth.message)
-		}
-	//TODO - add role check here
-		//perform role check
-		if (auth.user_identifier) {
-			const { valid, message } = (await this.roles.tablePermission({
-				identifier: auth.user_identifier,
-				table: table_name,
-				access: RolePermission.WRITE,
-				x_request_id,
-			})) as AuthTablePermissionFailResponse
-
-			if (!valid) {
-				return res.status(401).send(this.response.text(message))
-			}
-		}
 
 		if (body instanceof Array) {
 			const total = body.length
@@ -122,7 +106,10 @@ export class PostController {
 			const data: FindOneResponseObject[] = []
 
 			for (const item of body) {
-				const insertResult = await this.createOneRecord(options, item, auth.user_identifier, x_request_id)
+				const insertResult = await this.createOneRecord({
+					schema,
+					data: item,
+				}, auth.user_identifier, x_request_id)
 
 				if (!insertResult.valid) {
 					errored++
@@ -135,14 +122,14 @@ export class PostController {
 
 				data.push(insertResult.result)
 				await this.websocket.publish(
-					options.schema,
+					schema,
 					PublishType.INSERT,
-					insertResult.result[options.schema.primary_key],
+					insertResult.result[schema.primary_key],
 				)
 				await this.webhook.publish(
-					options.schema,
+					schema,
 					PublishType.INSERT,
-					insertResult.result[options.schema.primary_key],
+					insertResult.result[schema.primary_key],
 					auth.user_identifier,
 				)
 				successful++
@@ -157,7 +144,10 @@ export class PostController {
 			} as CreateManyResponseObject)
 		}
 
-		const insertResult = await this.createOneRecord(options, body, auth.user_identifier, x_request_id)
+		const insertResult = await this.createOneRecord({
+			schema,
+			data: body,
+		}, auth.user_identifier, x_request_id)
 
 		if (!insertResult.valid) {
 			return res.status(400).send(this.response.text(insertResult.message))
@@ -170,8 +160,7 @@ export class PostController {
 	 */
 
 	private async createOneRecord(
-		options,
-		data,
+		options: DataSourceCreateOneOptions,
 		user_identifier,
 		x_request_id,
 	): Promise<{
@@ -180,7 +169,7 @@ export class PostController {
 		result?: FindOneResponseObject
 	}> {
 		//validate input data
-		const { valid, message, instance } = await this.schema.validateData(options.schema, data)
+		const { valid, message, instance } = await this.schema.validateData(options.schema, options.data)
 		if (!valid) {
 			return {
 				valid,
@@ -205,6 +194,7 @@ export class PostController {
 		}
 
 		try {
+			//TODO - handle allowed_fields in role permissions repsonse
 			const result = (await this.query.perform(
 				QueryPerform.CREATE,
 				options,

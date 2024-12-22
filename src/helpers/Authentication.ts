@@ -30,7 +30,7 @@ export class Authentication {
 		private readonly query: Query,
 		private readonly schema: Schema,
 		private readonly jwtService: JwtService,
-	) {}
+	) { }
 
 
 	/**
@@ -39,55 +39,59 @@ export class Authentication {
 
 	async public(options: {
 		table: string
-		access: RolePermission
+		access_level: RolePermission
 		x_request_id?: string
 	}): Promise<AuthRestrictionsResponse> {
 
-		const auth_schema = await this.schema.getSchema({ table: LLANA_PUBLIC_TABLES, x_request_id: options.x_request_id })	
-		let public_access = await this.cacheManager.get<FindManyResponseObject>(`auth:public`)
+		const auth_schema = await this.schema.getSchema({ table: LLANA_PUBLIC_TABLES, x_request_id: options.x_request_id })
+		let public_access
 
-			if (!public_access?.data) {
-				public_access = (await this.query.perform(
-					QueryPerform.FIND_MANY,
-					{
-						schema: auth_schema,
-						limit: 99999,
-					},
-					options.x_request_id,
-				)) as FindManyResponseObject
+		if(Env.IsNotTest()) {
+			public_access = await this.cacheManager.get<FindManyResponseObject>(`auth:public`)
+		}
 
-				await this.cacheManager.set(
-					`auth:public`,
-					public_access,
-					this.configService.get('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_IDENTITY_DATA_TTL,
-				)
-			}
+		if (!public_access?.data) {
+			public_access = (await this.query.perform(
+				QueryPerform.FIND_MANY,
+				{
+					schema: auth_schema,
+					limit: 99999,
+				},
+				options.x_request_id,
+			)) as FindManyResponseObject
 
-			if(public_access.data.length) {
+			await this.cacheManager.set(
+				`auth:public`,
+				public_access,
+				this.configService.get('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_IDENTITY_DATA_TTL,
+			)
+		}
 
-				for (const public_table of public_access.data) {
-					if (public_table.table === options.table) {
-						//compare access level
-						const access = comparePermissions(public_table.rule, options.access)
-						
-						if(access) {
-							return {
-								valid: true,
-								message: 'Public Access Granted',
-							}
+		if (public_access.data.length) {
+
+			for (const record of public_access.data) {
+				if (record.table === options.table) {
+					//compare access level
+					const access = comparePermissions(record.access_level, options.access_level)
+					
+					if (access) {
+						return {
+							valid: true,
+							message: 'Public Access Granted',
 						}
-
 					}
-				}
 
+				}
 			}
+
+		}
 
 		return {
 			valid: false,
 			message: 'Private Access Only',
 		}
 	}
-	
+
 
 	/**
 	 * Check is user is authorized to access system, optional pass in user_identifier for specific user check
@@ -138,7 +142,7 @@ export class Authentication {
 		body?: any
 		query?: any
 		x_request_id?: string
-	}): Promise<AuthRestrictionsResponse> { 
+	}): Promise<AuthRestrictionsResponse> {
 
 		if (!auth.name) {
 			return {
@@ -190,7 +194,7 @@ export class Authentication {
 		}
 
 		if (!req_api_key) {
-			 return {
+			return {
 				valid: false,
 				message: 'API key required',
 			}
@@ -228,16 +232,16 @@ export class Authentication {
 		}
 
 		const schema = await this.schema.getSchema({ table: options.table, x_request_id: options.x_request_id })
-			
-			if (!schema) {
-				this.logger.error(
-					`[Authentication][auth] No schema found for table ${options.table}`,
-					options.x_request_id,
-				)
-				return { valid: false, message: `No Schema Found For Table ${options.table}` }
-			}
 
-			const identity_column = schema.primary_key
+		if (!schema) {
+			this.logger.error(
+				`[Authentication][auth] No schema found for table ${options.table}`,
+				options.x_request_id,
+			)
+			return { valid: false, message: `No Schema Found For Table ${options.table}` }
+		}
+
+		const identity_column = schema.primary_key
 
 		let auth_result = await this.cacheManager.get(`auth:${auth.type}:${req_api_key}`)
 

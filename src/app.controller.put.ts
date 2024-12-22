@@ -43,30 +43,41 @@ export class PutController {
 		}
 
 		let schema: DataSourceSchema
+		const role_where = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-//TODO - do public check first (if table is public, skip auth and role check)
-		const auth = await this.authentication.auth({
-			table: table_name,
-			x_request_id,
-			access: RolePermission.WRITE,
-			headers: req.headers,
-			body: req.body,
-			query: req.query,
-		})
+
+				// Is the table public?
+				let auth = await this.authentication.public({
+					table: table_name,
+					access_level: RolePermission.WRITE,
+					x_request_id,
+				})
+		
+		// If not public, perform auth
 		if (!auth.valid) {
-			return res.status(401).send(this.response.text(auth.message))
-		}
+
+			auth = await this.authentication.auth({
+				table: table_name,
+				x_request_id,
+				access: RolePermission.WRITE,
+				headers: req.headers,
+				body: req.body,
+				query: req.query,
+			})
+			if (!auth.valid) {
+				return res.status(401).send(this.response.text(auth.message))
+			}
+
 
 		//perform role check
-	//TODO - add role check here
-		const role_where = []
+			if (auth.user_identifier) {
 
-		if (auth.user_identifier) {
+
 			const permission = await this.roles.tablePermission({
 				identifier: auth.user_identifier,
 				table: table_name,
@@ -82,6 +93,7 @@ export class PutController {
 				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
 			}
 		}
+	}
 
 		//validate input data
 		const validate = await this.schema.validateData(schema, body)
@@ -116,16 +128,13 @@ export class PutController {
 		}
 
 		const where = <DataSourceWhere[]>[
+			...role_where,
 			{
 				column: primary_key,
 				operator: WhereOperator.equals,
 				value: id,
 			},
 		]
-
-		if (role_where.length > 0) {
-			where.concat(role_where)
-		}
 
 		//Check record exists
 
@@ -143,41 +152,8 @@ export class PutController {
 		}
 
 		try {
-			if (table_name === LLANA_WEBHOOK_TABLE) {
-				//perform auth on webhook table
-				const auth = await this.authentication.auth({
-					table: record.table,
-					x_request_id,
-					access: RolePermission.READ,
-					headers: req.headers,
-					body: req.body,
-					query: req.query,
-				})
-				if (!auth.valid) {
-					return res.status(401).send(auth.message)
-				}
 
-				//perform role check
-				if (auth.user_identifier) {
-					const { valid, message } = (await this.roles.tablePermission({
-						identifier: auth.user_identifier,
-						table: record.table,
-						access: RolePermission.READ,
-						x_request_id,
-					})) as AuthTablePermissionFailResponse
-
-					if (!valid) {
-						return res.status(401).send(this.response.text(message))
-					}
-				}
-				const result = await this.query.perform(
-					QueryPerform.UPDATE,
-					{ id, schema, data: validate.instance },
-					x_request_id,
-				)
-				return res.status(200).send(result)
-			}
-
+//TODO - handle allowed_fields in role permissions repsonse
 			const result = await this.query.perform(
 				QueryPerform.UPDATE,
 				{ id, schema, data: validate.instance },
@@ -191,16 +167,7 @@ export class PutController {
 		}
 	}
 
-	@Patch('*/:id')
-	async updateByIdPatch(
-		@Req() req,
-		@Res() res,
-		@Body() body: Partial<any>,
-		@Headers() headers: HeaderParams,
-		@Param('id') id: string,
-	): Promise<FindOneResponseObject> {
-		return await this.updateById(req, res, body, headers, id)
-	}
+	
 
 	@Put('*/')
 	async updateMany(
@@ -217,43 +184,51 @@ export class PutController {
 		}
 
 		let schema: DataSourceSchema
+		const role_where = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-//TODO - do public check first (if table is public, skip auth and role check)
-		const auth = await this.authentication.auth({
+
+		// Is the table public?
+		let auth = await this.authentication.public({
 			table: table_name,
+			access_level: RolePermission.WRITE,
 			x_request_id,
-			access: RolePermission.WRITE,
-			headers: req.headers,
-			body: req.body,
-			query: req.query,
 		})
+
+		// If not public, perform auth
 		if (!auth.valid) {
-			return res.status(401).send(this.response.text(auth.message))
-		}
-
-		//perform role check
-	//TODO - add role check here
-		const role_where = []
-
-		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission({
-				identifier: auth.user_identifier,
+		
+			auth = await this.authentication.auth({
 				table: table_name,
-				access: RolePermission.WRITE,
 				x_request_id,
+				access: RolePermission.WRITE,
+				headers: req.headers,
+				body: req.body,
+				query: req.query,
 			})
-
-			if (!permission.valid) {
-				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+			if (!auth.valid) {
+				return res.status(401).send(this.response.text(auth.message))
 			}
 
-			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
+			if (auth.user_identifier) {
+				const permission = await this.roles.tablePermission({
+					identifier: auth.user_identifier,
+					table: table_name,
+					access: RolePermission.WRITE,
+					x_request_id,
+				})
+
+				if (!permission.valid) {
+					return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+				}
+
+				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
+					role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
+				}
 			}
 		}
 
@@ -264,7 +239,11 @@ export class PutController {
 			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
-		if (body instanceof Array) {
+		if(!(body instanceof Array)){
+			return res.status(400).send(this.response.text('Body must be an array'))
+		}
+
+
 			const total = body.length
 			let successful = 0
 			let errored = 0
@@ -314,6 +293,7 @@ export class PutController {
 				}
 
 				const where = <DataSourceWhere[]>[
+					...role_where,
 					{
 						column: primary_key,
 						operator: WhereOperator.equals,
@@ -346,35 +326,8 @@ export class PutController {
 				}
 
 				try {
-					if (table_name === LLANA_WEBHOOK_TABLE) {
-						//perform auth on webhook table
-						const auth = await this.authentication.auth({
-							table: record.table,
-							x_request_id,
-							access: RolePermission.READ,
-							headers: req.headers,
-							body: req.body,
-							query: req.query,
-						})
-						if (!auth.valid) {
-							return res.status(401).send(auth.message)
-						}
-
-						//perform role check
-						if (auth.user_identifier) {
-							const { valid, message } = (await this.roles.tablePermission({
-								identifier: auth.user_identifier,
-								table: record.table,
-								access: RolePermission.READ,
-								x_request_id,
-							})) as AuthTablePermissionFailResponse
-
-							if (!valid) {
-								return res.status(401).send(this.response.text(message))
-							}
-						}
-					}
-
+					
+					//TODO - handle allowed_fields in role permissions repsonse
 					const result = (await this.query.perform(
 						QueryPerform.UPDATE,
 						{ id: item[primary_key], schema, data: validate.instance },
@@ -406,9 +359,18 @@ export class PutController {
 				errors,
 				data,
 			} as UpdateManyResponseObject)
-		}
+	
+	}
 
-		return res.status(400).send(this.response.text('Body must be an array'))
+	@Patch('*/:id')
+	async updateByIdPatch(
+		@Req() req,
+		@Res() res,
+		@Body() body: Partial<any>,
+		@Headers() headers: HeaderParams,
+		@Param('id') id: string,
+	): Promise<FindOneResponseObject> {
+		return await this.updateById(req, res, body, headers, id)
 	}
 
 	@Patch('*/')

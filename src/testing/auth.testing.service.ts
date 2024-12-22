@@ -1,10 +1,20 @@
 import { Injectable } from '@nestjs/common'
 
 import { AuthService } from '../app.service.auth'
+import { Query } from '../helpers/Query'
+import { LLANA_PUBLIC_TABLES } from '../app.constants'
+import { DataSourceCreateOneOptions, QueryPerform } from '../types/datasource.types'
+import { Schema } from '../helpers/Schema'
+import { RolePermission } from '../types/roles.types'
+import { FindOneResponseObject } from '../dtos/response.dto'
 
 @Injectable()
 export class AuthTestingService {
-	constructor(private readonly authService: AuthService) {}
+	constructor(
+		private readonly authService: AuthService,
+		private readonly query: Query,
+		private readonly schema: Schema,
+	) {}
 
 	async login(): Promise<string> {
 		try {
@@ -16,5 +26,29 @@ export class AuthTestingService {
 			console.error('Login failed:', error)
 			throw error
 		}
+	}
+
+	async createPublicTablesRecord(data: {
+		table: string,
+		access_level: RolePermission
+	}): Promise<FindOneResponseObject> {
+
+		const schema = await this.schema.getSchema({ table: LLANA_PUBLIC_TABLES, x_request_id: 'test' })
+
+		const object: DataSourceCreateOneOptions = {
+			schema,
+			data
+		}
+
+		return await this.query.perform(QueryPerform.CREATE, object) as FindOneResponseObject
+	} 
+
+	async deletePublicTablesRecord(data: any): Promise<void> {
+		const schema = await this.schema.getSchema({ table: LLANA_PUBLIC_TABLES, x_request_id: 'test' })
+
+		await this.query.perform(QueryPerform.DELETE, {
+			id: data[schema.primary_key],
+			schema,
+		})
 	}
 }

@@ -22,6 +22,7 @@ import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
 import { envValidationSchema } from './config/env.validation'
+import { RolePermission } from './types/roles.types'
 
 // Type the config imports
 const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
@@ -42,9 +43,7 @@ describe('App > Controller > Put', () => {
 	let orderSchema: DataSourceSchema
 	let userSchema: DataSourceSchema
 
-	let customer1: any
-	let customer2: any
-	let customer3: any
+	let customers = []
 	let employee: any
 	let shipper: any
 	let order: any
@@ -105,13 +104,13 @@ describe('App > Controller > Put', () => {
 		orderSchema = await salesOrderTestingService.getSchema()
 		userSchema = await userTestingService.getSchema()
 
-		customer1 = await customerTestingService.createCustomer({})
-		customer2 = await customerTestingService.createCustomer({})
-		customer3 = await customerTestingService.createCustomer({})
+		customers.push(await customerTestingService.createCustomer({}))
+		customers.push(await customerTestingService.createCustomer({}))
+		customers.push(await customerTestingService.createCustomer({}))
 		employee = await employeeTestingService.createEmployee({})
 		shipper = await shipperTestingService.createShipper({})
 		order = await salesOrderTestingService.createOrder({
-			custId: customer1[customerSchema.primary_key],
+			custId: customers[0][customerSchema.primary_key],
 			employeeId: employee[employeeSchema.primary_key],
 			shipperId: shipper[shipperSchema.primary_key],
 		})
@@ -129,7 +128,7 @@ describe('App > Controller > Put', () => {
 	describe('Update', () => {
 		it('One', async function () {
 			const result = await request(app.getHttpServer())
-				.put(`/Customer/${customer1[customerSchema.primary_key]}`)
+				.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
 				.send({
 					companyName: 'Updated Company Name',
 					contactName: 'Updated Contact Name',
@@ -139,26 +138,26 @@ describe('App > Controller > Put', () => {
 
 			expect(result.body).toBeDefined()
 			expect(result.body[customerSchema.primary_key].toString()).toEqual(
-				customer1[customerSchema.primary_key].toString(),
+				customers[0][customerSchema.primary_key].toString(),
 			)
 			expect(result.body.companyName).toEqual('Updated Company Name')
 			expect(result.body.contactName).toEqual('Updated Contact Name')
-			customer1 = result.body
+			customers[0] = result.body
 		})
 		it('Many', async function () {
-			customer2.companyName = 'Customer2 Company Name'
-			customer3.companyName = 'Customer2 Company Name'
+			customers[1].companyName = 'Customer2 Company Name'
+			customers[2].companyName = 'Customer2 Company Name'
 
 			const result = await request(app.getHttpServer())
 				.put(`/Customer/`)
 				.send([
 					{
-						[customerSchema.primary_key]: customer2[customerSchema.primary_key],
-						companyName: customer2.companyName,
+						[customerSchema.primary_key]: customers[1][customerSchema.primary_key],
+						companyName: customers[1].companyName,
 					},
 					{
-						[customerSchema.primary_key]: customer3[customerSchema.primary_key],
-						companyName: customer3.companyName,
+						[customerSchema.primary_key]: customers[2][customerSchema.primary_key],
+						companyName: customers[2].companyName,
 					},
 				])
 				.set('Authorization', `Bearer ${jwt}`)
@@ -172,17 +171,17 @@ describe('App > Controller > Put', () => {
 			expect(result.body.successful).toEqual(2)
 			expect(result.body.data.length).toBeGreaterThan(0)
 			expect(result.body.data[0][customerSchema.primary_key].toString()).toEqual(
-				customer2[customerSchema.primary_key].toString(),
+				customers[1][customerSchema.primary_key].toString(),
 			)
-			expect(result.body.data[0].companyName).toEqual(customer2.companyName)
-			expect(result.body.data[0].contactName).toEqual(customer2.contactName)
+			expect(result.body.data[0].companyName).toEqual(customers[1].companyName)
+			expect(result.body.data[0].contactName).toEqual(customers[1].contactName)
 			expect(result.body.data[1][customerSchema.primary_key].toString()).toEqual(
-				customer3[customerSchema.primary_key].toString(),
+				customers[2][customerSchema.primary_key].toString(),
 			)
-			expect(result.body.data[1].companyName).toEqual(customer3.companyName)
-			expect(result.body.data[1].contactName).toEqual(customer3.contactName)
-			customer2 = result.body.data[0]
-			customer3 = result.body.data[1]
+			expect(result.body.data[1].companyName).toEqual(customers[2].companyName)
+			expect(result.body.data[1].contactName).toEqual(customers[2].contactName)
+			customers[1] = result.body.data[0]
+			customers[2] = result.body.data[1]
 		})
 
 		it('One - Integer', async function () {
@@ -218,11 +217,70 @@ describe('App > Controller > Put', () => {
 		})
 	})
 
+describe('Public Updating', () => {
+
+		it('Default public fail to update', async function () {
+			await request(app.getHttpServer())
+				.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
+				.send({
+					companyName: 'Anything here',
+				})
+				.expect(401)
+		})
+
+		it('Cannot update with READ permissions', async function () {
+
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.READ,
+			})
+
+			try{
+
+				await request(app.getHttpServer())
+				.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
+				.send({
+					companyName: 'Anything here',
+				})
+				.expect(401)
+
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+
+		it('Can update with WRITE permissions', async function () {
+		
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.WRITE,
+			})
+
+			try{
+				await request(app.getHttpServer())
+				.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
+				.send({
+					companyName: 'Anything here',
+				})
+				.expect(200)
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+	})
+
+
 	afterAll(async () => {
 		await salesOrderTestingService.deleteOrder(order[orderSchema.primary_key])
-		await customerTestingService.deleteCustomer(customer1[customerSchema.primary_key])
-		await customerTestingService.deleteCustomer(customer2[customerSchema.primary_key])
-		await customerTestingService.deleteCustomer(customer3[customerSchema.primary_key])
+		for(let customer of customers){
+			await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
+		}
 		await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])
 		await shipperTestingService.deleteShipper(shipper[shipperSchema.primary_key])
 		await userTestingService.deleteUser(user[userSchema.primary_key])

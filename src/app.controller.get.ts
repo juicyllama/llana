@@ -49,7 +49,7 @@ export class GetController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
-		//TODO - add role check here - only return tables that the user has access to
+		//TODO - only return tables that the user has access to
 
 		return res.status(200).send(await this.query.perform(QueryPerform.LIST_TABLES, undefined, x_request_id))
 	}
@@ -61,39 +61,54 @@ export class GetController {
 		const table_name = UrlToTable(req.originalUrl, 1)
 
 		let schema: DataSourceSchema
+		const role_where = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-//TODO - do public check first (if table is public, skip auth and role check)
-		const auth = await this.authentication.auth({
+
+		// Is the table public?
+		let auth = await this.authentication.public({
 			table: table_name,
+			access_level: RolePermission.READ,
 			x_request_id,
-			access: RolePermission.READ,
-			headers: req.headers,
-			body: req.body,
-			query: req.query,
 		})
+		
+		// If not public, perform auth
 		if (!auth.valid) {
-			return res.status(401).send(this.response.text(auth.message))
-		}
 
-			//TODO - add role check here
-
-		//perform role check
-		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission({
-				identifier: auth.user_identifier,
+			auth = await this.authentication.auth({
 				table: table_name,
-				access: RolePermission.READ,
 				x_request_id,
+				access: RolePermission.READ,
+				headers: req.headers,
+				body: req.body,
+				query: req.query,
 			})
-
-			if (!permission.valid) {
-				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+			if (!auth.valid) {
+				return res.status(401).send(this.response.text(auth.message))
 			}
+ 
+			//perform role check
+			if (auth.user_identifier) {
+				const permission = await this.roles.tablePermission({
+					identifier: auth.user_identifier,
+					table: table_name,
+					access: RolePermission.READ,
+					x_request_id,
+				})
+
+				if (!permission.valid) {
+					return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+				}
+
+				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
+					role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
+				}
+			}
+
 		}
 
 		return res.status(200).send(schema)
@@ -133,20 +148,30 @@ export class GetController {
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-//TODO - do public check first (if table is public, skip auth and role check)
-		const auth = await this.authentication.auth({
+
+		// Is the table public?
+		let auth = await this.authentication.public({
 			table: table_name,
+			access_level: RolePermission.READ,
 			x_request_id,
-			access: RolePermission.READ,
-			headers: req.headers,
-			body: req.body,
-			query: req.query,
 		})
+
+		// If not public, perform auth
 		if (!auth.valid) {
-			return res.status(401).send(this.response.text(auth.message))
-		}
-	//TODO - add role check here
-		try {
+		
+			auth = await this.authentication.auth({
+				table: table_name,
+				x_request_id,
+				access: RolePermission.READ,
+				headers: req.headers,
+				body: req.body,
+				query: req.query,
+			})
+			if (!auth.valid) {
+				return res.status(401).send(this.response.text(auth.message))
+			}
+
+
 			//perform role check
 			if (auth.user_identifier) {
 				let permission = await this.roles.tablePermission({
@@ -178,6 +203,8 @@ export class GetController {
 					}
 				}
 			}
+		}
+		
 
 			//validate :id field
 			primary_key = this.schema.getPrimaryKey(options.schema)
@@ -232,9 +259,7 @@ export class GetController {
 					}
 				}
 			}
-		} catch (e) {
-			return res.status(400).send(this.response.text(e.message))
-		}
+
 
 		options.where.push({
 			column: primary_key,
@@ -250,6 +275,7 @@ export class GetController {
 		}
 
 		try {
+			//TODO - handle allowed_fields in role permissions repsonse
 			let result = (await this.query.perform(
 				QueryPerform.FIND_ONE,
 				options,
@@ -306,8 +332,18 @@ export class GetController {
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-//TODO - do public check first (if table is public, skip auth and role check)
-		const auth = await this.authentication.auth({
+
+		// Is the table public?
+		let auth = await this.authentication.public({
+			table: table_name,
+			access_level: RolePermission.READ,
+			x_request_id,
+		})
+
+		// If not public, perform auth
+		if (!auth.valid) {
+	
+		 auth = await this.authentication.auth({
 			table: table_name,
 			x_request_id,
 			access: RolePermission.READ,
@@ -319,7 +355,7 @@ export class GetController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
-		try {
+	
 			//perform role check
 			if (auth.user_identifier) {
 				let permission = await this.roles.tablePermission({
@@ -351,6 +387,7 @@ export class GetController {
 					}
 				}
 			}
+		}
 
 			const { limit, offset } = this.pagination.get(queryParams)
 			options.limit = limit
@@ -417,10 +454,7 @@ export class GetController {
 
 				options.sort = validateSort.sort
 			}
-		} catch (e) {
-			return res.status(400).send(this.response.text(e.message))
-		}
-
+		
 		if (this.configService.get('database.deletes.soft')) {
 			options.where.push({
 				column: this.configService.get('database.deletes.soft'),
@@ -429,6 +463,7 @@ export class GetController {
 		}
 
 		try {
+			//TODO - handle allowed_fields in role permissions repsonse
 			let result = (await this.query.perform(
 				QueryPerform.FIND_MANY,
 				options,

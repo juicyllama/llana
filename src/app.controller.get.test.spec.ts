@@ -21,6 +21,7 @@ import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
 import { envValidationSchema } from './config/env.validation'
+import { RolePermission } from './types/roles.types'
 
 // Type the config imports
 const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
@@ -317,6 +318,55 @@ describe('App > Controller > Get', () => {
 			//TODO: Add enum field to the schema
 		})
 
+	})
+
+	describe('Public Fetch', () => {
+
+		it('Default public fail to fetch', async function () {
+			await request(app.getHttpServer())
+				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+				.expect(401)
+		})
+
+		it('Can fetch with READ permissions', async function () {
+
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: salesOrderSchema.table,
+				access_level: RolePermission.READ,
+			})
+
+			try{
+
+				await request(app.getHttpServer())
+				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+				.expect(200)
+
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+
+		it('Can fetch with WRITE permissions', async function () {
+		
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: salesOrderSchema.table,
+				access_level: RolePermission.WRITE,
+			})
+
+			try{
+				await request(app.getHttpServer())
+				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+				.expect(200)
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
 	})
 
 	afterAll(async () => {

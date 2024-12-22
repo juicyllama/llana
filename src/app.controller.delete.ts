@@ -62,7 +62,7 @@ export class DeleteController {
 		// Is the table public?
 		let auth = await this.authentication.public({
 			table: table_name,
-			access: RolePermission.DELETE,
+			access_level: RolePermission.DELETE,
 			x_request_id,
 		})
 		
@@ -168,7 +168,7 @@ export class DeleteController {
 		@Req() req,
 		@Res() res,
 		@Headers() headers: HeaderParams,
-		@Body() body: Partial<any>[],
+		@Body() body: Partial<any> | Partial<any>[],
 	): Promise<DeleteManyResponseObject> {
 		const x_request_id = headers['x-request-id']
 		let table_name = UrlToTable(req.originalUrl, 1)
@@ -189,7 +189,7 @@ export class DeleteController {
 		// Is the table public?
 		let auth = await this.authentication.public({
 			table: table_name,
-			access: RolePermission.DELETE,
+			access_level: RolePermission.DELETE,
 			x_request_id,
 		})
 

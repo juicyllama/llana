@@ -1,4 +1,5 @@
 import { DataSourceWhere } from './datasource.types'
+import { RolePermission } from './roles.types'
 
 export interface Auth {
 	type: AuthType
@@ -55,6 +56,7 @@ export interface AuthRestrictionsResponse {
 
 export interface AuthTablePermissionSuccessResponse extends AuthTablePermissionResponse {
 	restriction?: DataSourceWhere
+	allowed_fields?: string[]
 }
 
 export interface AuthTablePermissionFailResponse extends AuthTablePermissionResponse {

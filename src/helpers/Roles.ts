@@ -127,9 +127,10 @@ export class Roles {
 		// check if there is a table role setting
 		if (custom_permissions.data?.length) {
 			for (const permission of custom_permissions.data) {
-				if (comparePermissions(options.access, permission.records)) {
+				if (comparePermissions(permission.records, options.access)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
+						allowed_fields: permission.allowed_fields,
 					}
 					await this.cacheManager.set(
 						`roles:${options.identifier}:${options.table}:${options.access}`,
@@ -139,7 +140,7 @@ export class Roles {
 					return permission_result
 				}
 
-				if (comparePermissions(options.access, permission.own_records)) {
+				if (comparePermissions(permission.own_records, options.access)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 						restriction: {
@@ -147,6 +148,7 @@ export class Roles {
 							operator: WhereOperator.equals,
 							value: options.identifier,
 						},
+						allowed_fields: permission.allowed_fields,
 					}
 					await this.cacheManager.set(
 						`roles:${options.identifier}:${options.table}:${options.access}`,
@@ -180,9 +182,10 @@ export class Roles {
 
 		if (default_permissions.data?.length) {
 			for (const permission of default_permissions.data) {
-				if (comparePermissions(options.access, permission.records)) {
+				if (comparePermissions(permission.records, options.access)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
+						allowed_fields: permission.allowed_fields,
 					}
 					await this.cacheManager.set(
 						`roles:${options.identifier}:${options.table}:${options.access}`,
@@ -243,20 +246,42 @@ export class Roles {
 	}
 
 }
+/**
+ * 
+ * @param permission level being requested (e.g. user permission)
+ * @param access level required (e.g. delete endpoint is DELETE) 
+ * @returns 
+ */
+export function comparePermissions(permission: RolePermission, access: RolePermission): boolean {
 
-export function comparePermissions(access: RolePermission, permission: RolePermission): boolean {
+	console.log(`Request has ${permission} permission, and they need ${access} permission`)
+
+	let passed = false
+
 	switch (access) {
-		case RolePermission.NONE:
-			return false
+		case RolePermission.DELETE:
+			passed = (
+				permission === RolePermission.DELETE
+			)
+			break
+		case RolePermission.WRITE:
+			passed = (
+				permission === RolePermission.WRITE || 
+				permission === RolePermission.DELETE
+			)	
+			break
 		case RolePermission.READ:
-			return (
+			passed = (
 				permission === RolePermission.READ ||
 				permission === RolePermission.WRITE ||
 				permission === RolePermission.DELETE
 			)
-		case RolePermission.WRITE:
-			return permission === RolePermission.WRITE || permission === RolePermission.DELETE
-		case RolePermission.DELETE:
-			return permission === RolePermission.DELETE
+			break
+		case RolePermission.NONE:
+			passed = false
+			break
 	}
+	
+	console.log('passed', passed)
+	return passed
 }

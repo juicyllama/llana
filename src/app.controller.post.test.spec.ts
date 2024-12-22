@@ -18,6 +18,7 @@ import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
 import { envValidationSchema } from './config/env.validation'
+import { RolePermission } from './types/roles.types'
 
 // Type the config imports
 const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
@@ -32,9 +33,7 @@ describe('App > Controller > Post', () => {
 	let customerSchema: DataSourceSchema
 	let userSchema: DataSourceSchema
 
-	let customer1: any
-	let customer2: any
-	let customer3: any
+	let customers = []
 	let user: any
 
 	let jwt: string
@@ -93,7 +92,7 @@ describe('App > Controller > Post', () => {
 			expect(result.body[customerSchema.primary_key]).toBeDefined()
 			expect(result.body.companyName).toBeDefined()
 			expect(result.body.contactName).toBeDefined()
-			customer1 = result.body
+			customers.push(result.body)
 		})
 		it('Create Many', async function () {
 			const result = await request(app.getHttpServer())
@@ -113,8 +112,8 @@ describe('App > Controller > Post', () => {
 			expect(result.body.data[0].companyName).toBeDefined()
 			expect(result.body.data[1][customerSchema.primary_key]).toBeDefined()
 			expect(result.body.data[1].companyName).toBeDefined()
-			customer2 = result.body.data[0]
-			customer3 = result.body.data[1]
+			customers.push(result.body.data[0]) 
+			customers.push(result.body.data[1])
 		})
 		it('Create User', async function () {
 			user = await userTestingService.mockUser()
@@ -133,10 +132,68 @@ describe('App > Controller > Post', () => {
 		})
 	})
 
+	describe('Public Creation', () => {
+
+		it('Default public fail to create', async function () {
+			await request(app.getHttpServer())
+				.post(`/Customer/`)
+				.send(customerTestingService.mockCustomer())
+				.expect(401)
+		})
+
+		it('Cannot create with READ permissions', async function () {
+
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.READ,
+			})
+
+			try{
+
+			await request(app.getHttpServer())
+				.post(`/Customer/`)
+				.send(customerTestingService.mockCustomer())
+				.expect(401)
+
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+
+		it('Can create with WRITE permissions', async function () {
+		
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.WRITE,
+			})
+
+			try{
+				const result = await request(app.getHttpServer())
+				.post(`/Customer/`)
+				.send(customerTestingService.mockCustomer())
+				.expect(201)
+
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeDefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeDefined()
+				customers.push(result.body)
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+	})
+
 	afterAll(async () => {
-		await customerTestingService.deleteCustomer(customer1[customerSchema.primary_key])
-		await customerTestingService.deleteCustomer(customer2[customerSchema.primary_key])
-		await customerTestingService.deleteCustomer(customer3[customerSchema.primary_key])
+		for(let customer of customers){
+			await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
+		}
 		await userTestingService.deleteUser(user[userSchema.primary_key])
 		await app.close()
 	})

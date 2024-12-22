@@ -166,7 +166,7 @@ export class AppBootup implements OnApplicationBootstrap {
 			 * |`role` | `string` | The name of the role, which should match the value from your users role field |
 			 * |`records` | `enum` | The permission level for this role across all records in the table, either `NONE` `READ` `WRITE` `DELETE`|
 			 * |`own_records` | `enum` | The permission level for this role if it includes a reference back to the user identity (their own records) either `NONE` `READ` `WRITE` `DELETE`|
-			 * |`available_fields` | `string` | A comma separated list of fields that are restricted for this role |
+			 * |`allowed_fields` | `string` | A comma separated list of fields that are restricted for this role |
 			 */
 
 			const schema: DataSourceSchema = {
@@ -242,7 +242,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						foreign_key: false,
 						enums: ['NONE', 'READ', 'WRITE', 'DELETE'],
 					},{
-						field: 'available_fields',
+						field: 'allowed_fields',
 						type: DataSourceColumnType.STRING,
 						nullable: true,
 						required: false,
