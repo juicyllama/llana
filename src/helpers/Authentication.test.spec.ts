@@ -12,7 +12,7 @@ import { ConfigService } from '@nestjs/config'
 import { AuthService } from '../app.service.auth'
 import { JwtModule } from '@nestjs/jwt'
 import { AuthLocation } from '../types/auth.types'
-import { LLANA_AUTH_TABLE } from '../app.constants'
+import { LLANA_PUBLIC_TABLES } from '../app.constants'
 
 describe('Authentication Helper', () => {
 	let authentication: Authentication
@@ -96,9 +96,9 @@ describe('Authentication Helper', () => {
 									primary_key: 'id',
 								})
 							}
-							if (options.table === LLANA_AUTH_TABLE) {
+							if (options.table === LLANA_PUBLIC_TABLES) {
 								return Promise.resolve({
-									table: LLANA_AUTH_TABLE,
+									table: LLANA_PUBLIC_TABLES,
 									columns: [
 										{ name: 'id', type: 'number', primary: true },
 										{ name: 'type', type: 'string' },

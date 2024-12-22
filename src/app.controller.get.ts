@@ -43,12 +43,13 @@ export class GetController {
 			access: RolePermission.READ,
 			headers: req.headers,
 			body: req.body,
-			query: req.query,
-			skip_table_checks: true,
+			query: req.query
 		})
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
+
+		//TODO - add role check here - only return tables that the user has access to
 
 		return res.status(200).send(await this.query.perform(QueryPerform.LIST_TABLES, undefined, x_request_id))
 	}
@@ -66,7 +67,7 @@ export class GetController {
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-
+//TODO - do public check first (if table is public, skip auth and role check)
 		const auth = await this.authentication.auth({
 			table: table_name,
 			x_request_id,
@@ -78,6 +79,8 @@ export class GetController {
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
+
+			//TODO - add role check here
 
 		//perform role check
 		if (auth.user_identifier) {
@@ -130,7 +133,7 @@ export class GetController {
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-
+//TODO - do public check first (if table is public, skip auth and role check)
 		const auth = await this.authentication.auth({
 			table: table_name,
 			x_request_id,
@@ -142,7 +145,7 @@ export class GetController {
 		if (!auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
-
+	//TODO - add role check here
 		try {
 			//perform role check
 			if (auth.user_identifier) {
@@ -303,7 +306,7 @@ export class GetController {
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-
+//TODO - do public check first (if table is public, skip auth and role check)
 		const auth = await this.authentication.auth({
 			table: table_name,
 			x_request_id,

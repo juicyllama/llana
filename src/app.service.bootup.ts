@@ -6,7 +6,7 @@ import * as fs from 'fs'
 
 import {
 	APP_BOOT_CONTEXT,
-	LLANA_AUTH_TABLE,
+	LLANA_PUBLIC_TABLES,
 	LLANA_RELATION_TABLE,
 	LLANA_ROLES_TABLE,
 	LLANA_WEBHOOK_LOG_TABLE,
@@ -69,22 +69,23 @@ export class AppBootup implements OnApplicationBootstrap {
 			APP_BOOT_CONTEXT,
 		)) as ListTablesResponseObject
 
-		if (!database.tables.includes(LLANA_AUTH_TABLE)) {
-			this.logger.log(`Creating ${LLANA_AUTH_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
+		if (!database.tables.includes(LLANA_PUBLIC_TABLES)) {
+			this.logger.log(`Creating ${LLANA_PUBLIC_TABLES} schema as it does not exist`, APP_BOOT_CONTEXT)
 
 			/**
-			 * Create the _llana_auth schema
+			 * Create the _llana_public_tables schema
+			 * 
+			 * If you want to open tables up to the public, you can use this table to set the permissions, if you want the whole database 
+			 * to be open, you can use an environment variable to skip the auth checks (recommended alongside host restrictions)
 			 *
 			 * |Field | Type | Details|
 			 * |--------|---------|--------|
-			 * |`auth` | `enum` | Which auth type this applies to, either `APIKEY` or `JWT` |
-			 * |`type` | `enum` | If to `INCLUDE` or `EXCLUDE` the endpoint, excluding means authentication will not be required |
 			 * |`table` | `string` | The table this rule applies to |
-			 * |`public_records` | `enum` | The permission level if `EXCLUDE` and opened to the public, either `NONE` `READ` `WRITE` `DELETE`|
+			 * |`access_level` | `enum` | The permission level to the public, either `READ` `WRITE` `DELETE`|
 			 */
 
 			const schema: DataSourceSchema = {
-				table: LLANA_AUTH_TABLE,
+				table: LLANA_PUBLIC_TABLES,
 				primary_key: 'id',
 				columns: [
 					{
@@ -101,26 +102,6 @@ export class AppBootup implements OnApplicationBootstrap {
 						},
 					},
 					{
-						field: 'auth',
-						type: DataSourceColumnType.ENUM,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						enums: ['APIKEY', 'JWT'],
-					},
-					{
-						field: 'type',
-						type: DataSourceColumnType.ENUM,
-						nullable: false,
-						required: true,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						enums: ['INCLUDE', 'EXCLUDE'],
-					},
-					{
 						field: 'table',
 						type: DataSourceColumnType.STRING,
 						nullable: false,
@@ -130,14 +111,14 @@ export class AppBootup implements OnApplicationBootstrap {
 						foreign_key: false,
 					},
 					{
-						field: 'public_records',
+						field: 'access_level',
 						type: DataSourceColumnType.ENUM,
 						nullable: false,
 						required: true,
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
-						enums: ['NONE', 'READ', 'WRITE', 'DELETE'],
+						enums: ['READ', 'WRITE', 'DELETE'],
 					},
 				],
 			}
@@ -145,7 +126,7 @@ export class AppBootup implements OnApplicationBootstrap {
 			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
 			if (!created) {
-				throw new Error(`Failed to create ${LLANA_AUTH_TABLE} table`)
+				throw new Error(`Failed to create ${LLANA_PUBLIC_TABLES} table`)
 			}
 
 			// Example Auth Table - For example allowing external API access to see Employee data
@@ -153,17 +134,9 @@ export class AppBootup implements OnApplicationBootstrap {
 			if (!this.authentication.skipAuth()) {
 				const example_auth: any[] = [
 					{
-						auth: AuthType.APIKEY,
-						type: 'EXCLUDE',
 						table: 'Employee',
-						public_records: RolePermission.READ,
-					},
-					{
-						auth: AuthType.JWT,
-						type: 'EXCLUDE',
-						table: 'Employee',
-						public_records: RolePermission.READ,
-					},
+						access_level: RolePermission.READ,
+					}
 				]
 
 				for (const example of example_auth) {
@@ -193,6 +166,7 @@ export class AppBootup implements OnApplicationBootstrap {
 			 * |`role` | `string` | The name of the role, which should match the value from your users role field |
 			 * |`records` | `enum` | The permission level for this role across all records in the table, either `NONE` `READ` `WRITE` `DELETE`|
 			 * |`own_records` | `enum` | The permission level for this role if it includes a reference back to the user identity (their own records) either `NONE` `READ` `WRITE` `DELETE`|
+			 * |`available_fields` | `string` | A comma separated list of fields that are restricted for this role |
 			 */
 
 			const schema: DataSourceSchema = {
@@ -267,7 +241,15 @@ export class AppBootup implements OnApplicationBootstrap {
 						unique_key: false,
 						foreign_key: false,
 						enums: ['NONE', 'READ', 'WRITE', 'DELETE'],
-					},
+					},{
+						field: 'available_fields',
+						type: DataSourceColumnType.STRING,
+						nullable: true,
+						required: false,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+					}
 				],
 			}
 
@@ -744,7 +726,7 @@ export class AppBootup implements OnApplicationBootstrap {
 
 		if (this.authentication.skipAuth()) {
 			this.logger.warn(
-				'Skipping auth is set to true, you should maintain _llana_auth table for any WRITE permissions',
+				'Skipping auth is set to true, you should maintain _llana_public_tables table for any WRITE permissions',
 				APP_BOOT_CONTEXT,
 			)
 		}

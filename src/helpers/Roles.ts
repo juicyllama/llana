@@ -127,7 +127,7 @@ export class Roles {
 		// check if there is a table role setting
 		if (custom_permissions.data?.length) {
 			for (const permission of custom_permissions.data) {
-				if (this.rolePass(options.access, permission.records)) {
+				if (comparePermissions(options.access, permission.records)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 					}
@@ -139,7 +139,7 @@ export class Roles {
 					return permission_result
 				}
 
-				if (this.rolePass(options.access, permission.own_records)) {
+				if (comparePermissions(options.access, permission.own_records)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 						restriction: {
@@ -180,7 +180,7 @@ export class Roles {
 
 		if (default_permissions.data?.length) {
 			for (const permission of default_permissions.data) {
-				if (this.rolePass(options.access, permission.records)) {
+				if (comparePermissions(options.access, permission.records)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 					}
@@ -242,20 +242,21 @@ export class Roles {
 		return role?.[config.location.column]
 	}
 
-	rolePass(access: RolePermission, permission: RolePermission): boolean {
-		switch (access) {
-			case RolePermission.NONE:
-				return false
-			case RolePermission.READ:
-				return (
-					permission === RolePermission.READ ||
-					permission === RolePermission.WRITE ||
-					permission === RolePermission.DELETE
-				)
-			case RolePermission.WRITE:
-				return permission === RolePermission.WRITE || permission === RolePermission.DELETE
-			case RolePermission.DELETE:
-				return permission === RolePermission.DELETE
-		}
+}
+
+export function comparePermissions(access: RolePermission, permission: RolePermission): boolean {
+	switch (access) {
+		case RolePermission.NONE:
+			return false
+		case RolePermission.READ:
+			return (
+				permission === RolePermission.READ ||
+				permission === RolePermission.WRITE ||
+				permission === RolePermission.DELETE
+			)
+		case RolePermission.WRITE:
+			return permission === RolePermission.WRITE || permission === RolePermission.DELETE
+		case RolePermission.DELETE:
+			return permission === RolePermission.DELETE
 	}
 }

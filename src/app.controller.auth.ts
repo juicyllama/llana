@@ -79,6 +79,8 @@ export class AuthController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
+		//TODO - add role check here
+
 		//return the user's profile
 		const schema = await this.schema.getSchema({ table, x_request_id })
 		const identity_column = await this.authentication.getIdentityColumn(x_request_id)

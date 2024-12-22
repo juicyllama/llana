@@ -1,7 +1,7 @@
 import { DataSourceType } from './types/datasource.types'
 
 export const NON_FIELD_PARAMS = ['fields', 'limit', 'offset', 'sort', 'page', 'relations', 'join']
-export const LLANA_AUTH_TABLE = '_llana_auth'
+export const LLANA_PUBLIC_TABLES = '_llana_public_tables'
 export const LLANA_ROLES_TABLE = '_llana_role'
 export const LLANA_RELATION_TABLE = '_llana_relation'
 export const LLANA_WEBHOOK_TABLE = '_llana_webhook'

@@ -49,7 +49,7 @@ export class PutController {
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-
+//TODO - do public check first (if table is public, skip auth and role check)
 		const auth = await this.authentication.auth({
 			table: table_name,
 			x_request_id,
@@ -63,7 +63,7 @@ export class PutController {
 		}
 
 		//perform role check
-
+	//TODO - add role check here
 		const role_where = []
 
 		if (auth.user_identifier) {
@@ -223,7 +223,7 @@ export class PutController {
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-
+//TODO - do public check first (if table is public, skip auth and role check)
 		const auth = await this.authentication.auth({
 			table: table_name,
 			x_request_id,
@@ -237,7 +237,7 @@ export class PutController {
 		}
 
 		//perform role check
-
+	//TODO - add role check here
 		const role_where = []
 
 		if (auth.user_identifier) {

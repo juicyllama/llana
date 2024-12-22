@@ -42,7 +42,7 @@ export class PostController {
 
 		if (table_name === 'webhook') {
 			table_name = LLANA_WEBHOOK_TABLE
-
+//TODO - do public check first (if table is public, skip auth and role check)
 			//perform auth on webhook table
 			const auth = await this.authentication.auth({
 				table: req.body.table,
@@ -55,7 +55,7 @@ export class PostController {
 			if (!auth.valid) {
 				return res.status(401).send(auth.message)
 			}
-
+	//TODO - add role check here
 			//perform role check
 			if (auth.user_identifier) {
 				const { valid, message } = (await this.roles.tablePermission({
@@ -87,7 +87,7 @@ export class PostController {
 		} catch (e) {
 			return res.status(404).send(this.response.text(e.message))
 		}
-
+//TODO - do public check first (if table is public, skip auth and role check)
 		const auth = await this.authentication.auth({
 			table: table_name,
 			x_request_id,
@@ -99,7 +99,7 @@ export class PostController {
 		if (!auth.valid) {
 			return res.status(401).send(auth.message)
 		}
-
+	//TODO - add role check here
 		//perform role check
 		if (auth.user_identifier) {
 			const { valid, message } = (await this.roles.tablePermission({
@@ -169,7 +169,7 @@ export class PostController {
 	 * Create the record
 	 */
 
-	async createOneRecord(
+	private async createOneRecord(
 		options,
 		data,
 		user_identifier,
