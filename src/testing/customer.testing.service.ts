@@ -15,12 +15,13 @@ export class CustomerTestingService {
 		private readonly schema: Schema,
 	) {}
 
-	mockCustomer(): any {
+	mockCustomer(userId: any): any {
 		return {
 			custId: faker.number.int({
 				min: 1000,
 				max: 9999,
 			}),
+			userId,
 			companyName: faker.company.name(),
 			contactName: faker.person.firstName() + ', ' + faker.person.lastName(),
 			contactTitle: faker.person.prefix(),
@@ -40,7 +41,7 @@ export class CustomerTestingService {
 	async createCustomer(customer: any): Promise<any> {
 		const customerTableSchema = await this.schema.getSchema({ table })
 
-		const CUSTOMER = this.mockCustomer()
+		const CUSTOMER = this.mockCustomer(customer.userId)
 
 		return (await this.query.perform(
 			QueryPerform.CREATE,

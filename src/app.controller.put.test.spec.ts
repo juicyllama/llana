@@ -50,6 +50,7 @@ describe('App > Controller > Put', () => {
 	let user: any
 
 	let jwt: string
+	let userId: any
 	let logger = new Logger()
 
 	beforeAll(async () => {
@@ -104,9 +105,12 @@ describe('App > Controller > Put', () => {
 		orderSchema = await salesOrderTestingService.getSchema()
 		userSchema = await userTestingService.getSchema()
 
-		customers.push(await customerTestingService.createCustomer({}))
-		customers.push(await customerTestingService.createCustomer({}))
-		customers.push(await customerTestingService.createCustomer({}))
+		jwt = await authTestingService.login()
+		userId = await authTestingService.getUserId(jwt)
+
+		customers.push(await customerTestingService.createCustomer({userId}))
+		customers.push(await customerTestingService.createCustomer({userId}))
+		customers.push(await customerTestingService.createCustomer({userId}))
 		employee = await employeeTestingService.createEmployee({})
 		shipper = await shipperTestingService.createShipper({})
 		order = await salesOrderTestingService.createOrder({
@@ -116,7 +120,7 @@ describe('App > Controller > Put', () => {
 		})
 		user = await userTestingService.createUser({})
 
-		jwt = await authTestingService.login()
+		
 	}, TIMEOUT)
 
 	beforeEach(() => {
@@ -219,7 +223,7 @@ describe('App > Controller > Put', () => {
 
 describe('Public Updating', () => {
 
-		it('Default public fail to update', async function () {
+		it('Default public fail to create', async function () {
 			await request(app.getHttpServer())
 				.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
 				.send({

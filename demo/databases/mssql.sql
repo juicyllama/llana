@@ -46,6 +46,7 @@ SET IDENTITY_INSERT UserApiKey OFF;
 
 CREATE TABLE Customer (
   custId INT IDENTITY NOT NULL
+  ,userId int NOT NULL
   ,companyName VARCHAR(40) NOT NULL
   ,contactName VARCHAR(30) NULL
   ,contactTitle VARCHAR(30) NULL
@@ -62,6 +63,7 @@ CREATE TABLE Customer (
   ,updatedAt datetime2(0) DEFAULT GETDATE() /* ON UPDATE GETDATE() */
   ,deletedAt datetime2(0) DEFAULT NULL
   ,PRIMARY KEY (custId)
+  ,CONSTRAINT CustomerUserId FOREIGN KEY (userId) REFERENCES [User] (id) ON DELETE CASCADE ON UPDATE NO ACTION
   ) ;
 
 CREATE TABLE Employee (

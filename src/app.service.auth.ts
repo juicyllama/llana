@@ -20,6 +20,11 @@ export class AuthService {
 		private readonly schema: Schema,
 	) {}
 
+	async getUserId(jwt: string): Promise<any> {
+		const payload = await this.jwtService.verifyAsync(jwt)
+		return payload.sub
+	}
+
 	async signIn(username: string, pass: string, x_request_id?: string): Promise<{ access_token: string; id: any }> {
 		if (!username) {
 			throw new BadRequestException('Username is required')

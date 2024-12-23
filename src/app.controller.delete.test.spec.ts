@@ -33,6 +33,7 @@ describe('App > Controller > Delete', () => {
 	let customers = []
 
 	let jwt: string
+	let userId: any
 	let logger = new Logger()
 
 	beforeAll(async () => {
@@ -63,14 +64,16 @@ describe('App > Controller > Delete', () => {
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
 
-		customerSchema = await customerTestingService.getSchema()
-
-		customers.push(await customerTestingService.createCustomer({}))
-		customers.push(await customerTestingService.createCustomer({}))
-		customers.push(await customerTestingService.createCustomer({}))
-		customers.push(await customerTestingService.createCustomer({}))
 
 		jwt = await authTestingService.login()
+		userId = await authTestingService.getUserId(jwt)
+
+		customerSchema = await customerTestingService.getSchema()
+
+		customers.push(await customerTestingService.createCustomer({userId}))
+		customers.push(await customerTestingService.createCustomer({userId}))
+		customers.push(await customerTestingService.createCustomer({userId}))
+		customers.push(await customerTestingService.createCustomer({userId}))
 	})
 
 	describe('Delete', () => {

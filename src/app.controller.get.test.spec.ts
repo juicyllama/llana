@@ -47,6 +47,7 @@ describe('App > Controller > Get', () => {
 	let orders = []
 
 	let jwt: string
+	let userId: any
 	let logger = new Logger()
 
 	beforeAll(async () => {
@@ -97,7 +98,10 @@ describe('App > Controller > Get', () => {
 		shipperSchema = await shipperTestingService.getSchema()
 		salesOrderSchema = await salesOrderTestingService.getSchema()
 
-		customer = await customerTestingService.createCustomer({})
+		jwt = await authTestingService.login()
+		userId = await authTestingService.getUserId(jwt)
+
+		customer = await customerTestingService.createCustomer({userId})
 		employee = await employeeTestingService.createEmployee({})
 
 		shipper = await shipperTestingService.createShipper({})
@@ -113,7 +117,7 @@ describe('App > Controller > Get', () => {
 			)
 		}
 
-		jwt = await authTestingService.login()
+		
 	}, TIMEOUT)
 
 	beforeEach(() => {

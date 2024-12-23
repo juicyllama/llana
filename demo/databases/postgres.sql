@@ -42,6 +42,7 @@ DROP TABLE IF EXISTS "Customer";
 CREATE TABLE "Customer" 
   ( 
      "custId"       SERIAL PRIMARY KEY NOT NULL, 
+     "userId"     INT NOT NULL, 
      "companyName"  VARCHAR (40) NOT NULL, 
       "email"      VARCHAR (255) NOT NULL, 
      "contactName"  VARCHAR (30) NULL, 
@@ -55,7 +56,8 @@ CREATE TABLE "Customer"
      fax          VARCHAR (24) NULL,
      "createdAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      "updatedAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-     "deletedAt"  TIMESTAMP NULL
+     "deletedAt"  TIMESTAMP NULL,
+      CONSTRAINT CustomerUserId FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE RESTRICT
   ); 
 
 

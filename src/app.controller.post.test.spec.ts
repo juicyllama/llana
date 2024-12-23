@@ -37,6 +37,7 @@ describe('App > Controller > Post', () => {
 	let user: any
 
 	let jwt: string
+	let userId: any
 	let logger = new Logger()
 
 	beforeAll(async () => {
@@ -72,6 +73,8 @@ describe('App > Controller > Post', () => {
 		userSchema = await userTestingService.getSchema()
 
 		jwt = await authTestingService.login()
+		userId = await authTestingService.getUserId(jwt)
+
 	}, TIMEOUT)
 
 	beforeEach(() => {
@@ -84,7 +87,7 @@ describe('App > Controller > Post', () => {
 		it('Create One', async function () {
 			const result = await request(app.getHttpServer())
 				.post(`/Customer/`)
-				.send(customerTestingService.mockCustomer())
+				.send(customerTestingService.mockCustomer(userId))
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(201)
 
@@ -97,7 +100,7 @@ describe('App > Controller > Post', () => {
 		it('Create Many', async function () {
 			const result = await request(app.getHttpServer())
 				.post(`/Customer/`)
-				.send([customerTestingService.mockCustomer(), customerTestingService.mockCustomer()])
+				.send([customerTestingService.mockCustomer(userId), customerTestingService.mockCustomer(userId)])
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(201)
 			expect(result.body).toBeDefined()
@@ -137,7 +140,7 @@ describe('App > Controller > Post', () => {
 		it('Default public fail to create', async function () {
 			await request(app.getHttpServer())
 				.post(`/Customer/`)
-				.send(customerTestingService.mockCustomer())
+				.send(customerTestingService.mockCustomer(userId))
 				.expect(401)
 		})
 
@@ -152,7 +155,7 @@ describe('App > Controller > Post', () => {
 
 			await request(app.getHttpServer())
 				.post(`/Customer/`)
-				.send(customerTestingService.mockCustomer())
+				.send(customerTestingService.mockCustomer(userId))
 				.expect(401)
 
 			}catch(e){
@@ -173,7 +176,7 @@ describe('App > Controller > Post', () => {
 			try{
 				const result = await request(app.getHttpServer())
 				.post(`/Customer/`)
-				.send(customerTestingService.mockCustomer())
+				.send(customerTestingService.mockCustomer(userId))
 				.expect(201)
 
 				expect(result.body).toBeDefined()
@@ -188,6 +191,249 @@ describe('App > Controller > Post', () => {
 				await authTestingService.deletePublicTablesRecord(public_table_record)
 			}
 		})
+	})
+
+	describe('Role Based Creation', () => {
+
+		it('No table role, creates record', async function () {
+			const result = await request(app.getHttpServer())
+				.post(`/Customer/`)
+				.send(customerTestingService.mockCustomer(userId))
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(201)
+			customers.push(result.body)
+		})
+
+		it('DELETE table role, creates record', async function () {
+
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'UserId',
+				role: 'ADMIN',
+				records: RolePermission.DELETE,
+				own_records: RolePermission.DELETE,
+			})
+
+			try{
+				const result = await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(userId))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(201)
+				customers.push(result.body)
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('DELETE table role, own records, creates own record', async function () {
+
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'UserId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.DELETE,
+			})
+
+			try{
+				const result = await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(userId))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(201)
+				customers.push(result.body)
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('DELETE table role, own records, fails to create someone elses record', async function () {
+
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'UserId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.DELETE,
+			})
+
+			try{
+				await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(user[userSchema.primary_key]))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(401)
+
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('WRITE table role, creates record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'UserId',
+				role: 'ADMIN',
+				records: RolePermission.WRITE,
+				own_records: RolePermission.WRITE,
+			})
+
+			try{
+				const result = await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(userId))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(201)
+				customers.push(result.body)
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('WRITE table role, own records, creates own record', async function () {
+
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'UserId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.WRITE,
+			})
+
+			try{
+				const result = await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(userId))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(201)
+				customers.push(result.body)
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('WRITE table role, own records, fails to create someone elses record', async function () {
+
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'UserId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.WRITE,
+			})
+
+			try{
+				await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(user[userSchema.primary_key]))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(401)
+
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('READ table role, cannot create', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'UserId',
+				role: 'ADMIN',
+				records: RolePermission.DELETE,
+				own_records: RolePermission.DELETE,
+			})
+
+			try{
+				await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(userId))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(401)
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('READ table role, own records, cannot create own record', async function () {
+
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'UserId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.READ,
+			})
+
+			try{
+				await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(userId))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(401)
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('READ table role, own records, fails to create someone elses record', async function () {
+
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'UserId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.READ,
+			})
+
+			try{
+				await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(user[userSchema.primary_key]))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(401)
+
+			}catch(e){
+				logger.error(e)
+				throw e
+			}finally{
+				await authTestingService.deleteRole(role)
+			}
+		})
+
 	})
 
 	afterAll(async () => {
