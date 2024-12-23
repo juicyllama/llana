@@ -22,6 +22,7 @@ import jwt from './config/jwt.config'
 import roles from './config/roles.config'
 import { envValidationSchema } from './config/env.validation'
 import { RolePermission } from './types/roles.types'
+import { UserTestingService } from './testing/user.testing.service'
 
 // Type the config imports
 const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
@@ -33,6 +34,7 @@ describe('App > Controller > Get', () => {
 	let customerTestingService: CustomerTestingService
 	let employeeTestingService: EmployeeTestingService
 	let shipperTestingService: ShipperTestingService
+	let userTestingService: UserTestingService
 
 	let salesOrderTestingService: SalesOrderTestingService
 
@@ -40,6 +42,7 @@ describe('App > Controller > Get', () => {
 	let employeeSchema: DataSourceSchema
 	let shipperSchema: DataSourceSchema
 	let salesOrderSchema: DataSourceSchema
+	let userSchema: DataSourceSchema
 
 	let customer: any
 	let employee: any
@@ -48,6 +51,7 @@ describe('App > Controller > Get', () => {
 
 	let jwt: string
 	let userId: any
+	let user: any
 	let logger = new Logger()
 
 	beforeAll(async () => {
@@ -74,6 +78,7 @@ describe('App > Controller > Get', () => {
 				EmployeeTestingService,
 				ShipperTestingService,
 				SalesOrderTestingService,
+				UserTestingService,
 			],
 			exports: [
 				AuthTestingService,
@@ -81,6 +86,7 @@ describe('App > Controller > Get', () => {
 				EmployeeTestingService,
 				ShipperTestingService,
 				SalesOrderTestingService,
+				UserTestingService,
 			],
 		}).compile()
 		app = moduleRef.createNestApplication()
@@ -90,18 +96,28 @@ describe('App > Controller > Get', () => {
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
 		employeeTestingService = app.get<EmployeeTestingService>(EmployeeTestingService)
 		shipperTestingService = app.get<ShipperTestingService>(ShipperTestingService)
-
 		salesOrderTestingService = app.get<SalesOrderTestingService>(SalesOrderTestingService)
+		userTestingService = app.get<UserTestingService>(UserTestingService)
 
 		customerSchema = await customerTestingService.getSchema()
 		employeeSchema = await employeeTestingService.getSchema()
 		shipperSchema = await shipperTestingService.getSchema()
 		salesOrderSchema = await salesOrderTestingService.getSchema()
+		userSchema = await userTestingService.getSchema()
 
 		jwt = await authTestingService.login()
 		userId = await authTestingService.getUserId(jwt)
 
-		customer = await customerTestingService.createCustomer({userId})
+		user = await userTestingService.mockUser()
+
+		const result = await request(app.getHttpServer())
+			.post(`/User/`)
+			.send(user)
+			.set('Authorization', `Bearer ${jwt}`)
+			.expect(201)
+
+		user = result.body
+		customer = await customerTestingService.createCustomer({ userId: user[userSchema.primary_key] })
 		employee = await employeeTestingService.createEmployee({})
 
 		shipper = await shipperTestingService.createShipper({})
@@ -116,8 +132,6 @@ describe('App > Controller > Get', () => {
 				}),
 			)
 		}
-
-		
 	}, TIMEOUT)
 
 	beforeEach(() => {
@@ -279,12 +293,11 @@ describe('App > Controller > Get', () => {
 		})
 	})
 
-	//TODO expand to test enums, relations, and other fields
-	//validate response according to the schema
+	// TODO expand to test enums, relations, and other fields
+	// validate response according to the schema
 	describe('Validate response types', () => {
-
 		let result: any = {}
-		
+
 		it('Object', async function () {
 			result = <any>(
 				await request(app.getHttpServer())
@@ -292,21 +305,20 @@ describe('App > Controller > Get', () => {
 					.set('Authorization', `Bearer ${jwt}`)
 					.expect(200)
 			)
-	
-			expect(result.body).toBeDefined()
-		})	
 
+			expect(result.body).toBeDefined()
+		})
 
 		it('String', function () {
 			expect(result.body.shipName).toBeDefined()
 			expect(result.body.shipName).not.toBeNull()
-			expect(typeof result.body.shipName).toBe("string")
+			expect(typeof result.body.shipName).toBe('string')
 		})
 
 		it('Number', function () {
 			expect(result.body.freight).toBeDefined()
 			expect(result.body.freight).not.toBeNull()
-			expect(typeof result.body.freight).toBe("number")
+			expect(typeof result.body.freight).toBe('number')
 		})
 
 		it('Boolean', function () {
@@ -321,54 +333,193 @@ describe('App > Controller > Get', () => {
 		it('Enum', function () {
 			//TODO: Add enum field to the schema
 		})
-
 	})
 
 	describe('Public Fetch', () => {
-
 		it('Default public fail to fetch', async function () {
-			await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
-				.expect(401)
+			await request(app.getHttpServer()).get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`).expect(401)
 		})
 
 		it('Can fetch with READ permissions', async function () {
-
 			const public_table_record = await authTestingService.createPublicTablesRecord({
 				table: salesOrderSchema.table,
 				access_level: RolePermission.READ,
 			})
 
-			try{
-
+			try {
 				await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
-				.expect(200)
-
-			}catch(e){
+					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+					.expect(200)
+			} catch (e) {
 				logger.error(e)
 				throw e
-			}finally{
+			} finally {
 				await authTestingService.deletePublicTablesRecord(public_table_record)
 			}
 		})
 
 		it('Can fetch with WRITE permissions', async function () {
-		
 			const public_table_record = await authTestingService.createPublicTablesRecord({
 				table: salesOrderSchema.table,
 				access_level: RolePermission.WRITE,
 			})
 
-			try{
+			try {
 				await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
-				.expect(200)
-			}catch(e){
+					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+					.expect(200)
+			} catch (e) {
 				logger.error(e)
 				throw e
-			}finally{
+			} finally {
 				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+	})
+
+	describe('Role Based Fetching', () => {
+		it('No table role, gets record', async function () {
+			await request(app.getHttpServer())
+				.get(`/Customer/${customer[customerSchema.primary_key]}`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+		})
+
+		it('DELETE table role, get record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.DELETE,
+				own_records: RolePermission.DELETE,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.get(`/Customer/${customer[customerSchema.primary_key]}`)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('DELETE table role, own records, fails to get someone elses record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.DELETE,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.get(`/Customer/${customer[customerSchema.primary_key]}`)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(204)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('WRITE table role, get record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.WRITE,
+				own_records: RolePermission.WRITE,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.get(`/Customer/${customer[customerSchema.primary_key]}`)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('WRITE table role, own records, fails to get someone elses record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.WRITE,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.get(`/Customer/${customer[customerSchema.primary_key]}`)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(204)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('READ table role, gets record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.READ,
+				own_records: RolePermission.READ,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.get(`/Customer/${customer[customerSchema.primary_key]}`)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('READ table role, own records, fails to get someone elses record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.READ,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.get(`/Customer/${customer[customerSchema.primary_key]}`)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(204)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
 			}
 		})
 	})
@@ -380,6 +531,7 @@ describe('App > Controller > Get', () => {
 		await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
 		await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])
 		await shipperTestingService.deleteShipper(shipper[shipperSchema.primary_key])
+		await userTestingService.deleteUser(user[userSchema.primary_key])
 		await app.close()
 	}, TIMEOUT)
 })

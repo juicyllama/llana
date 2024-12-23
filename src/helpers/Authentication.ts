@@ -7,7 +7,7 @@ import { Cache } from 'cache-manager'
 import { CACHE_DEFAULT_IDENTITY_DATA_TTL, LLANA_PUBLIC_TABLES } from '../app.constants'
 import { FindManyResponseObject } from '../dtos/response.dto'
 import { Auth, AuthAPIKey, AuthLocation, AuthRestrictionsResponse, AuthType } from '../types/auth.types'
-import { DataSourceFindOneOptions, DataSourceSchema, QueryPerform, WhereOperator } from '../types/datasource.types'
+import { DataSourceFindOneOptions, QueryPerform, WhereOperator } from '../types/datasource.types'
 import { RolePermission } from '../types/roles.types'
 import { Env } from '../utils/Env'
 import { findDotNotation } from '../utils/Find'
@@ -30,8 +30,7 @@ export class Authentication {
 		private readonly query: Query,
 		private readonly schema: Schema,
 		private readonly jwtService: JwtService,
-	) { }
-
+	) {}
 
 	/**
 	 * Check if the table is open to public access
@@ -42,11 +41,13 @@ export class Authentication {
 		access_level: RolePermission
 		x_request_id?: string
 	}): Promise<AuthRestrictionsResponse> {
-
-		const auth_schema = await this.schema.getSchema({ table: LLANA_PUBLIC_TABLES, x_request_id: options.x_request_id })
+		const auth_schema = await this.schema.getSchema({
+			table: LLANA_PUBLIC_TABLES,
+			x_request_id: options.x_request_id,
+		})
 		let public_access
 
-		if(Env.IsNotTest()) {
+		if (Env.IsNotTest()) {
 			public_access = await this.cacheManager.get<FindManyResponseObject>(`auth:public`)
 		}
 
@@ -68,22 +69,19 @@ export class Authentication {
 		}
 
 		if (public_access.data.length) {
-
 			for (const record of public_access.data) {
 				if (record.table === options.table) {
 					//compare access level
 					const access = comparePermissions(record.access_level, options.access_level)
-					
+
 					if (access) {
 						return {
 							valid: true,
 							message: 'Public Access Granted',
 						}
 					}
-
 				}
 			}
-
 		}
 
 		return {
@@ -91,7 +89,6 @@ export class Authentication {
 			message: 'Private Access Only',
 		}
 	}
-
 
 	/**
 	 * Check is user is authorized to access system, optional pass in user_identifier for specific user check
@@ -136,14 +133,16 @@ export class Authentication {
 		return auth_passed
 	}
 
-	private async handleApiKeyAuth(auth: Auth, options: {
-		table: string
-		headers?: any
-		body?: any
-		query?: any
-		x_request_id?: string
-	}): Promise<AuthRestrictionsResponse> {
-
+	private async handleApiKeyAuth(
+		auth: Auth,
+		options: {
+			table: string
+			headers?: any
+			body?: any
+			query?: any
+			x_request_id?: string
+		},
+	): Promise<AuthRestrictionsResponse> {
 		if (!auth.name) {
 			return {
 				valid: false,
@@ -234,10 +233,7 @@ export class Authentication {
 		const schema = await this.schema.getSchema({ table: options.table, x_request_id: options.x_request_id })
 
 		if (!schema) {
-			this.logger.error(
-				`[Authentication][auth] No schema found for table ${options.table}`,
-				options.x_request_id,
-			)
+			this.logger.error(`[Authentication][auth] No schema found for table ${options.table}`, options.x_request_id)
 			return { valid: false, message: `No Schema Found For Table ${options.table}` }
 		}
 
@@ -246,7 +242,6 @@ export class Authentication {
 		let auth_result = await this.cacheManager.get(`auth:${auth.type}:${req_api_key}`)
 
 		if (!auth_result) {
-
 			const db_options: DataSourceFindOneOptions = {
 				schema,
 				fields: [identity_column],
@@ -354,7 +349,6 @@ export class Authentication {
 		headers?: any
 		x_request_id?: string
 	}): Promise<AuthRestrictionsResponse> {
-
 		const authHeader = options.headers['Authorization'] || options.headers['authorization']
 
 		if (!authHeader) {
@@ -371,7 +365,6 @@ export class Authentication {
 				valid: false,
 				message: 'Invalid authorization format. Use: Bearer <token>',
 			}
-
 		}
 
 		const payload = await this.jwtService.verifyAsync(jwt_token, {
@@ -406,7 +399,6 @@ export class Authentication {
 			return schema.primary_key
 		}
 	}
-
 
 	/**
 	 * Helper to check if we are skipping authentication

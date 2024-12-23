@@ -108,9 +108,11 @@ describe('App > Controller > Put', () => {
 		jwt = await authTestingService.login()
 		userId = await authTestingService.getUserId(jwt)
 
-		customers.push(await customerTestingService.createCustomer({userId}))
-		customers.push(await customerTestingService.createCustomer({userId}))
-		customers.push(await customerTestingService.createCustomer({userId}))
+		user = await userTestingService.createUser({})
+		customers.push(await customerTestingService.createCustomer({ userId }))
+		customers.push(await customerTestingService.createCustomer({ userId }))
+		customers.push(await customerTestingService.createCustomer({ userId }))
+		customers.push(await customerTestingService.createCustomer({ userId: user[userSchema.primary_key] }))
 		employee = await employeeTestingService.createEmployee({})
 		shipper = await shipperTestingService.createShipper({})
 		order = await salesOrderTestingService.createOrder({
@@ -118,9 +120,6 @@ describe('App > Controller > Put', () => {
 			employeeId: employee[employeeSchema.primary_key],
 			shipperId: shipper[shipperSchema.primary_key],
 		})
-		user = await userTestingService.createUser({})
-
-		
 	}, TIMEOUT)
 
 	beforeEach(() => {
@@ -221,8 +220,7 @@ describe('App > Controller > Put', () => {
 		})
 	})
 
-describe('Public Updating', () => {
-
+	describe('Public Updating', () => {
 		it('Default public fail to create', async function () {
 			await request(app.getHttpServer())
 				.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
@@ -233,56 +231,219 @@ describe('Public Updating', () => {
 		})
 
 		it('Cannot update with READ permissions', async function () {
-
 			const public_table_record = await authTestingService.createPublicTablesRecord({
 				table: customerSchema.table,
 				access_level: RolePermission.READ,
 			})
 
-			try{
-
+			try {
 				await request(app.getHttpServer())
-				.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
-				.send({
-					companyName: 'Anything here',
-				})
-				.expect(401)
-
-			}catch(e){
+					.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
+					.send({
+						companyName: 'Anything here',
+					})
+					.expect(401)
+			} catch (e) {
 				logger.error(e)
 				throw e
-			}finally{
+			} finally {
 				await authTestingService.deletePublicTablesRecord(public_table_record)
 			}
 		})
 
 		it('Can update with WRITE permissions', async function () {
-		
 			const public_table_record = await authTestingService.createPublicTablesRecord({
 				table: customerSchema.table,
 				access_level: RolePermission.WRITE,
 			})
 
-			try{
+			try {
 				await request(app.getHttpServer())
-				.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
-				.send({
-					companyName: 'Anything here',
-				})
-				.expect(200)
-			}catch(e){
+					.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
+					.send({
+						companyName: 'Anything here',
+					})
+					.expect(200)
+			} catch (e) {
 				logger.error(e)
 				throw e
-			}finally{
+			} finally {
 				await authTestingService.deletePublicTablesRecord(public_table_record)
 			}
 		})
 	})
 
+	describe('Role Based Updating', () => {
+		it('No table role, updates record', async function () {
+			await request(app.getHttpServer())
+				.put(`/Customer/${customers[3][customerSchema.primary_key]}`)
+				.send({
+					companyName: 'Anything here',
+				})
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+		})
+
+		it('DELETE table role, updates record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.DELETE,
+				own_records: RolePermission.DELETE,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.put(`/Customer/${customers[3][customerSchema.primary_key]}`)
+					.send({
+						companyName: 'Anything here',
+					})
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('DELETE table role, own records, fails to update someone elses record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.DELETE,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.put(`/Customer/${customers[3][customerSchema.primary_key]}`)
+					.send({
+						companyName: 'Anything here',
+					})
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(401)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('WRITE table role, updates record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.WRITE,
+				own_records: RolePermission.WRITE,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.put(`/Customer/${customers[3][customerSchema.primary_key]}`)
+					.send({
+						companyName: 'Anything here',
+					})
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('WRITE table role, own records, fails to update someone elses record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.WRITE,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.put(`/Customer/${customers[3][customerSchema.primary_key]}`)
+					.send({
+						companyName: 'Anything here',
+					})
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(401)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('READ table role, updates record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.READ,
+				own_records: RolePermission.READ,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.put(`/Customer/${customers[3][customerSchema.primary_key]}`)
+					.send({
+						companyName: 'Anything here',
+					})
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(401)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('READ table role, own records, fails to update someone elses record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.READ,
+			})
+
+			try {
+				await request(app.getHttpServer())
+					.put(`/Customer/${customers[3][customerSchema.primary_key]}`)
+					.send({
+						companyName: 'Anything here',
+					})
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(401)
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+	})
 
 	afterAll(async () => {
 		await salesOrderTestingService.deleteOrder(order[orderSchema.primary_key])
-		for(let customer of customers){
+		for (let customer of customers) {
 			await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
 		}
 		await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])

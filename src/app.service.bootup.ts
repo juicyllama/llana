@@ -20,7 +20,6 @@ import { Documentation } from './helpers/Documentation'
 import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
-import { AuthType } from './types/auth.types'
 import {
 	ColumnExtraNumber,
 	DataSourceColumnType,
@@ -74,8 +73,8 @@ export class AppBootup implements OnApplicationBootstrap {
 
 			/**
 			 * Create the _llana_public_tables schema
-			 * 
-			 * If you want to open tables up to the public, you can use this table to set the permissions, if you want the whole database 
+			 *
+			 * If you want to open tables up to the public, you can use this table to set the permissions, if you want the whole database
 			 * to be open, you can use an environment variable to skip the auth checks (recommended alongside host restrictions)
 			 *
 			 * |Field | Type | Details|
@@ -136,7 +135,7 @@ export class AppBootup implements OnApplicationBootstrap {
 					{
 						table: 'Employee',
 						access_level: RolePermission.READ,
-					}
+					},
 				]
 
 				for (const example of example_auth) {
@@ -241,7 +240,8 @@ export class AppBootup implements OnApplicationBootstrap {
 						unique_key: false,
 						foreign_key: false,
 						enums: ['NONE', 'READ', 'WRITE', 'DELETE'],
-					},{
+					},
+					{
 						field: 'allowed_fields',
 						type: DataSourceColumnType.STRING,
 						nullable: true,
@@ -249,7 +249,7 @@ export class AppBootup implements OnApplicationBootstrap {
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
-					}
+					},
 				],
 			}
 
@@ -275,13 +275,6 @@ export class AppBootup implements OnApplicationBootstrap {
 				const custom_roles: CustomRole[] = [
 					{
 						custom: true,
-						role: 'ADMIN',
-						table: this.authentication.getIdentityTable(),
-						records: RolePermission.DELETE,
-						own_records: RolePermission.DELETE,
-					},
-					{
-						custom: true,
 						role: 'USER',
 						table: this.authentication.getIdentityTable(),
 						records: RolePermission.NONE,
@@ -289,19 +282,10 @@ export class AppBootup implements OnApplicationBootstrap {
 					},
 					{
 						custom: true,
-						role: 'ADMIN',
-						table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
-						identity_column:
-							this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
-						records: RolePermission.DELETE,
-						own_records: RolePermission.DELETE,
-					},
-					{
-						custom: true,
 						role: 'USER',
 						table: this.configService.get<string>('AUTH_USER_API_KEY_TABLE_NAME') ?? 'UserApiKey',
 						identity_column:
-							this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'UserId',
+							this.configService.get<string>('AUTH_USER_API_KEY_TABLE_IDENTITY_COLUMN') ?? 'userId',
 						records: RolePermission.NONE,
 						own_records: RolePermission.WRITE,
 					},

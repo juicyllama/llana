@@ -12,7 +12,7 @@ import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { WebsocketService } from './modules/websocket/websocket.service'
-import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
+import { AuthTablePermissionFailResponse } from './types/auth.types'
 import {
 	DataSourceConfig,
 	DataSourceSchema,
@@ -51,7 +51,6 @@ export class DeleteController {
 		}
 
 		let schema: DataSourceSchema
-		const role_where = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -65,7 +64,7 @@ export class DeleteController {
 			access_level: RolePermission.DELETE,
 			x_request_id,
 		})
-		
+
 		// If not public, perform auth
 		if (!auth.valid) {
 			auth = await this.authentication.auth({
@@ -78,24 +77,6 @@ export class DeleteController {
 			})
 			if (!auth.valid) {
 				return res.status(401).send(this.response.text(auth.message))
-			}	
-
-			//perform role check
-			if (auth.user_identifier) {
-				const permission = await this.roles.tablePermission({
-					identifier: auth.user_identifier,
-					table: table_name,
-					access: RolePermission.DELETE,
-					x_request_id,
-				})
-
-				if (!permission.valid) {
-					return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-				}
-
-				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-					role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
-				}
 			}
 		}
 
@@ -112,7 +93,6 @@ export class DeleteController {
 		}
 
 		const where = <DataSourceWhere[]>[
-			...role_where,
 			{
 				column: primary_key,
 				operator: WhereOperator.equals,
@@ -135,6 +115,21 @@ export class DeleteController {
 			return res.status(400).send(this.response.text(`Record with id ${id} not found`))
 		}
 
+		//perform role check
+		if (auth.user_identifier) {
+			const permission = await this.roles.tablePermission({
+				identifier: auth.user_identifier,
+				table: table_name,
+				access: RolePermission.DELETE,
+				data: record,
+				x_request_id,
+			})
+
+			if (!permission.valid) {
+				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+			}
+		}
+
 		//Soft or Hard delete check
 		const databaseConfig: DataSourceConfig = this.configService.get('database')
 
@@ -145,7 +140,6 @@ export class DeleteController {
 		}
 
 		try {
-
 			const result = await this.query.perform(
 				QueryPerform.DELETE,
 				{
@@ -178,7 +172,6 @@ export class DeleteController {
 		}
 
 		let schema: DataSourceSchema
-		const role_where = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -195,7 +188,6 @@ export class DeleteController {
 
 		// If not public, perform auth
 		if (!auth.valid) {
-
 			auth = await this.authentication.auth({
 				table: table_name,
 				x_request_id,
@@ -206,23 +198,6 @@ export class DeleteController {
 			})
 			if (!auth.valid) {
 				return res.status(401).send(this.response.text(auth.message))
-			}
-
-			if (auth.user_identifier) {
-				const permission = await this.roles.tablePermission({
-					identifier: auth.user_identifier,
-					table: table_name,
-					access: RolePermission.DELETE,
-					x_request_id,
-				})
-
-				if (!permission.valid) {
-					return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-				}
-
-				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-					role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
-				}
 			}
 		}
 
@@ -240,6 +215,24 @@ export class DeleteController {
 			const errors = []
 
 			for (const item of body) {
+				if (auth.user_identifier) {
+					const permission = await this.roles.tablePermission({
+						identifier: auth.user_identifier,
+						table: table_name,
+						access: RolePermission.DELETE,
+						data: item,
+						x_request_id,
+					})
+
+					if (!permission.valid) {
+						errored++
+						errors.push({
+							item: body.indexOf(item),
+							message: this.response.text((permission as AuthTablePermissionFailResponse).message),
+						})
+					}
+				}
+
 				const id = item[primary_key]
 
 				const validateKey = await this.schema.validateData(schema, { [primary_key]: id })
@@ -248,7 +241,6 @@ export class DeleteController {
 				}
 
 				const where = <DataSourceWhere[]>[
-					...role_where,
 					{
 						column: primary_key,
 						operator: WhereOperator.equals,

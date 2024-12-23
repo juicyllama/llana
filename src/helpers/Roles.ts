@@ -8,6 +8,7 @@ import { FindManyResponseObject } from '../dtos/response.dto'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from '../types/auth.types'
 import { QueryPerform, WhereOperator } from '../types/datasource.types'
 import { RolePermission, RolesConfig } from '../types/roles.types'
+import { Env } from '../utils/Env'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
@@ -24,6 +25,11 @@ export class Roles {
 
 	/**
 	 * Check if a role has permission to access a table
+	 * * Pull from cache if available
+	 * * Get the users role
+	 * * Check if the role has custom permissions for the table
+	 * * Check if the role has default permissions set
+	 * * Return the result
 	 */
 
 	async tablePermission(options: {
@@ -31,6 +37,7 @@ export class Roles {
 		table: string
 		access: RolePermission
 		x_request_id: string
+		data?: any //Used for Create and Update to check if the user has permission to update the record
 	}): Promise<AuthTablePermissionSuccessResponse | AuthTablePermissionFailResponse> {
 		const config = this.configService.get<RolesConfig>('roles')
 
@@ -41,9 +48,13 @@ export class Roles {
 			}
 		}
 
-		let permission_result = await this.cacheManager.get<
-			AuthTablePermissionSuccessResponse | AuthTablePermissionFailResponse
-		>(`roles:${options.identifier}:${options.table}:${options.access}`)
+		let permission_result
+
+		if (Env.IsNotTest()) {
+			permission_result = await this.cacheManager.get<
+				AuthTablePermissionSuccessResponse | AuthTablePermissionFailResponse
+			>(`roles:${options.identifier}:${options.table}:${options.access}`)
+		}
 
 		if (permission_result?.valid) {
 			return permission_result
@@ -140,7 +151,37 @@ export class Roles {
 					return permission_result
 				}
 
+				if (!comparePermissions(permission.own_records, options.access)) {
+
+					permission_result = <AuthTablePermissionFailResponse>{
+						valid: false,
+						message: `Table Action ${options.access} - Permission Denied For Role ${role}`,
+					}
+					await this.cacheManager.set(
+						`roles:${options.identifier}:${options.table}:${options.access}`,
+						permission_result,
+						CACHE_DEFAULT_IDENTITY_DATA_TTL,
+					)
+					return permission_result
+				} else if (
+					options.data &&
+					options.data[permission.identity_column ?? schema.primary_key] !== options.identifier
+				) {
+
+					permission_result = <AuthTablePermissionFailResponse>{
+						valid: false,
+						message: `Identity Mismatch - You can only add ${options.table} records with your own ${permission.identity_column ?? schema.primary_key}`,
+					}
+					await this.cacheManager.set(
+						`roles:${options.identifier}:${options.table}:${options.access}`,
+						permission_result,
+						CACHE_DEFAULT_IDENTITY_DATA_TTL,
+					)
+					return permission_result
+				}
+
 				if (comparePermissions(permission.own_records, options.access)) {
+
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 						restriction: {
@@ -244,44 +285,33 @@ export class Roles {
 
 		return role?.[config.location.column]
 	}
-
 }
 /**
- * 
+ *
  * @param permission level being requested (e.g. user permission)
- * @param access level required (e.g. delete endpoint is DELETE) 
- * @returns 
+ * @param access level required (e.g. delete endpoint is DELETE)
+ * @returns
  */
 export function comparePermissions(permission: RolePermission, access: RolePermission): boolean {
-
-	console.log(`Request has ${permission} permission, and they need ${access} permission`)
 
 	let passed = false
 
 	switch (access) {
 		case RolePermission.DELETE:
-			passed = (
-				permission === RolePermission.DELETE
-			)
+			passed = permission === RolePermission.DELETE
 			break
 		case RolePermission.WRITE:
-			passed = (
-				permission === RolePermission.WRITE || 
-				permission === RolePermission.DELETE
-			)	
+			passed = permission === RolePermission.WRITE || permission === RolePermission.DELETE
 			break
 		case RolePermission.READ:
-			passed = (
+			passed =
 				permission === RolePermission.READ ||
 				permission === RolePermission.WRITE ||
 				permission === RolePermission.DELETE
-			)
 			break
 		case RolePermission.NONE:
 			passed = false
 			break
 	}
-	
-	console.log('passed', passed)
 	return passed
 }

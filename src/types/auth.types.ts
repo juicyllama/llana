@@ -1,5 +1,4 @@
 import { DataSourceWhere } from './datasource.types'
-import { RolePermission } from './roles.types'
 
 export interface Auth {
 	type: AuthType

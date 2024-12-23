@@ -11,7 +11,7 @@ import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { WebsocketService } from './modules/websocket/websocket.service'
-import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
+import { AuthTablePermissionFailResponse } from './types/auth.types'
 import { DataSourceCreateOneOptions, DataSourceSchema, PublishType, QueryPerform } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 
@@ -25,7 +25,7 @@ export class PostController {
 		private readonly roles: Roles,
 		private readonly websocket: WebsocketService,
 		private readonly webhook: Webhook,
-	) { }
+	) {}
 
 	/**
 	 * Create new record
@@ -46,7 +46,6 @@ export class PostController {
 		}
 
 		let schema: DataSourceSchema
-		const role_where = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -60,8 +59,6 @@ export class PostController {
 			access_level: RolePermission.WRITE,
 			x_request_id,
 		})
-
-		console.log('auth', auth)
 
 		// If not public, perform auth
 		if (!auth.valid) {
@@ -77,26 +74,23 @@ export class PostController {
 				return res.status(401).send(this.response.text(auth.message))
 			}
 
-
 			//perform role check
 			if (auth.user_identifier) {
 				const permission = await this.roles.tablePermission({
 					identifier: auth.user_identifier,
 					table: table_name,
 					access: RolePermission.WRITE,
+					data: body,
 					x_request_id,
 				})
 
 				if (!permission.valid) {
-					return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-				}
-
-				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-					role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
+					return res
+						.status(401)
+						.send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 				}
 			}
 		}
-
 
 		if (body instanceof Array) {
 			const total = body.length
@@ -106,10 +100,14 @@ export class PostController {
 			const data: FindOneResponseObject[] = []
 
 			for (const item of body) {
-				const insertResult = await this.createOneRecord({
-					schema,
-					data: item,
-				}, auth.user_identifier, x_request_id)
+				const insertResult = await this.createOneRecord(
+					{
+						schema,
+						data: item,
+					},
+					auth.user_identifier,
+					x_request_id,
+				)
 
 				if (!insertResult.valid) {
 					errored++
@@ -121,11 +119,7 @@ export class PostController {
 				}
 
 				data.push(insertResult.result)
-				await this.websocket.publish(
-					schema,
-					PublishType.INSERT,
-					insertResult.result[schema.primary_key],
-				)
+				await this.websocket.publish(schema, PublishType.INSERT, insertResult.result[schema.primary_key])
 				await this.webhook.publish(
 					schema,
 					PublishType.INSERT,
@@ -144,10 +138,14 @@ export class PostController {
 			} as CreateManyResponseObject)
 		}
 
-		const insertResult = await this.createOneRecord({
-			schema,
-			data: body,
-		}, auth.user_identifier, x_request_id)
+		const insertResult = await this.createOneRecord(
+			{
+				schema,
+				data: body,
+			},
+			auth.user_identifier,
+			x_request_id,
+		)
 
 		if (!insertResult.valid) {
 			return res.status(400).send(this.response.text(insertResult.message))
