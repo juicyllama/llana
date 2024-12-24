@@ -186,7 +186,6 @@ describe('App > Controller > Post', () => {
 		})
 	})
 
-	//TODO test multiple records with different permissions
 	describe('Role Based Creation', () => {
 		it('No table role, creates record', async function () {
 			const result = await request(app.getHttpServer())
@@ -345,6 +344,44 @@ describe('App > Controller > Post', () => {
 			}
 		})
 
+		it('WRITE table role, multiple records, one success and one fail', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.WRITE,
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send([customerTestingService.mockCustomer(userId), customerTestingService.mockCustomer(user[userSchema.primary_key])])
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(201)
+
+				expect(result.body).toBeDefined()
+				expect(result.body.total).toBeDefined()
+				expect(result.body.total).toEqual(2)
+				expect(result.body.errored).toBeDefined()
+				expect(result.body.errored).toEqual(1)
+				expect(result.body.successful).toBeDefined()
+				expect(result.body.successful).toEqual(1)
+				expect(result.body.data.length).toBeGreaterThan(0)
+				expect(result.body.data[0][customerSchema.primary_key]).toBeDefined()
+				expect(result.body.data[0].companyName).toBeDefined()
+				expect(result.body.data[1]).toBeUndefined()
+
+				customers.push(result.body.data[0])
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
 		it('READ table role, cannot create', async function () {
 			const role = await authTestingService.createRole({
 				custom: true,
@@ -418,7 +455,6 @@ describe('App > Controller > Post', () => {
 		})
 	})
 
-	//TODO test multiple records results
 	describe('Allowed Fields Results', () => {
 		it('As standard, all fields returned', async function () {
 			const result = await request(app.getHttpServer())
@@ -472,6 +508,59 @@ describe('App > Controller > Post', () => {
 				expect(result.body.country).toBeUndefined()
 				expect(result.body.phone).toBeUndefined()
 				expect(result.body.fax).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('When allowed_fields are passed, only return these fields (multiple)', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.WRITE,
+				own_records: RolePermission.WRITE,
+				allowed_fields: 'companyName,contactName',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send([customerTestingService.mockCustomer(userId), customerTestingService.mockCustomer(userId)])
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(201)
+				customers.push(result.body)
+				expect(result.body).toBeDefined()
+				expect(result.body.total).toBeDefined()
+				expect(result.body.total).toEqual(2)
+				expect(result.body.errored).toBeDefined()
+				expect(result.body.errored).toEqual(0)
+				expect(result.body.data[0][customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.data[0].companyName).toBeDefined()
+				expect(result.body.data[0].contactName).toBeDefined()
+				expect(result.body.data[0].contactTitle).toBeUndefined()
+				expect(result.body.data[0].address).toBeUndefined()
+				expect(result.body.data[0].city).toBeUndefined()
+				expect(result.body.data[0].region).toBeUndefined()
+				expect(result.body.data[0].postalCode).toBeUndefined()
+				expect(result.body.data[0].country).toBeUndefined()
+				expect(result.body.data[0].phone).toBeUndefined()
+				expect(result.body.data[0].fax).toBeUndefined()
+				expect(result.body.data[1][customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.data[1].companyName).toBeDefined()
+				expect(result.body.data[1].contactName).toBeDefined()
+				expect(result.body.data[1].contactTitle).toBeUndefined()
+				expect(result.body.data[1].address).toBeUndefined()
+				expect(result.body.data[1].city).toBeUndefined()
+				expect(result.body.data[1].region).toBeUndefined()
+				expect(result.body.data[1].postalCode).toBeUndefined()
+				expect(result.body.data[1].country).toBeUndefined()
+				expect(result.body.data[1].phone).toBeUndefined()
+				expect(result.body.data[1].fax).toBeUndefined()
 			} catch (e) {
 				logger.error(e)
 				throw e

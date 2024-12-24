@@ -75,24 +75,6 @@ export class PostController {
 				return res.status(401).send(this.response.text(auth.message))
 			}
 
-			//perform role check
-			if (auth.user_identifier) {
-				const permission = await this.roles.tablePermission({
-					identifier: auth.user_identifier,
-					table: table_name,
-					access: RolePermission.WRITE,
-					data: body,
-					x_request_id,
-				})
-
-				if (!permission.valid) {
-					return res
-						.status(401)
-						.send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-				}
-
-				fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
-			}
 		}
 
 		if (body instanceof Array) {
@@ -103,6 +85,30 @@ export class PostController {
 			const data: FindOneResponseObject[] = []
 
 			for (const item of body) {
+
+				//perform role check
+			if (auth.user_identifier) {
+				const permission = await this.roles.tablePermission({
+					identifier: auth.user_identifier,
+					table: table_name,
+					access: RolePermission.WRITE,
+					data: item,
+					x_request_id,
+				})
+
+				if (!permission.valid) {
+					errored++
+					errors.push({
+						item: body.indexOf(item),
+						message: this.response.text((permission as AuthTablePermissionFailResponse).message),
+					})
+					continue
+				}
+
+				fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
+			}
+
+
 				const insertResult = await this.createOneRecord(
 					{
 						schema,
@@ -140,6 +146,25 @@ export class PostController {
 				errors,
 				data,
 			} as CreateManyResponseObject)
+		}
+
+		//perform role check
+		if (auth.user_identifier) {
+			const permission = await this.roles.tablePermission({
+				identifier: auth.user_identifier,
+				table: table_name,
+				access: RolePermission.WRITE,
+				data: body,
+				x_request_id,
+			})
+
+			if (!permission.valid) {
+				return res
+					.status(401)
+					.send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+			}
+
+			fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
 		}
 
 		const insertResult = await this.createOneRecord(
@@ -198,7 +223,6 @@ export class PostController {
 		}
 
 		try {
-			//TODO - handle allowed_fields in role permissions repsonse for
 			const result = (await this.query.perform(
 				QueryPerform.CREATE,
 				options,

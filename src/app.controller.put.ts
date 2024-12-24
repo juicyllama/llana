@@ -146,7 +146,6 @@ export class PutController {
 		}
 
 		try {
-			//TODO - handle allowed_fields in role permissions repsonse
 			const result = await this.query.perform(
 				QueryPerform.UPDATE,
 				{ id, schema, data: validate.instance },
@@ -184,7 +183,7 @@ export class PutController {
 		}
 
 		let schema: DataSourceSchema
-		const fields = []
+		let fields = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -231,25 +230,6 @@ export class PutController {
 		const data: FindOneResponseObject[] = []
 
 		for (const item of body) {
-			//Perform role validation on each record
-			if (auth.user_identifier) {
-				const permission = await this.roles.tablePermission({
-					identifier: auth.user_identifier,
-					table: table_name,
-					access: RolePermission.WRITE,
-					data: item,
-					x_request_id,
-				})
-
-				if (!permission.valid) {
-					errored++
-					errors.push({
-						item: body.indexOf(item),
-						message: this.response.text((permission as AuthTablePermissionFailResponse).message),
-					})
-					continue
-				}
-			}
 
 			//validate input data
 			const validate = await this.schema.validateData(schema, item)
@@ -320,8 +300,33 @@ export class PutController {
 				continue
 			}
 
+			//Perform role validation on each record
+			if (auth.user_identifier) {
+
+				const permission = await this.roles.tablePermission({
+					identifier: auth.user_identifier,
+					table: table_name,
+					access: RolePermission.WRITE,
+					data: {
+						...record,
+						...item,
+					},
+					x_request_id,
+				})
+
+				if (!permission.valid) {
+					errored++
+					errors.push({
+						item: body.indexOf(item),
+						message: this.response.text((permission as AuthTablePermissionFailResponse).message),
+					})
+					continue
+				}
+
+				fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
+			}
+
 			try {
-				//TODO - handle allowed_fields in role permissions repsonse
 				const result = (await this.query.perform(
 					QueryPerform.UPDATE,
 					{ id: item[primary_key], schema, data: validate.instance },
@@ -335,6 +340,16 @@ export class PutController {
 					auth.user_identifier,
 				)
 				successful++
+
+				if(fields.length) {
+					const filtered = {}
+					for (const field of fields) {
+						filtered[field] = result[field]
+					}
+					data.push(filtered)
+					continue
+				}
+
 				data.push(result)
 			} catch (e) {
 				errored++

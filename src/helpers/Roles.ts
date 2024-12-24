@@ -169,7 +169,7 @@ export class Roles {
 				) {
 					permission_result = <AuthTablePermissionFailResponse>{
 						valid: false,
-						message: `Identity Mismatch - You can only add ${options.table} records with your own ${permission.identity_column ?? schema.primary_key}`,
+						message: `Identity Mismatch - You can only add ${options.table} records with your own ${permission.identity_column ?? schema.primary_key} (${options.identifier}) but you are trying to add ${options.data[permission.identity_column ?? schema.primary_key]}`,
 					}
 					await this.cacheManager.set(
 						`roles:${options.identifier}:${options.table}:${options.access}`,
