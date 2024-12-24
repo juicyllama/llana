@@ -154,7 +154,7 @@ export class PutController {
 			await this.websocket.publish(schema, PublishType.UPDATE, result[schema.primary_key])
 			await this.webhooks.publish(schema, PublishType.UPDATE, result[schema.primary_key], auth.user_identifier)
 
-			if(fields.length) {
+			if (fields.length) {
 				const filtered = {}
 				for (const field of fields) {
 					filtered[field] = result[field]
@@ -230,7 +230,6 @@ export class PutController {
 		const data: FindOneResponseObject[] = []
 
 		for (const item of body) {
-
 			//validate input data
 			const validate = await this.schema.validateData(schema, item)
 			if (!validate.valid) {
@@ -302,7 +301,6 @@ export class PutController {
 
 			//Perform role validation on each record
 			if (auth.user_identifier) {
-
 				const permission = await this.roles.tablePermission({
 					identifier: auth.user_identifier,
 					table: table_name,
@@ -341,7 +339,7 @@ export class PutController {
 				)
 				successful++
 
-				if(fields.length) {
+				if (fields.length) {
 					const filtered = {}
 					for (const field of fields) {
 						filtered[field] = result[field]

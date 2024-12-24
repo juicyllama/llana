@@ -31,6 +31,8 @@ export class CustomerTestingService {
 			postalCode: faker.location.zipCode(),
 			country: faker.location.countryCode(),
 			email: faker.internet.email(),
+			phone: faker.phone.number(),
+			fax: faker.phone.number(),
 		}
 	}
 

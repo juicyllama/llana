@@ -12,7 +12,6 @@ import { Env } from '../utils/Env'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
-import { S } from '@faker-js/faker/dist/airline-BnpeTvY9'
 
 @Injectable()
 export class Roles {
@@ -293,7 +292,7 @@ export class Roles {
 			return []
 		}
 
-		return allowed_fields.split(',').map((field) => field.trim())
+		return allowed_fields.split(',').map(field => field.trim())
 	}
 }
 /**

@@ -74,7 +74,6 @@ export class PostController {
 			if (!auth.valid) {
 				return res.status(401).send(this.response.text(auth.message))
 			}
-
 		}
 
 		if (body instanceof Array) {
@@ -85,29 +84,27 @@ export class PostController {
 			const data: FindOneResponseObject[] = []
 
 			for (const item of body) {
-
 				//perform role check
-			if (auth.user_identifier) {
-				const permission = await this.roles.tablePermission({
-					identifier: auth.user_identifier,
-					table: table_name,
-					access: RolePermission.WRITE,
-					data: item,
-					x_request_id,
-				})
-
-				if (!permission.valid) {
-					errored++
-					errors.push({
-						item: body.indexOf(item),
-						message: this.response.text((permission as AuthTablePermissionFailResponse).message),
+				if (auth.user_identifier) {
+					const permission = await this.roles.tablePermission({
+						identifier: auth.user_identifier,
+						table: table_name,
+						access: RolePermission.WRITE,
+						data: item,
+						x_request_id,
 					})
-					continue
+
+					if (!permission.valid) {
+						errored++
+						errors.push({
+							item: body.indexOf(item),
+							message: this.response.text((permission as AuthTablePermissionFailResponse).message),
+						})
+						continue
+					}
+
+					fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
 				}
-
-				fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
-			}
-
 
 				const insertResult = await this.createOneRecord(
 					{
@@ -159,9 +156,7 @@ export class PostController {
 			})
 
 			if (!permission.valid) {
-				return res
-					.status(401)
-					.send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
 
 			fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
@@ -238,7 +233,7 @@ export class PostController {
 			)
 
 			//Filter results
-			if(fields.length) {
+			if (fields.length) {
 				const filtered = {}
 				for (const field of fields) {
 					filtered[field] = result[field]

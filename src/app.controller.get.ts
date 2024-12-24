@@ -201,11 +201,13 @@ export class GetController {
 					}
 				}
 
-				if(permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
-					if(!queryFields?.length) {
+				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
+					if (!queryFields?.length) {
 						queryFields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
-					}else{
-						queryFields = queryFields.filter(field => (permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field))
+					} else {
+						queryFields = queryFields.filter(field =>
+							(permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field),
+						)
 					}
 				}
 			}
@@ -279,7 +281,6 @@ export class GetController {
 		}
 
 		try {
-			//TODO - handle allowed_fields in role permissions repsonse for relations
 			let result = (await this.query.perform(
 				QueryPerform.FIND_ONE,
 				options,
@@ -389,11 +390,13 @@ export class GetController {
 					}
 				}
 
-				if(permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
-					if(!queryFields?.length) {
+				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
+					if (!queryFields?.length) {
 						queryFields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
-					}else{
-						queryFields = queryFields.filter(field => (permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field))
+					} else {
+						queryFields = queryFields.filter(field =>
+							(permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field),
+						)
 					}
 				}
 			}
@@ -473,7 +476,6 @@ export class GetController {
 		}
 
 		try {
-			//TODO - handle allowed_fields in role permissions repsonse in relations
 			let result = (await this.query.perform(
 				QueryPerform.FIND_MANY,
 				options,

@@ -282,6 +282,10 @@ export class Mongo {
 
 			const result = await mongo.collection.find(mongoFilters).project(mongoFields).limit(1).toArray()
 
+			if (options.fields?.length && !options.fields.includes(options.schema.primary_key)) {
+				delete result[0][options.schema.primary_key]
+			}
+
 			this.logger.debug(`[${DATABASE_TYPE}] Result: ${JSON.stringify(result[0])}`, x_request_id)
 			mongo.connection.close()
 			return this.formatOutput(options, result[0])
@@ -348,6 +352,12 @@ export class Mongo {
 					.toArray()
 			)
 			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${x_request_id}`)
+
+			for (const r in results) {
+				if (options.fields?.length && !options.fields.includes(options.schema.primary_key)) {
+					delete results[r][options.schema.primary_key]
+				}
+			}
 
 			mongo.connection.close()
 

@@ -388,48 +388,50 @@ describe('App > Controller > Put', () => {
 			}
 		})
 
-			it('WRITE table role, multiple records, one success and one fail', async function () {
-					const role = await authTestingService.createRole({
-						custom: true,
-						table: customerSchema.table,
-						identity_column: 'userId',
-						role: 'ADMIN',
-						records: RolePermission.NONE,
-						own_records: RolePermission.WRITE,
-					})
-		
-					try {
-						const result = await request(app.getHttpServer())
-							.put(`/Customer/`)
-							.send([{
-								[customerSchema.primary_key]: customers[0][customerSchema.primary_key],
-								companyName: 'Anything here',
-							},{
-								[customerSchema.primary_key]: customers[3][customerSchema.primary_key],
-								companyName: 'Anything here',
-							}])
-							.set('Authorization', `Bearer ${jwt}`)
-							.expect(200)
-		
-						expect(result.body).toBeDefined()
-						expect(result.body.total).toBeDefined()
-						expect(result.body.total).toEqual(2)
-						expect(result.body.errored).toBeDefined()
-						expect(result.body.errored).toEqual(1)
-						expect(result.body.successful).toBeDefined()
-						expect(result.body.successful).toEqual(1)
-						expect(result.body.data.length).toBeGreaterThan(0)
-						expect(result.body.data[0][customerSchema.primary_key]).toBeDefined()
-						expect(result.body.data[0].companyName).toBeDefined()
-						expect(result.body.data[1]).toBeUndefined()
-	
-					} catch (e) {
-						logger.error(e)
-						throw e
-					} finally {
-						await authTestingService.deleteRole(role)
-					}
-				})
+		it('WRITE table role, multiple records, one success and one fail', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.WRITE,
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.put(`/Customer/`)
+					.send([
+						{
+							[customerSchema.primary_key]: customers[0][customerSchema.primary_key],
+							companyName: 'Anything here',
+						},
+						{
+							[customerSchema.primary_key]: customers[3][customerSchema.primary_key],
+							companyName: 'Anything here',
+						},
+					])
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+
+				expect(result.body).toBeDefined()
+				expect(result.body.total).toBeDefined()
+				expect(result.body.total).toEqual(2)
+				expect(result.body.errored).toBeDefined()
+				expect(result.body.errored).toEqual(1)
+				expect(result.body.successful).toBeDefined()
+				expect(result.body.successful).toEqual(1)
+				expect(result.body.data.length).toBeGreaterThan(0)
+				expect(result.body.data[0][customerSchema.primary_key]).toBeDefined()
+				expect(result.body.data[0].companyName).toBeDefined()
+				expect(result.body.data[1]).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
 
 		it('READ table role, updates record', async function () {
 			const role = await authTestingService.createRole({
@@ -547,64 +549,67 @@ describe('App > Controller > Put', () => {
 			}
 		})
 
-				it('When allowed_fields are passed, only return these fields (multiple)', async function () {
-					const role = await authTestingService.createRole({
-						custom: true,
-						table: customerSchema.table,
-						identity_column: 'userId',
-						role: 'ADMIN',
-						records: RolePermission.WRITE,
-						own_records: RolePermission.WRITE,
-						allowed_fields: 'companyName,contactName',
-					})
-		
-					try {
-						const result = await request(app.getHttpServer())
-							.put(`/Customer/`)
-							.send([{
-								[customerSchema.primary_key]: customers[0][customerSchema.primary_key],
-								companyName: 'Anything here',
-							},{
-								[customerSchema.primary_key]: customers[1][customerSchema.primary_key],
-								companyName: 'Anything here',
-							}])
-							.set('Authorization', `Bearer ${jwt}`)
-							.expect(200)
+		it('When allowed_fields are passed, only return these fields (multiple)', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.WRITE,
+				own_records: RolePermission.WRITE,
+				allowed_fields: 'companyName,contactName',
+			})
 
-						expect(result.body).toBeDefined()
-						expect(result.body.total).toBeDefined()
-						expect(result.body.total).toEqual(2)
-						expect(result.body.errored).toBeDefined()
-						expect(result.body.errored).toEqual(0)
-						expect(result.body.data[0][customerSchema.primary_key]).toBeUndefined()
-						expect(result.body.data[0].companyName).toBeDefined()
-						expect(result.body.data[0].contactName).toBeDefined()
-						expect(result.body.data[0].contactTitle).toBeUndefined()
-						expect(result.body.data[0].address).toBeUndefined()
-						expect(result.body.data[0].city).toBeUndefined()
-						expect(result.body.data[0].region).toBeUndefined()
-						expect(result.body.data[0].postalCode).toBeUndefined()
-						expect(result.body.data[0].country).toBeUndefined()
-						expect(result.body.data[0].phone).toBeUndefined()
-						expect(result.body.data[0].fax).toBeUndefined()
-						expect(result.body.data[1][customerSchema.primary_key]).toBeUndefined()
-						expect(result.body.data[1].companyName).toBeDefined()
-						expect(result.body.data[1].contactName).toBeDefined()
-						expect(result.body.data[1].contactTitle).toBeUndefined()
-						expect(result.body.data[1].address).toBeUndefined()
-						expect(result.body.data[1].city).toBeUndefined()
-						expect(result.body.data[1].region).toBeUndefined()
-						expect(result.body.data[1].postalCode).toBeUndefined()
-						expect(result.body.data[1].country).toBeUndefined()
-						expect(result.body.data[1].phone).toBeUndefined()
-						expect(result.body.data[1].fax).toBeUndefined()
-					} catch (e) {
-						logger.error(e)
-						throw e
-					} finally {
-						await authTestingService.deleteRole(role)
-					}
-				})
+			try {
+				const result = await request(app.getHttpServer())
+					.put(`/Customer/`)
+					.send([
+						{
+							[customerSchema.primary_key]: customers[0][customerSchema.primary_key],
+							companyName: 'Anything here',
+						},
+						{
+							[customerSchema.primary_key]: customers[1][customerSchema.primary_key],
+							companyName: 'Anything here',
+						},
+					])
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+
+				expect(result.body).toBeDefined()
+				expect(result.body.total).toBeDefined()
+				expect(result.body.total).toEqual(2)
+				expect(result.body.errored).toBeDefined()
+				expect(result.body.errored).toEqual(0)
+				expect(result.body.data[0][customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.data[0].companyName).toBeDefined()
+				expect(result.body.data[0].contactName).toBeDefined()
+				expect(result.body.data[0].contactTitle).toBeUndefined()
+				expect(result.body.data[0].address).toBeUndefined()
+				expect(result.body.data[0].city).toBeUndefined()
+				expect(result.body.data[0].region).toBeUndefined()
+				expect(result.body.data[0].postalCode).toBeUndefined()
+				expect(result.body.data[0].country).toBeUndefined()
+				expect(result.body.data[0].phone).toBeUndefined()
+				expect(result.body.data[0].fax).toBeUndefined()
+				expect(result.body.data[1][customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.data[1].companyName).toBeDefined()
+				expect(result.body.data[1].contactName).toBeDefined()
+				expect(result.body.data[1].contactTitle).toBeUndefined()
+				expect(result.body.data[1].address).toBeUndefined()
+				expect(result.body.data[1].city).toBeUndefined()
+				expect(result.body.data[1].region).toBeUndefined()
+				expect(result.body.data[1].postalCode).toBeUndefined()
+				expect(result.body.data[1].country).toBeUndefined()
+				expect(result.body.data[1].phone).toBeUndefined()
+				expect(result.body.data[1].fax).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
 	})
 
 	afterAll(async () => {

@@ -369,14 +369,14 @@ export class Authentication {
 
 		let payload
 
-		try{
+		try {
 			payload = await this.jwtService.verifyAsync(jwt_token, {
 				secret: this.configService.get('JWT_KEY'),
 			})
-		}catch(e){
+		} catch (e) {
 			this.logger.error(`[Authentication][auth] JWT verification failed: ${e.message}`)
 
-			switch(e.message){
+			switch (e.message) {
 				case 'jwt expired':
 					return {
 						valid: false,
@@ -387,11 +387,8 @@ export class Authentication {
 						valid: false,
 						message: 'Authentication Failed',
 					}
-
 			}
 		}
-
-		
 
 		if (!payload) {
 			return {

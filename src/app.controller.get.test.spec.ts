@@ -524,7 +524,6 @@ describe('App > Controller > Get', () => {
 		})
 	})
 
-	//TODO handle relations with roles and allowed fields filtering
 	describe('Allowed Fields Results', () => {
 		it('As standard, all fields returned', async function () {
 			const result = await request(app.getHttpServer())
@@ -685,7 +684,6 @@ describe('App > Controller > Get', () => {
 				expect(result.body.User[0].role).toBeUndefined()
 				expect(result.body.User[0].firstName).toBeUndefined()
 				expect(result.body.User[0].lastName).toBeUndefined()
-
 			} catch (e) {
 				logger.error(e)
 				throw e
@@ -713,25 +711,25 @@ describe('App > Controller > Get', () => {
 					.set('Authorization', `Bearer ${jwt}`)
 					.expect(200)
 
-					expect(result.body).toBeDefined()
-					expect(result.body[customerSchema.primary_key]).toBeUndefined()
-					expect(result.body.companyName).toBeDefined()
-					expect(result.body.contactName).toBeDefined()
-					expect(result.body.contactTitle).toBeUndefined()
-					expect(result.body.address).toBeUndefined()
-					expect(result.body.city).toBeUndefined()
-					expect(result.body.region).toBeUndefined()
-					expect(result.body.postalCode).toBeUndefined()
-					expect(result.body.country).toBeUndefined()
-					expect(result.body.phone).toBeUndefined()
-					expect(result.body.fax).toBeUndefined()
-					expect(result.body.User[0]).toBeDefined()
-					expect(result.body.User[0][userSchema.primary_key]).toBeUndefined()
-					expect(result.body.User[0].email).toBeDefined()
-					expect(result.body.User[0].password).toBeUndefined()
-					expect(result.body.User[0].role).toBeUndefined()
-					expect(result.body.User[0].firstName).toBeUndefined()
-					expect(result.body.User[0].lastName).toBeUndefined()
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeDefined()
+				expect(result.body.contactTitle).toBeUndefined()
+				expect(result.body.address).toBeUndefined()
+				expect(result.body.city).toBeUndefined()
+				expect(result.body.region).toBeUndefined()
+				expect(result.body.postalCode).toBeUndefined()
+				expect(result.body.country).toBeUndefined()
+				expect(result.body.phone).toBeUndefined()
+				expect(result.body.fax).toBeUndefined()
+				expect(result.body.User[0]).toBeDefined()
+				expect(result.body.User[0][userSchema.primary_key]).toBeUndefined()
+				expect(result.body.User[0].email).toBeDefined()
+				expect(result.body.User[0].password).toBeUndefined()
+				expect(result.body.User[0].role).toBeUndefined()
+				expect(result.body.User[0].firstName).toBeUndefined()
+				expect(result.body.User[0].lastName).toBeUndefined()
 			} catch (e) {
 				logger.error(e)
 				throw e
@@ -739,9 +737,6 @@ describe('App > Controller > Get', () => {
 				await authTestingService.deleteRole(role)
 			}
 		})
-
-
-
 	})
 
 	afterAll(async () => {

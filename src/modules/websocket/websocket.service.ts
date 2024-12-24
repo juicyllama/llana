@@ -17,8 +17,7 @@ export class WebsocketService implements OnApplicationShutdown {
 	}
 
 	public async publish(schema: DataSourceSchema, type: PublishType, id: number | string) {
-
-		if(!id) {
+		if (!id) {
 			this.logger.debug(`[WebsocketService] Skipping publish ${schema.table} ${type} as no id provided`)
 			return
 		}

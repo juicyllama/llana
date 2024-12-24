@@ -357,7 +357,10 @@ describe('App > Controller > Post', () => {
 			try {
 				const result = await request(app.getHttpServer())
 					.post(`/Customer/`)
-					.send([customerTestingService.mockCustomer(userId), customerTestingService.mockCustomer(user[userSchema.primary_key])])
+					.send([
+						customerTestingService.mockCustomer(userId),
+						customerTestingService.mockCustomer(user[userSchema.primary_key]),
+					])
 					.set('Authorization', `Bearer ${jwt}`)
 					.expect(201)
 
@@ -572,7 +575,9 @@ describe('App > Controller > Post', () => {
 
 	afterAll(async () => {
 		for (let customer of customers) {
-			await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
+			if(customer[customerSchema.primary_key]){
+				await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
+			}	
 		}
 		await userTestingService.deleteUser(user[userSchema.primary_key])
 		await app.close()
