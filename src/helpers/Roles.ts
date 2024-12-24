@@ -12,6 +12,7 @@ import { Env } from '../utils/Env'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { Schema } from './Schema'
+import { S } from '@faker-js/faker/dist/airline-BnpeTvY9'
 
 @Injectable()
 export class Roles {
@@ -141,7 +142,7 @@ export class Roles {
 				if (comparePermissions(permission.records, options.access)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
-						allowed_fields: permission.allowed_fields,
+						allowed_fields: this.formatAllowedFields(permission.allowed_fields),
 					}
 					await this.cacheManager.set(
 						`roles:${options.identifier}:${options.table}:${options.access}`,
@@ -186,7 +187,7 @@ export class Roles {
 							operator: WhereOperator.equals,
 							value: options.identifier,
 						},
-						allowed_fields: permission.allowed_fields,
+						allowed_fields: this.formatAllowedFields(permission.allowed_fields),
 					}
 					await this.cacheManager.set(
 						`roles:${options.identifier}:${options.table}:${options.access}`,
@@ -223,7 +224,7 @@ export class Roles {
 				if (comparePermissions(permission.records, options.access)) {
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
-						allowed_fields: permission.allowed_fields,
+						allowed_fields: this.formatAllowedFields(permission.allowed_fields),
 					}
 					await this.cacheManager.set(
 						`roles:${options.identifier}:${options.table}:${options.access}`,
@@ -281,6 +282,18 @@ export class Roles {
 		)
 
 		return role?.[config.location.column]
+	}
+
+	/**
+	 * Process allowed fields from the role permission
+	 */
+
+	private formatAllowedFields(allowed_fields: string): string[] {
+		if (!allowed_fields) {
+			return []
+		}
+
+		return allowed_fields.split(',').map((field) => field.trim())
 	}
 }
 /**

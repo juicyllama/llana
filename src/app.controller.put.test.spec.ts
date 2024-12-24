@@ -273,6 +273,7 @@ describe('App > Controller > Put', () => {
 		})
 	})
 
+	//TODO test multiple records with different permissions
 	describe('Role Based Updating', () => {
 		it('No table role, updates record', async function () {
 			await request(app.getHttpServer())
@@ -441,6 +442,7 @@ describe('App > Controller > Put', () => {
 		})
 	})
 
+	//TODO test multiple records results
 	describe('Allowed Fields Results', () => {
 		it('As standard, all fields returned', async function () {
 			const result = await request(app.getHttpServer())

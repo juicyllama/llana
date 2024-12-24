@@ -11,7 +11,7 @@ import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { WebsocketService } from './modules/websocket/websocket.service'
-import { AuthTablePermissionFailResponse } from './types/auth.types'
+import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import { DataSourceCreateOneOptions, DataSourceSchema, PublishType, QueryPerform } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 
@@ -46,6 +46,7 @@ export class PostController {
 		}
 
 		let schema: DataSourceSchema
+		let fields = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -89,6 +90,8 @@ export class PostController {
 						.status(401)
 						.send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 				}
+
+				fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
 			}
 		}
 
@@ -106,6 +109,7 @@ export class PostController {
 						data: item,
 					},
 					auth.user_identifier,
+					fields,
 					x_request_id,
 				)
 
@@ -144,6 +148,7 @@ export class PostController {
 				data: body,
 			},
 			auth.user_identifier,
+			fields,
 			x_request_id,
 		)
 
@@ -160,6 +165,7 @@ export class PostController {
 	private async createOneRecord(
 		options: DataSourceCreateOneOptions,
 		user_identifier,
+		fields: string[],
 		x_request_id,
 	): Promise<{
 		valid: boolean
@@ -192,7 +198,7 @@ export class PostController {
 		}
 
 		try {
-			//TODO - handle allowed_fields in role permissions repsonse
+			//TODO - handle allowed_fields in role permissions repsonse for
 			const result = (await this.query.perform(
 				QueryPerform.CREATE,
 				options,
@@ -206,6 +212,19 @@ export class PostController {
 				result[options.schema.primary_key],
 				user_identifier,
 			)
+
+			//Filter results
+			if(fields.length) {
+				const filtered = {}
+				for (const field of fields) {
+					filtered[field] = result[field]
+				}
+				return {
+					valid: true,
+					result: filtered,
+				}
+			}
+
 			return {
 				valid: true,
 				result,

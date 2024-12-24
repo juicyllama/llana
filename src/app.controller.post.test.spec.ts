@@ -186,6 +186,7 @@ describe('App > Controller > Post', () => {
 		})
 	})
 
+	//TODO test multiple records with different permissions
 	describe('Role Based Creation', () => {
 		it('No table role, creates record', async function () {
 			const result = await request(app.getHttpServer())
@@ -417,6 +418,7 @@ describe('App > Controller > Post', () => {
 		})
 	})
 
+	//TODO test multiple records results
 	describe('Allowed Fields Results', () => {
 		it('As standard, all fields returned', async function () {
 			const result = await request(app.getHttpServer())

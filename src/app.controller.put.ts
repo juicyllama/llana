@@ -11,7 +11,7 @@ import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { WebsocketService } from './modules/websocket/websocket.service'
-import { AuthTablePermissionFailResponse } from './types/auth.types'
+import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import { DataSourceSchema, DataSourceWhere, PublishType, QueryPerform, WhereOperator } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 
@@ -43,6 +43,7 @@ export class PutController {
 		}
 
 		let schema: DataSourceSchema
+		let fields = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -140,6 +141,8 @@ export class PutController {
 			if (!permission.valid) {
 				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
+
+			fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
 		}
 
 		try {
@@ -151,6 +154,15 @@ export class PutController {
 			)
 			await this.websocket.publish(schema, PublishType.UPDATE, result[schema.primary_key])
 			await this.webhooks.publish(schema, PublishType.UPDATE, result[schema.primary_key], auth.user_identifier)
+
+			if(fields.length) {
+				const filtered = {}
+				for (const field of fields) {
+					filtered[field] = result[field]
+				}
+				return res.status(200).send(filtered)
+			}
+
 			return res.status(200).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
@@ -172,6 +184,7 @@ export class PutController {
 		}
 
 		let schema: DataSourceSchema
+		const fields = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -234,6 +247,7 @@ export class PutController {
 						item: body.indexOf(item),
 						message: this.response.text((permission as AuthTablePermissionFailResponse).message),
 					})
+					continue
 				}
 			}
 

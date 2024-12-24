@@ -524,6 +524,7 @@ describe('App > Controller > Get', () => {
 		})
 	})
 
+	//TODO handle relations with roles and allowed fields filtering
 	describe('Allowed Fields Results', () => {
 		it('As standard, all fields returned', async function () {
 			const result = await request(app.getHttpServer())
@@ -620,6 +621,7 @@ describe('App > Controller > Get', () => {
 				await authTestingService.deleteRole(role)
 			}
 		})
+
 	})
 
 	afterAll(async () => {
