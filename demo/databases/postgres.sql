@@ -44,7 +44,7 @@ CREATE TABLE "Customer"
      "custId"       SERIAL PRIMARY KEY NOT NULL, 
      "userId"     INT NOT NULL, 
      "companyName"  VARCHAR (40) NOT NULL, 
-      "email"      VARCHAR (255) NOT NULL, 
+      "email"      VARCHAR (255) NULL, 
      "contactName"  VARCHAR (30) NULL, 
      "contactTitle" VARCHAR (30) NULL, 
      address      VARCHAR (60) NULL, 
@@ -65,7 +65,7 @@ DROP TABLE IF EXISTS "Employee";
 CREATE TABLE "Employee" 
   ( 
      "employeeId"      SERIAL  PRIMARY KEY NOT NULL, 
-     "email"      VARCHAR (255) NOT NULL, 
+     "email"      VARCHAR (255) NULL, 
      "lastName"        VARCHAR (20) NOT NULL, 
      "firstName"       VARCHAR (10) NOT NULL, 
      title           VARCHAR (30) NULL, 
@@ -87,6 +87,25 @@ CREATE TABLE "Employee"
      "updatedAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
      "deletedAt"  TIMESTAMP NULL
   ); 
+
+DROP TABLE IF EXISTS "Supplier";
+CREATE TABLE "Supplier" 
+  ( 
+     "supplierId"   SERIAL PRIMARY KEY NOT NULL, 
+     "companyName"  VARCHAR (40) NOT NULL, 
+     "contactName"  VARCHAR (30) NULL, 
+     "contactTitle" VARCHAR (30) NULL, 
+     address       VARCHAR (60) NULL, 
+     city          VARCHAR (15) NULL, 
+     region        VARCHAR (15) NULL, 
+     "postalCode"    VARCHAR (10) NULL, 
+     country       VARCHAR (15) NULL, 
+     phone         VARCHAR (24) NULL, 
+     fax           VARCHAR (24) NULL,
+     "createdAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     "updatedAt"  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     "deletedAt"  TIMESTAMP NULL
+  );
 
 DROP TABLE IF EXISTS "Shipper";
 CREATE TABLE "Shipper" 
@@ -131,24 +150,24 @@ CREATE TABLE "SalesOrder"
 -- Populate Employess table
 
 
-INSERT INTO "Employee"("lastName", "firstName", title, titleofcourtesy, birthdate, hiredate, address, city, region, "postalCode", country, phone, mgrid)
-  VALUES(N'Davis', N'Sara', N'CEO', N'Ms.', '19581208 00:00:00.000', '20020501 00:00:00.000', N'7890 - 20th Ave. E., Apt. 2A', N'Seattle', N'WA', N'10003', N'USA', N'(206) 555-0101', NULL);
-INSERT INTO "Employee"("lastName", "firstName", title, titleofcourtesy, birthdate, hiredate, address, city, region, "postalCode", country, phone, mgrid)
-  VALUES(N'Funk', N'Don', N'Vice President, Sales', N'Dr.', '19620219 00:00:00.000', '20020814 00:00:00.000', N'9012 W. Capital Way', N'Tacoma', N'WA', N'10001', N'USA', N'(206) 555-0100', 1);
-INSERT INTO "Employee"("lastName", "firstName", title, titleofcourtesy, birthdate, hiredate, address, city, region, "postalCode", country, phone, mgrid)
-  VALUES(N'Lew', N'Judy', N'Sales Manager', N'Ms.', '19730830 00:00:00.000', '20020401 00:00:00.000', N'2345 Moss Bay Blvd.', N'Kirkland', N'WA', N'10007', N'USA', N'(206) 555-0103', 2);
-INSERT INTO "Employee"("lastName", "firstName", title, titleofcourtesy, birthdate, hiredate, address, city, region, "postalCode", country, phone, mgrid)
-  VALUES(N'Peled', N'Yael', N'Sales Representative', N'Mrs.', '19470919 00:00:00.000', '20030503 00:00:00.000', N'5678 Old Redmond Rd.', N'Redmond', N'WA', N'10009', N'USA', N'(206) 555-0104', 3);
-INSERT INTO "Employee"("lastName", "firstName", title, titleofcourtesy, birthdate, hiredate, address, city, region, "postalCode", country, phone, mgrid)
-  VALUES(N'Buck', N'Sven', N'Sales Manager', N'Mr.', '19650304 00:00:00.000', '20031017 00:00:00.000', N'8901 Garrett Hill', N'London', NULL, N'10004', N'UK', N'(71) 234-5678', 2);
-INSERT INTO "Employee"("lastName", "firstName", title, titleofcourtesy, birthdate, hiredate, address, city, region, "postalCode", country, phone, mgrid)
-  VALUES(N'Suurs', N'Paul', N'Sales Representative', N'Mr.', '19730702 00:00:00.000', '20031017 00:00:00.000', N'3456 Coventry House, Miner Rd.', N'London', NULL, N'10005', N'UK', N'(71) 345-6789', 5);
-INSERT INTO "Employee"("lastName", "firstName", title, titleofcourtesy, birthdate, hiredate, address, city, region, "postalCode", country, phone, mgrid)
-  VALUES(N'King', N'Russell', N'Sales Representative', N'Mr.', '19700529 00:00:00.000', '20040102 00:00:00.000', N'6789 Edgeham Hollow, Winchester Way', N'London', NULL, N'10002', N'UK', N'(71) 123-4567', 5);
-INSERT INTO "Employee"("lastName", "firstName", title, titleofcourtesy, birthdate, hiredate, address, city, region, "postalCode", country, phone, mgrid)
-  VALUES(N'Cameron', N'Maria', N'Sales Representative', N'Ms.', '19680109 00:00:00.000', '20040305 00:00:00.000', N'4567 - 11th Ave. N.E.', N'Seattle', N'WA', N'10006', N'USA', N'(206) 555-0102', 3);
-INSERT INTO "Employee"("lastName", "firstName", title, titleofcourtesy, birthdate, hiredate, address, city, region, "postalCode", country, phone, mgrid)
-  VALUES(N'Dolgopyatova', N'Zoya', N'Sales Representative', N'Ms.', '19760127 00:00:00.000', '20041115 00:00:00.000', N'1234 Houndstooth Rd.', N'London', NULL, N'10008', N'UK', N'(71) 456-7890', 5);
+INSERT INTO "Employee"("lastName", "firstName", "title", "titleOfCourtesy", "birthDate", "hireDate", "address", "city", "region", "postalCode", "country", "phone")
+  VALUES(N'Davis', N'Sara', N'CEO', N'Ms.', '19581208 00:00:00.000', '20020501 00:00:00.000', N'7890 - 20th Ave. E., Apt. 2A', N'Seattle', N'WA', N'10003', N'USA', N'(206) 555-0101');
+INSERT INTO "Employee"("lastName", "firstName", "title", "titleOfCourtesy", "birthDate", "hireDate", "address", "city", "region", "postalCode", "country", "phone")  
+  VALUES(N'Funk', N'Don', N'Vice President, Sales', N'Dr.', '19620219 00:00:00.000', '20020814 00:00:00.000', N'9012 W. Capital Way', N'Tacoma', N'WA', N'10001', N'USA', N'(206) 555-0100');
+INSERT INTO "Employee"("lastName", "firstName", "title", "titleOfCourtesy", "birthDate", "hireDate", "address", "city", "region", "postalCode", "country", "phone")  
+  VALUES(N'Lew', N'Judy', N'Sales Manager', N'Ms.', '19730830 00:00:00.000', '20020401 00:00:00.000', N'2345 Moss Bay Blvd.', N'Kirkland', N'WA', N'10007', N'USA', N'(206) 555-0103');
+INSERT INTO "Employee"("lastName", "firstName", "title", "titleOfCourtesy", "birthDate", "hireDate", "address", "city", "region", "postalCode", "country", "phone")  
+  VALUES(N'Peled', N'Yael', N'Sales Representative', N'Mrs.', '19470919 00:00:00.000', '20030503 00:00:00.000', N'5678 Old Redmond Rd.', N'Redmond', N'WA', N'10009', N'USA', N'(206) 555-0104');
+INSERT INTO "Employee"("lastName", "firstName", "title", "titleOfCourtesy", "birthDate", "hireDate", "address", "city", "region", "postalCode", "country", "phone")  
+  VALUES(N'Buck', N'Sven', N'Sales Manager', N'Mr.', '19650304 00:00:00.000', '20031017 00:00:00.000', N'8901 Garrett Hill', N'London', NULL, N'10004', N'UK', N'(71) 234-5678');
+INSERT INTO "Employee"("lastName", "firstName", "title", "titleOfCourtesy", "birthDate", "hireDate", "address", "city", "region", "postalCode", "country", "phone")  
+  VALUES(N'Suurs', N'Paul', N'Sales Representative', N'Mr.', '19730702 00:00:00.000', '20031017 00:00:00.000', N'3456 Coventry House, Miner Rd.', N'London', NULL, N'10005', N'UK', N'(71) 345-6789');
+INSERT INTO "Employee"("lastName", "firstName", "title", "titleOfCourtesy", "birthDate", "hireDate", "address", "city", "region", "postalCode", "country", "phone")  
+  VALUES(N'King', N'Russell', N'Sales Representative', N'Mr.', '19700529 00:00:00.000', '20040102 00:00:00.000', N'6789 Edgeham Hollow, Winchester Way', N'London', NULL, N'10002', N'UK', N'(71) 123-4567');
+INSERT INTO "Employee"("lastName", "firstName", "title", "titleOfCourtesy", "birthDate", "hireDate", "address", "city", "region", "postalCode", "country", "phone")  
+  VALUES(N'Cameron', N'Maria', N'Sales Representative', N'Ms.', '19680109 00:00:00.000', '20040305 00:00:00.000', N'4567 - 11th Ave. N.E.', N'Seattle', N'WA', N'10006', N'USA', N'(206) 555-0102');
+INSERT INTO "Employee"("lastName", "firstName", "title", "titleOfCourtesy", "birthDate", "hireDate", "address", "city", "region", "postalCode", "country", "phone")  
+  VALUES(N'Dolgopyatova', N'Zoya', N'Sales Representative', N'Ms.', '19760127 00:00:00.000', '20041115 00:00:00.000', N'1234 Houndstooth Rd.', N'London', NULL, N'10008', N'UK', N'(71) 456-7890');
 
 -- ---  Populate "Supplier"
 
@@ -213,28 +232,28 @@ INSERT INTO "Supplier"("supplierId", "companyName", "contactName", "contactTitle
 
 
 
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer NRZBB', N'Allen, Michael', N'Sales Representative', N'Obere Str. 0123', N'Berlin', NULL, N'10092', N'Germany', N'030-3456789', N'030-0123456');
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer MLTDN', N'Hassall, Mark', N'Owner', N'Avda. de la Constitución 5678', N'México D.F.', NULL, N'10077', N'Mexico', N'(5) 789-0123', N'(5) 456-7890');
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer KBUDE', N'Peoples, John', N'Owner', N'Mataderos  7890', N'México D.F.', NULL, N'10097', N'Mexico', N'(5) 123-4567', NULL);
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer HFBZG', N'Arndt, Torsten', N'Sales Representative', N'7890 Hanover Sq.', N'London', NULL, N'10046', N'UK', N'(171) 456-7890', N'(171) 456-7891');
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer HGVLZ', N'Higginbotham, Tom', N'Order Administrator', N'Berguvsvägen  5678', N'Luleå', NULL, N'10112', N'Sweden', N'0921-67 89 01', N'0921-23 45 67');
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer XHXJV', N'Poland, Carole', N'Sales Representative', N'Forsterstr. 7890', N'Mannheim', NULL, N'10117', N'Germany', N'0621-67890', N'0621-12345');
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer QXVLA', N'Bansal, Dushyant', N'Marketing Manager', N'2345, place Kléber', N'Strasbourg', NULL, N'10089', N'France', N'67.89.01.23', N'67.89.01.24');
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer QUHWH', N'Ilyina, Julia', N'Owner', N'C/ Araquil, 0123', N'Madrid', NULL, N'10104', N'Spain', N'(91) 345 67 89', N'(91) 012 34 56');
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer RTXGC', N'Raghav, Amritansh', N'Owner', N'6789, rue des Bouchers', N'Marseille', NULL, N'10105', N'France', N'23.45.67.89', N'23.45.67.80');
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer EEALV', N'Bassols, Pilar Colome', N'Accounting Manager', N'8901 Tsawassen Blvd.', N'Tsawassen', N'BC', N'10111', N'Canada', N'(604) 901-2345', N'(604) 678-9012');
-INSERT INTO "Customer"("companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
-  VALUES(N'Customer UBHAU', N'Jaffe, David', N'Sales Representative', N'Fauntleroy Circus 4567', N'London', NULL, N'10064', N'UK', N'(171) 789-0123', NULL);
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer NRZBB', N'Allen, Michael', N'Sales Representative', N'Obere Str. 0123', N'Berlin', NULL, N'10092', N'Germany', N'030-3456789', N'030-0123456');
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer MLTDN', N'Hassall, Mark', N'Owner', N'Avda. de la Constitución 5678', N'México D.F.', NULL, N'10077', N'Mexico', N'(5) 789-0123', N'(5) 456-7890');
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer KBUDE', N'Peoples, John', N'Owner', N'Mataderos  7890', N'México D.F.', NULL, N'10097', N'Mexico', N'(5) 123-4567', NULL);
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer HFBZG', N'Arndt, Torsten', N'Sales Representative', N'7890 Hanover Sq.', N'London', NULL, N'10046', N'UK', N'(171) 456-7890', N'(171) 456-7891');
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer HGVLZ', N'Higginbotham, Tom', N'Order Administrator', N'Berguvsvägen  5678', N'Luleå', NULL, N'10112', N'Sweden', N'0921-67 89 01', N'0921-23 45 67');
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer XHXJV', N'Poland, Carole', N'Sales Representative', N'Forsterstr. 7890', N'Mannheim', NULL, N'10117', N'Germany', N'0621-67890', N'0621-12345');
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer QXVLA', N'Bansal, Dushyant', N'Marketing Manager', N'2345, place Kléber', N'Strasbourg', NULL, N'10089', N'France', N'67.89.01.23', N'67.89.01.24');
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer QUHWH', N'Ilyina, Julia', N'Owner', N'C/ Araquil, 0123', N'Madrid', NULL, N'10104', N'Spain', N'(91) 345 67 89', N'(91) 012 34 56');
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer RTXGC', N'Raghav, Amritansh', N'Owner', N'6789, rue des Bouchers', N'Marseille', NULL, N'10105', N'France', N'23.45.67.89', N'23.45.67.80');
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer EEALV', N'Bassols, Pilar Colome', N'Accounting Manager', N'8901 Tsawassen Blvd.', N'Tsawassen', N'BC', N'10111', N'Canada', N'(604) 901-2345', N'(604) 678-9012');
+INSERT INTO "Customer"("userId", "companyName", "contactName", "contactTitle", address, city, region, "postalCode", country, phone, fax)
+  VALUES(1, N'Customer UBHAU', N'Jaffe, David', N'Sales Representative', N'Fauntleroy Circus 4567', N'London', NULL, N'10064', N'UK', N'(171) 789-0123', NULL);
 
 INSERT INTO "Shipper"("shipperId", "companyName", phone)
   VALUES(1, N'"Shipper" GVSUA', N'(503) 555-0137');
@@ -245,42 +264,42 @@ INSERT INTO "Shipper"("shipperId", "companyName", phone)
 
 
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10248, 85, 5, '20060704 00:00:00.000', '20060801 00:00:00.000', '20060716 00:00:00.000', 3, 32.38, N'Ship to 85-B', N'6789 rue de l''Abbaye', N'Reims', NULL, N'10345', N'France');
+  VALUES(1, 1, 5, '20060704 00:00:00.000', '20060801 00:00:00.000', '20060716 00:00:00.000', 3, 32.38, N'Ship to 85-B', N'6789 rue de l''Abbaye', N'Reims', NULL, N'10345', N'France');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10249, 79, 6, '20060705 00:00:00.000', '20060816 00:00:00.000', '20060710 00:00:00.000', 1, 11.61, N'Ship to 79-C', N'Luisenstr. 9012', N'Münster', NULL, N'10328', N'Germany');
+  VALUES(2, 2, 6, '20060705 00:00:00.000', '20060816 00:00:00.000', '20060710 00:00:00.000', 1, 11.61, N'Ship to 79-C', N'Luisenstr. 9012', N'Münster', NULL, N'10328', N'Germany');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10250, 34, 4, '20060708 00:00:00.000', '20060805 00:00:00.000', '20060712 00:00:00.000', 2, 65.83, N'Destination SCQXA', N'Rua do Paço, 7890', N'Rio de Janeiro', N'RJ', N'10195', N'Brazil');
+  VALUES(3, 3, 4, '20060708 00:00:00.000', '20060805 00:00:00.000', '20060712 00:00:00.000', 2, 65.83, N'Destination SCQXA', N'Rua do Paço, 7890', N'Rio de Janeiro', N'RJ', N'10195', N'Brazil');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10251, 84, 3, '20060708 00:00:00.000', '20060805 00:00:00.000', '20060715 00:00:00.000', 1, 41.34, N'Ship to 84-A', N'3456, rue du Commerce', N'Lyon', NULL, N'10342', N'France');
+  VALUES(4, 4, 3, '20060708 00:00:00.000', '20060805 00:00:00.000', '20060715 00:00:00.000', 1, 41.34, N'Ship to 84-A', N'3456, rue du Commerce', N'Lyon', NULL, N'10342', N'France');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10252, 76, 4, '20060709 00:00:00.000', '20060806 00:00:00.000', '20060711 00:00:00.000', 2, 51.30, N'Ship to 76-B', N'Boulevard Tirou, 9012', N'Charleroi', NULL, N'10318', N'Belgium');
+  VALUES(5, 5, 4, '20060709 00:00:00.000', '20060806 00:00:00.000', '20060711 00:00:00.000', 2, 51.30, N'Ship to 76-B', N'Boulevard Tirou, 9012', N'Charleroi', NULL, N'10318', N'Belgium');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10253, 34, 3, '20060710 00:00:00.000', '20060724 00:00:00.000', '20060716 00:00:00.000', 2, 58.17, N'Destination JPAIY', N'Rua do Paço, 8901', N'Rio de Janeiro', N'RJ', N'10196', N'Brazil');
+  VALUES(6, 6, 3, '20060710 00:00:00.000', '20060724 00:00:00.000', '20060716 00:00:00.000', 2, 58.17, N'Destination JPAIY', N'Rua do Paço, 8901', N'Rio de Janeiro', N'RJ', N'10196', N'Brazil');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10254, 14, 5, '20060711 00:00:00.000', '20060808 00:00:00.000', '20060723 00:00:00.000', 2, 22.98, N'Destination YUJRD', N'Hauptstr. 1234', N'Bern', NULL, N'10139', N'Switzerland');
+  VALUES(7, 7, 5, '20060711 00:00:00.000', '20060808 00:00:00.000', '20060723 00:00:00.000', 2, 22.98, N'Destination YUJRD', N'Hauptstr. 1234', N'Bern', NULL, N'10139', N'Switzerland');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10255, 68, 9, '20060712 00:00:00.000', '20060809 00:00:00.000', '20060715 00:00:00.000', 3, 148.33, N'Ship to 68-A', N'Starenweg 6789', N'Genève', NULL, N'10294', N'Switzerland');
+  VALUES(8, 8, 9, '20060712 00:00:00.000', '20060809 00:00:00.000', '20060715 00:00:00.000', 3, 148.33, N'Ship to 68-A', N'Starenweg 6789', N'Genève', NULL, N'10294', N'Switzerland');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10256, 88, 3, '20060715 00:00:00.000', '20060812 00:00:00.000', '20060717 00:00:00.000', 2, 13.97, N'Ship to 88-B', N'Rua do Mercado, 5678', N'Resende', N'SP', N'10354', N'Brazil');
+  VALUES(9, 9, 3, '20060715 00:00:00.000', '20060812 00:00:00.000', '20060717 00:00:00.000', 2, 13.97, N'Ship to 88-B', N'Rua do Mercado, 5678', N'Resende', N'SP', N'10354', N'Brazil');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10257, 35, 4, '20060716 00:00:00.000', '20060813 00:00:00.000', '20060722 00:00:00.000', 3, 81.91, N'Destination JYDLM', N'Carrera1234 con Ave. Carlos Soublette #8-35', N'San Cristóbal', N'Táchira', N'10199', N'Venezuela');
+  VALUES(10, 1, 4, '20060716 00:00:00.000', '20060813 00:00:00.000', '20060722 00:00:00.000', 3, 81.91, N'Destination JYDLM', N'Carrera1234 con Ave. Carlos Soublette #8-35', N'San Cristóbal', N'Táchira', N'10199', N'Venezuela');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10258, 20, 1, '20060717 00:00:00.000', '20060814 00:00:00.000', '20060723 00:00:00.000', 1, 140.51, N'Destination RVDMF', N'Kirchgasse 9012', N'Graz', NULL, N'10157', N'Austria');
+  VALUES(11, 2, 1, '20060717 00:00:00.000', '20060814 00:00:00.000', '20060723 00:00:00.000', 1, 140.51, N'Destination RVDMF', N'Kirchgasse 9012', N'Graz', NULL, N'10157', N'Austria');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10259, 13, 4, '20060718 00:00:00.000', '20060815 00:00:00.000', '20060725 00:00:00.000', 3, 3.25, N'Destination LGGCH', N'Sierras de Granada 9012', N'México D.F.', NULL, N'10137', N'Mexico');
+  VALUES(12, 3, 4, '20060718 00:00:00.000', '20060815 00:00:00.000', '20060725 00:00:00.000', 3, 3.25, N'Destination LGGCH', N'Sierras de Granada 9012', N'México D.F.', NULL, N'10137', N'Mexico');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10260, 56, 4, '20060719 00:00:00.000', '20060816 00:00:00.000', '20060729 00:00:00.000', 1, 55.09, N'Ship to 56-A', N'Mehrheimerstr. 0123', N'Köln', NULL, N'10258', N'Germany');
+  VALUES(13, 4, 4, '20060719 00:00:00.000', '20060816 00:00:00.000', '20060729 00:00:00.000', 1, 55.09, N'Ship to 56-A', N'Mehrheimerstr. 0123', N'Köln', NULL, N'10258', N'Germany');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10261, 61, 4, '20060719 00:00:00.000', '20060816 00:00:00.000', '20060730 00:00:00.000', 2, 3.05, N'Ship to 61-B', N'Rua da Panificadora, 6789', N'Rio de Janeiro', N'RJ', N'10274', N'Brazil');
+  VALUES(14, 5, 4, '20060719 00:00:00.000', '20060816 00:00:00.000', '20060730 00:00:00.000', 2, 3.05, N'Ship to 61-B', N'Rua da Panificadora, 6789', N'Rio de Janeiro', N'RJ', N'10274', N'Brazil');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10262, 65, 8, '20060722 00:00:00.000', '20060819 00:00:00.000', '20060725 00:00:00.000', 3, 48.29, N'Ship to 65-B', N'8901 Milton Dr.', N'Albuquerque', N'NM', N'10286', N'USA');
+  VALUES(15, 6, 8, '20060722 00:00:00.000', '20060819 00:00:00.000', '20060725 00:00:00.000', 3, 48.29, N'Ship to 65-B', N'8901 Milton Dr.', N'Albuquerque', N'NM', N'10286', N'USA');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10263, 20, 9, '20060723 00:00:00.000', '20060820 00:00:00.000', '20060731 00:00:00.000', 3, 146.06, N'Destination FFXKT', N'Kirchgasse 0123', N'Graz', NULL, N'10158', N'Austria');
+  VALUES(16, 7, 9, '20060723 00:00:00.000', '20060820 00:00:00.000', '20060731 00:00:00.000', 3, 146.06, N'Destination FFXKT', N'Kirchgasse 0123', N'Graz', NULL, N'10158', N'Austria');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10264, 24, 6, '20060724 00:00:00.000', '20060821 00:00:00.000', '20060823 00:00:00.000', 3, 3.67, N'Destination KBSBN', N'Åkergatan 9012', N'Bräcke', NULL, N'10167', N'Sweden');
+  VALUES(17, 8, 6, '20060724 00:00:00.000', '20060821 00:00:00.000', '20060823 00:00:00.000', 3, 3.67, N'Destination KBSBN', N'Åkergatan 9012', N'Bräcke', NULL, N'10167', N'Sweden');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10265, 7, 2, '20060725 00:00:00.000', '20060822 00:00:00.000', '20060812 00:00:00.000', 1, 55.28, N'Ship to 7-A', N'0123, place Kléber', N'Strasbourg', NULL, N'10329', N'France');
+  VALUES(18, 7, 2, '20060725 00:00:00.000', '20060822 00:00:00.000', '20060812 00:00:00.000', 1, 55.28, N'Ship to 7-A', N'0123, place Kléber', N'Strasbourg', NULL, N'10329', N'France');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10266, 87, 3, '20060726 00:00:00.000', '20060906 00:00:00.000', '20060731 00:00:00.000', 3, 25.73, N'Ship to 87-B', N'Torikatu 2345', N'Oulu', NULL, N'10351', N'Finland');
+  VALUES(19, 9, 3, '20060726 00:00:00.000', '20060906 00:00:00.000', '20060731 00:00:00.000', 3, 25.73, N'Ship to 87-B', N'Torikatu 2345', N'Oulu', NULL, N'10351', N'Finland');
 INSERT INTO "SalesOrder"("orderId", "custId", "employeeId", "orderDate", "requiredDate", "shippedDate", "shipperId", freight, "shipName", "shipAddress", "shipCity", "shipRegion", "shipPostalCode", "shipCountry")
-  VALUES(10267, 25, 4, '20060729 00:00:00.000', '20060826 00:00:00.000', '20060806 00:00:00.000', 1, 208.58, N'Destination VAPXU', N'Berliner Platz 0123', N'München', NULL, N'10168', N'Germany');
+  VALUES(20, 1, 4, '20060729 00:00:00.000', '20060826 00:00:00.000', '20060806 00:00:00.000', 1, 208.58, N'Destination VAPXU', N'Berliner Platz 0123', N'München', NULL, N'10168', N'Germany');

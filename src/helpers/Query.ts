@@ -568,6 +568,10 @@ export class Query {
 				result[relation.join.org_column] = result[relation.join.org_column][0]
 			}
 
+			if(!result[relation.join.org_column]){
+				throw new Error(`Cannot build relation. Field ${relation.join.org_column} not found in the result set. Please ensure you are selecting the column in your query`)
+			}
+
 			const where: DataSourceWhere[] = [
 				{
 					column: relation.join.column,

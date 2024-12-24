@@ -367,9 +367,31 @@ export class Authentication {
 			}
 		}
 
-		const payload = await this.jwtService.verifyAsync(jwt_token, {
-			secret: this.configService.get('JWT_KEY'),
-		})
+		let payload
+
+		try{
+			payload = await this.jwtService.verifyAsync(jwt_token, {
+				secret: this.configService.get('JWT_KEY'),
+			})
+		}catch(e){
+			this.logger.error(`[Authentication][auth] JWT verification failed: ${e.message}`)
+
+			switch(e.message){
+				case 'jwt expired':
+					return {
+						valid: false,
+						message: 'Access token expired',
+					}
+				default:
+					return {
+						valid: false,
+						message: 'Authentication Failed',
+					}
+
+			}
+		}
+
+		
 
 		if (!payload) {
 			return {

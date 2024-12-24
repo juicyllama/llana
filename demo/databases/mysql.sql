@@ -157,26 +157,26 @@ INSERT IGNORE INTO Employee(employeeId, lastName, firstName, title, titleofcourt
 
 -- ---  
 
-INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(1, N'Customer NRZBB', N'Allen, Michael', N'Sales Representative', N'Obere Str. 0123', N'Berlin', NULL, N'10092', N'Germany', N'030-3456789', N'030-0123456');
-INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(2, N'Customer MLTDN', N'Hassall, Mark', N'Owner', N'Avda. de la Constitución 5678', N'México D.F.', NULL, N'10077', N'Mexico', N'(5) 789-0123', N'(5) 456-7890');
-INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(3, N'Customer KBUDE', N'Peoples, John', N'Owner', N'Mataderos  7890', N'México D.F.', NULL, N'10097', N'Mexico', N'(5) 123-4567', NULL);
-INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(4, N'Customer HFBZG', N'Arndt, Torsten', N'Sales Representative', N'7890 Hanover Sq.', N'London', NULL, N'10046', N'UK', N'(171) 456-7890', N'(171) 456-7891');
-INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(5, N'Customer HGVLZ', N'Higginbotham, Tom', N'Order Administrator', N'Berguvsvägen  5678', N'Luleå', NULL, N'10112', N'Sweden', N'0921-67 89 01', N'0921-23 45 67');
-INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(6, N'Customer XHXJV', N'Poland, Carole', N'Sales Representative', N'Forsterstr. 7890', N'Mannheim', NULL, N'10117', N'Germany', N'0621-67890', N'0621-12345');
-INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(7, N'Customer QXVLA', N'Bansal, Dushyant', N'Marketing Manager', N'2345, place Kléber', N'Strasbourg', NULL, N'10089', N'France', N'67.89.01.23', N'67.89.01.24');
-INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(8, N'Customer QUHWH', N'Ilyina, Julia', N'Owner', N'C/ Araquil, 0123', N'Madrid', NULL, N'10104', N'Spain', N'(91) 345 67 89', N'(91) 012 34 56');
-INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(9, N'Customer RTXGC', N'Raghav, Amritansh', N'Owner', N'6789, rue des Bouchers', N'Marseille', NULL, N'10105', N'France', N'23.45.67.89', N'23.45.67.80');
-INSERT IGNORE INTO Customer(custId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
-  VALUES(10, N'Customer EEALV', N'Bassols, Pilar Colome', N'Accounting Manager', N'8901 Tsawassen Blvd.', N'Tsawassen', N'BC', N'10111', N'Canada', N'(604) 901-2345', N'(604) 678-9012');
+INSERT IGNORE INTO Customer(custId, userId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
+  VALUES(1, 1, N'Customer NRZBB', N'Allen, Michael', N'Sales Representative', N'Obere Str. 0123', N'Berlin', NULL, N'10092', N'Germany', N'030-3456789', N'030-0123456');
+INSERT IGNORE INTO Customer(custId, userId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
+  VALUES(2, 1, N'Customer MLTDN', N'Hassall, Mark', N'Owner', N'Avda. de la Constitución 5678', N'México D.F.', NULL, N'10077', N'Mexico', N'(5) 789-0123', N'(5) 456-7890');
+INSERT IGNORE INTO Customer(custId, userId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
+  VALUES(3, 1, N'Customer KBUDE', N'Peoples, John', N'Owner', N'Mataderos  7890', N'México D.F.', NULL, N'10097', N'Mexico', N'(5) 123-4567', NULL);
+INSERT IGNORE INTO Customer(custId, userId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
+  VALUES(4, 1, N'Customer HFBZG', N'Arndt, Torsten', N'Sales Representative', N'7890 Hanover Sq.', N'London', NULL, N'10046', N'UK', N'(171) 456-7890', N'(171) 456-7891');
+INSERT IGNORE INTO Customer(custId, userId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
+  VALUES(5, 1, N'Customer HGVLZ', N'Higginbotham, Tom', N'Order Administrator', N'Berguvsvägen  5678', N'Luleå', NULL, N'10112', N'Sweden', N'0921-67 89 01', N'0921-23 45 67');
+INSERT IGNORE INTO Customer(custId, userId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
+  VALUES(6, 1, N'Customer XHXJV', N'Poland, Carole', N'Sales Representative', N'Forsterstr. 7890', N'Mannheim', NULL, N'10117', N'Germany', N'0621-67890', N'0621-12345');
+INSERT IGNORE INTO Customer(custId, userId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
+  VALUES(7, 1, N'Customer QXVLA', N'Bansal, Dushyant', N'Marketing Manager', N'2345, place Kléber', N'Strasbourg', NULL, N'10089', N'France', N'67.89.01.23', N'67.89.01.24');
+INSERT IGNORE INTO Customer(custId, userId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
+  VALUES(8, 1, N'Customer QUHWH', N'Ilyina, Julia', N'Owner', N'C/ Araquil, 0123', N'Madrid', NULL, N'10104', N'Spain', N'(91) 345 67 89', N'(91) 012 34 56');
+INSERT IGNORE INTO Customer(custId, userId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
+  VALUES(9, 1, N'Customer RTXGC', N'Raghav, Amritansh', N'Owner', N'6789, rue des Bouchers', N'Marseille', NULL, N'10105', N'France', N'23.45.67.89', N'23.45.67.80');
+INSERT IGNORE INTO Customer(custId, userId, companyName, contactName, contactTitle, address, city, region, postalCode, country, phone, fax)
+  VALUES(10,1, N'Customer EEALV', N'Bassols, Pilar Colome', N'Accounting Manager', N'8901 Tsawassen Blvd.', N'Tsawassen', N'BC', N'10111', N'Canada', N'(604) 901-2345', N'(604) 678-9012');
 
 
 INSERT IGNORE INTO Shipper(shipperId, companyName, phone)
