@@ -58,7 +58,7 @@ export class AuthTestingService {
 		role: string
 		records: RolePermission
 		own_records: RolePermission
-		allowed_fields?: string[]
+		allowed_fields?: string
 	}): Promise<FindOneResponseObject> {
 		const schema = await this.schema.getSchema({ table: LLANA_ROLES_TABLE, x_request_id: 'test' })
 		return (await this.query.perform(QueryPerform.CREATE, <DataSourceCreateOneOptions>{

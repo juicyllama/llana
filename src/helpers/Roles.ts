@@ -152,7 +152,6 @@ export class Roles {
 				}
 
 				if (!comparePermissions(permission.own_records, options.access)) {
-
 					permission_result = <AuthTablePermissionFailResponse>{
 						valid: false,
 						message: `Table Action ${options.access} - Permission Denied For Role ${role}`,
@@ -167,7 +166,6 @@ export class Roles {
 					options.data &&
 					options.data[permission.identity_column ?? schema.primary_key] !== options.identifier
 				) {
-
 					permission_result = <AuthTablePermissionFailResponse>{
 						valid: false,
 						message: `Identity Mismatch - You can only add ${options.table} records with your own ${permission.identity_column ?? schema.primary_key}`,
@@ -181,7 +179,6 @@ export class Roles {
 				}
 
 				if (comparePermissions(permission.own_records, options.access)) {
-
 					permission_result = <AuthTablePermissionSuccessResponse>{
 						valid: true,
 						restriction: {
@@ -293,7 +290,6 @@ export class Roles {
  * @returns
  */
 export function comparePermissions(permission: RolePermission, access: RolePermission): boolean {
-
 	let passed = false
 
 	switch (access) {

@@ -524,6 +524,104 @@ describe('App > Controller > Get', () => {
 		})
 	})
 
+	describe('Allowed Fields Results', () => {
+		it('As standard, all fields returned', async function () {
+			const result = await request(app.getHttpServer())
+				.get(`/Customer/${customer[customerSchema.primary_key]}`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+
+			expect(result.body).toBeDefined()
+			expect(result.body[customerSchema.primary_key]).toBeDefined()
+			expect(result.body.companyName).toBeDefined()
+			expect(result.body.contactName).toBeDefined()
+			expect(result.body.contactTitle).toBeDefined()
+			expect(result.body.address).toBeDefined()
+			expect(result.body.city).toBeDefined()
+			expect(result.body.region).toBeDefined()
+			expect(result.body.postalCode).toBeDefined()
+			expect(result.body.country).toBeDefined()
+			expect(result.body.phone).toBeDefined()
+			expect(result.body.fax).toBeDefined()
+		})
+
+		it('When allowed_fields are passed, only return these fields', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.WRITE,
+				own_records: RolePermission.WRITE,
+				allowed_fields: 'companyName,contactName',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.get(`/Customer/${customer[customerSchema.primary_key]}`)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeDefined()
+				expect(result.body.contactTitle).toBeUndefined()
+				expect(result.body.address).toBeUndefined()
+				expect(result.body.city).toBeUndefined()
+				expect(result.body.region).toBeUndefined()
+				expect(result.body.postalCode).toBeUndefined()
+				expect(result.body.country).toBeUndefined()
+				expect(result.body.phone).toBeUndefined()
+				expect(result.body.fax).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('When allowed_fields are passed, only return these fields even with fields passed', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.WRITE,
+				own_records: RolePermission.WRITE,
+				allowed_fields: 'companyName,contactName',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.get(
+						`/Customer/${customer[customerSchema.primary_key]}?fields=companyName,contactName,contactTitle`,
+					)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeDefined()
+				expect(result.body.contactTitle).toBeUndefined()
+				expect(result.body.address).toBeUndefined()
+				expect(result.body.city).toBeUndefined()
+				expect(result.body.region).toBeUndefined()
+				expect(result.body.postalCode).toBeUndefined()
+				expect(result.body.country).toBeUndefined()
+				expect(result.body.phone).toBeUndefined()
+				expect(result.body.fax).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
+	})
+
 	afterAll(async () => {
 		for (let i = 0; i < 10; i++) {
 			await salesOrderTestingService.deleteOrder(orders[i][salesOrderSchema.primary_key])
