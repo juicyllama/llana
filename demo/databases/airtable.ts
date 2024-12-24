@@ -130,7 +130,11 @@ const buildCustomers = async () => {
 		url: `${ENDPOINT}/meta/bases/${baseId}/tables`,
 		data: {
 			name: table,
-			fields: [{ name: 'custId', type: 'number', options: { precision: 0 } }, ...fields],
+			fields: [
+				{ name: 'custId', type: 'number', options: { precision: 0 } },
+				{ name: 'userId', type: 'number', options: { precision: 0 } },
+				...fields,
+			],
 		},
 		headers: {
 			Authorization: `Bearer ${apiKey}`,

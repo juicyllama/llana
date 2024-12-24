@@ -17,6 +17,11 @@ export class WebsocketService implements OnApplicationShutdown {
 	}
 
 	public async publish(schema: DataSourceSchema, type: PublishType, id: number | string) {
+		if (!id) {
+			this.logger.debug(`[WebsocketService] Skipping publish ${schema.table} ${type} as no id provided`)
+			return
+		}
+
 		this.logger.debug(`[WebsocketService] Publishing ${schema.table} ${type} for #${id}`)
 		if (this.redisPubClient.status !== 'ready') {
 			throw new Error('Redis client not ready')

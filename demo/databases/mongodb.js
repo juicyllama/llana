@@ -24,6 +24,11 @@ db.getCollection("_llana_relation").insertMany([{
     "column": "_id",
     "org_table": "SalesOrder",
     "org_column": "custId"
+},{
+    "table": "Customer",
+    "column": "userId",
+    "org_table": "User",
+    "org_column": "_id"
 }, {
     "table": "Employee",
     "column": "_id",
@@ -90,6 +95,7 @@ db.UserApiKey.insert({
 // Insert customers
 
 const customers = db.Customer.insertMany([{
+    "userId": user._id,
     "custId": 1,
     "fax": "030-0123456",
     "city": "Berlin",
@@ -104,6 +110,7 @@ const customers = db.Customer.insertMany([{
     "contactName": "Allen, Michael",
     "contactTitle": "Sales Representative"
 }, {
+    "userId": user._id,
     "custId": 2,
     "fax": "(5) 456-7890",
     "city": "México D.F.",
@@ -118,6 +125,7 @@ const customers = db.Customer.insertMany([{
     "contactName": "Hassall, Mark",
     "contactTitle": "Owner"
 }, {
+    "userId": user._id,
     "custId": 3,
     "fax": null,
     "city": "México D.F.",
@@ -132,6 +140,7 @@ const customers = db.Customer.insertMany([{
     "contactName": "Peoples, John",
     "contactTitle": "Owner"
 }, {
+    "userId": user._id,
     "custId": 4,
     "fax": "(171) 456-7891",
     "city": "London",
@@ -146,6 +155,7 @@ const customers = db.Customer.insertMany([{
     "contactName": "Arndt, Torsten",
     "contactTitle": "Sales Representative"
 }, {
+    "userId": user._id,
     "custId": 5,
     "fax": "0921-23 45 67",
     "city": "Luleå",
@@ -160,6 +170,7 @@ const customers = db.Customer.insertMany([{
     "contactName": "Higginbotham, Tom",
     "contactTitle": "Order Administrator"
 }, {
+    "userId": user._id,
     "custId": 6,
     "fax": "0621-12345",
     "city": "Mannheim",
@@ -174,6 +185,7 @@ const customers = db.Customer.insertMany([{
     "contactName": "Poland, Carole",
     "contactTitle": "Sales Representative"
 }, {
+    "userId": user._id,
     "custId": 7,
     "fax": "67.89.01.24",
     "city": "Strasbourg",
@@ -188,6 +200,7 @@ const customers = db.Customer.insertMany([{
     "contactName": "Bansal, Dushyant",
     "contactTitle": "Marketing Manager"
 }, {
+    "userId": user._id,
     "custId": 8,
     "fax": "(91) 012 34 56",
     "city": "Madrid",
@@ -202,6 +215,7 @@ const customers = db.Customer.insertMany([{
     "contactName": "Ilyina, Julia",
     "contactTitle": "Owner"
 }, {
+    "userId": user._id,
     "custId": 9,
     "fax": "23.45.67.80",
     "city": "Marseille",
@@ -216,6 +230,7 @@ const customers = db.Customer.insertMany([{
     "contactName": "Raghav, Amritansh",
     "contactTitle": "Owner"
 }, {
+    "userId": user._id,
     "custId": 10,
     "fax": "(604) 678-9012",
     "city": "Tsawassen",

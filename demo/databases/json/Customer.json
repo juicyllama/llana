@@ -1,4 +1,5 @@
 [{
+    "userId": 1,
     "custId": 1,
     "fax": "030-0123456",
     "city": "Berlin",
@@ -13,6 +14,7 @@
     "contactName": "Allen, Michael",
     "contactTitle": "Sales Representative"
 }, {
+    "userId": 1,
     "custId": 2,
     "fax": "(5) 456-7890",
     "city": "México D.F.",
@@ -27,6 +29,7 @@
     "contactName": "Hassall, Mark",
     "contactTitle": "Owner"
 }, {
+    "userId": 1,
     "custId": 3,
     "fax": null,
     "city": "México D.F.",
@@ -41,6 +44,7 @@
     "contactName": "Peoples, John",
     "contactTitle": "Owner"
 }, {
+    "userId": 1,
     "custId": 4,
     "fax": "(171) 456-7891",
     "city": "London",
@@ -55,6 +59,7 @@
     "contactName": "Arndt, Torsten",
     "contactTitle": "Sales Representative"
 }, {
+    "userId": 1,
     "custId": 5,
     "fax": "0921-23 45 67",
     "city": "Luleå",
@@ -69,6 +74,7 @@
     "contactName": "Higginbotham, Tom",
     "contactTitle": "Order Administrator"
 }, {
+    "userId": 1,
     "custId": 6,
     "fax": "0621-12345",
     "city": "Mannheim",
@@ -83,6 +89,7 @@
     "contactName": "Poland, Carole",
     "contactTitle": "Sales Representative"
 }, {
+    "userId": 1,
     "custId": 7,
     "fax": "67.89.01.24",
     "city": "Strasbourg",
@@ -97,6 +104,7 @@
     "contactName": "Bansal, Dushyant",
     "contactTitle": "Marketing Manager"
 }, {
+    "userId": 1,
     "custId": 8,
     "fax": "(91) 012 34 56",
     "city": "Madrid",
@@ -111,6 +119,7 @@
     "contactName": "Ilyina, Julia",
     "contactTitle": "Owner"
 }, {
+    "userId": 1,
     "custId": 9,
     "fax": "23.45.67.80",
     "city": "Marseille",
@@ -125,6 +134,7 @@
     "contactName": "Raghav, Amritansh",
     "contactTitle": "Owner"
 }, {
+    "userId": 1,
     "custId": 10,
     "fax": "(604) 678-9012",
     "city": "Tsawassen",

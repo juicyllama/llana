@@ -21,6 +21,7 @@ import {
 	DataSourceFindOneOptions,
 	DataSourceListTablesOptions,
 	DataSourceSchema,
+	DataSourceSchemaRelation,
 	DataSourceType,
 	DataSourceUniqueCheckOptions,
 	DataSourceUpdateOneOptions,
@@ -564,15 +565,20 @@ export class Query {
 		}
 
 		for (const relation of options.relations) {
-			if (Array.isArray(result[relation.join.org_column])) {
-				result[relation.join.org_column] = result[relation.join.org_column][0]
+			const rel = this.getTableRelationColumn(relation.join, options.schema.table)
+			const relationTable = this.getChildTableRelation(relation.join, options.schema.table)
+
+			if (!result[rel]) {
+				throw new Error(
+					`Cannot build relation. Field ${rel} not found in the result set. Please ensure you are selecting the column in your query`,
+				)
 			}
 
 			const where: DataSourceWhere[] = [
 				{
-					column: relation.join.column,
+					column: relationTable.column,
 					operator: WhereOperator.equals,
-					value: result[relation.join.org_column],
+					value: result[rel],
 				},
 			]
 
@@ -603,5 +609,35 @@ export class Query {
 		}
 
 		return result
+	}
+
+	/**
+	 * Get a relation column from a relation table
+	 */
+
+	getTableRelationColumn(relation: DataSourceSchemaRelation, currentTable: string): string {
+		if (relation.table === currentTable) {
+			return relation.column
+		}
+
+		return relation.org_column
+	}
+
+	/**
+	 * Get a "child" table relation from a relation
+	 */
+
+	getChildTableRelation(relation: DataSourceSchemaRelation, currentTable: string): { table: string; column: string } {
+		if (relation.table === currentTable) {
+			return {
+				table: relation.org_table,
+				column: relation.org_column,
+			}
+		}
+
+		return {
+			table: relation.table,
+			column: relation.column,
+		}
 	}
 }

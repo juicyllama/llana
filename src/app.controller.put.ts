@@ -43,6 +43,7 @@ export class PutController {
 		}
 
 		let schema: DataSourceSchema
+		let fields = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -50,36 +51,25 @@ export class PutController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({
+		// Is the table public?
+		let auth = await this.authentication.public({
 			table: table_name,
+			access_level: RolePermission.WRITE,
 			x_request_id,
-			access: RolePermission.WRITE,
-			headers: req.headers,
-			body: req.body,
-			query: req.query,
 		})
+
+		// If not public, perform auth
 		if (!auth.valid) {
-			return res.status(401).send(this.response.text(auth.message))
-		}
-
-		//perform role check
-
-		const role_where = []
-
-		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission({
-				identifier: auth.user_identifier,
+			auth = await this.authentication.auth({
 				table: table_name,
-				access: RolePermission.WRITE,
 				x_request_id,
+				access: RolePermission.WRITE,
+				headers: req.headers,
+				body: req.body,
+				query: req.query,
 			})
-
-			if (!permission.valid) {
-				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-			}
-
-			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
+			if (!auth.valid) {
+				return res.status(401).send(this.response.text(auth.message))
 			}
 		}
 
@@ -123,10 +113,6 @@ export class PutController {
 			},
 		]
 
-		if (role_where.length > 0) {
-			where.concat(role_where)
-		}
-
 		//Check record exists
 
 		const record = (await this.query.perform(
@@ -142,42 +128,24 @@ export class PutController {
 			return res.status(400).send(this.response.text(`Record with id ${id} not found`))
 		}
 
-		try {
-			if (table_name === LLANA_WEBHOOK_TABLE) {
-				//perform auth on webhook table
-				const auth = await this.authentication.auth({
-					table: record.table,
-					x_request_id,
-					access: RolePermission.READ,
-					headers: req.headers,
-					body: req.body,
-					query: req.query,
-				})
-				if (!auth.valid) {
-					return res.status(401).send(auth.message)
-				}
+		// If not public, perform auth
+		if (auth.user_identifier) {
+			const permission = await this.roles.tablePermission({
+				identifier: auth.user_identifier,
+				table: table_name,
+				access: RolePermission.WRITE,
+				data: record,
+				x_request_id,
+			})
 
-				//perform role check
-				if (auth.user_identifier) {
-					const { valid, message } = (await this.roles.tablePermission({
-						identifier: auth.user_identifier,
-						table: record.table,
-						access: RolePermission.READ,
-						x_request_id,
-					})) as AuthTablePermissionFailResponse
-
-					if (!valid) {
-						return res.status(401).send(this.response.text(message))
-					}
-				}
-				const result = await this.query.perform(
-					QueryPerform.UPDATE,
-					{ id, schema, data: validate.instance },
-					x_request_id,
-				)
-				return res.status(200).send(result)
+			if (!permission.valid) {
+				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
 
+			fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
+		}
+
+		try {
 			const result = await this.query.perform(
 				QueryPerform.UPDATE,
 				{ id, schema, data: validate.instance },
@@ -185,21 +153,19 @@ export class PutController {
 			)
 			await this.websocket.publish(schema, PublishType.UPDATE, result[schema.primary_key])
 			await this.webhooks.publish(schema, PublishType.UPDATE, result[schema.primary_key], auth.user_identifier)
+
+			if (fields.length) {
+				const filtered = {}
+				for (const field of fields) {
+					filtered[field] = result[field]
+				}
+				return res.status(200).send(filtered)
+			}
+
 			return res.status(200).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
 		}
-	}
-
-	@Patch('*/:id')
-	async updateByIdPatch(
-		@Req() req,
-		@Res() res,
-		@Body() body: Partial<any>,
-		@Headers() headers: HeaderParams,
-		@Param('id') id: string,
-	): Promise<FindOneResponseObject> {
-		return await this.updateById(req, res, body, headers, id)
 	}
 
 	@Put('*/')
@@ -217,6 +183,7 @@ export class PutController {
 		}
 
 		let schema: DataSourceSchema
+		let fields = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -224,36 +191,25 @@ export class PutController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({
+		// Is the table public?
+		let auth = await this.authentication.public({
 			table: table_name,
+			access_level: RolePermission.WRITE,
 			x_request_id,
-			access: RolePermission.WRITE,
-			headers: req.headers,
-			body: req.body,
-			query: req.query,
 		})
+
+		// If not public, perform auth
 		if (!auth.valid) {
-			return res.status(401).send(this.response.text(auth.message))
-		}
-
-		//perform role check
-
-		const role_where = []
-
-		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission({
-				identifier: auth.user_identifier,
+			auth = await this.authentication.auth({
 				table: table_name,
-				access: RolePermission.WRITE,
 				x_request_id,
+				access: RolePermission.WRITE,
+				headers: req.headers,
+				body: req.body,
+				query: req.query,
 			})
-
-			if (!permission.valid) {
-				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-			}
-
-			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
+			if (!auth.valid) {
+				return res.status(401).send(this.response.text(auth.message))
 			}
 		}
 
@@ -264,151 +220,163 @@ export class PutController {
 			return res.status(400).send(this.response.text(`No primary key found for table ${table_name}`))
 		}
 
-		if (body instanceof Array) {
-			const total = body.length
-			let successful = 0
-			let errored = 0
-			const errors = []
-			const data: FindOneResponseObject[] = []
+		if (!(body instanceof Array)) {
+			return res.status(400).send(this.response.text('Body must be an array'))
+		}
+		const total = body.length
+		let successful = 0
+		let errored = 0
+		const errors = []
+		const data: FindOneResponseObject[] = []
 
-			for (const item of body) {
-				//validate input data
-				const validate = await this.schema.validateData(schema, item)
-				if (!validate.valid) {
-					errored++
-					errors.push({
-						item: body.indexOf(item),
-						message: validate.message,
-					})
-					continue
-				}
-
-				const validateKey = await this.schema.validateData(schema, { [primary_key]: item[primary_key] })
-				if (!validateKey.valid) {
-					errored++
-					errors.push({
-						item: body.indexOf(item),
-						message: validateKey.message,
-					})
-					continue
-				}
-
-				//validate uniqueness
-				const uniqueValidation = (await this.query.perform(
-					QueryPerform.UNIQUE,
-					{
-						schema,
-						data: item,
-						id: item[primary_key],
-					},
-					x_request_id,
-				)) as IsUniqueResponse
-
-				if (!uniqueValidation.valid) {
-					errored++
-					errors.push({
-						item: body.indexOf(item),
-						message: uniqueValidation.message,
-					})
-					continue
-				}
-
-				const where = <DataSourceWhere[]>[
-					{
-						column: primary_key,
-						operator: WhereOperator.equals,
-						value: item[primary_key],
-					},
-				]
-
-				if (role_where.length > 0) {
-					where.concat(role_where)
-				}
-
-				//Check record exists
-
-				const record = (await this.query.perform(
-					QueryPerform.FIND_ONE,
-					{
-						schema,
-						where,
-					},
-					x_request_id,
-				)) as FindOneResponseObject
-
-				if (!record) {
-					errored++
-					errors.push({
-						item: body.indexOf(item),
-						message: `Record with id ${item[primary_key]} not found`,
-					})
-					continue
-				}
-
-				try {
-					if (table_name === LLANA_WEBHOOK_TABLE) {
-						//perform auth on webhook table
-						const auth = await this.authentication.auth({
-							table: record.table,
-							x_request_id,
-							access: RolePermission.READ,
-							headers: req.headers,
-							body: req.body,
-							query: req.query,
-						})
-						if (!auth.valid) {
-							return res.status(401).send(auth.message)
-						}
-
-						//perform role check
-						if (auth.user_identifier) {
-							const { valid, message } = (await this.roles.tablePermission({
-								identifier: auth.user_identifier,
-								table: record.table,
-								access: RolePermission.READ,
-								x_request_id,
-							})) as AuthTablePermissionFailResponse
-
-							if (!valid) {
-								return res.status(401).send(this.response.text(message))
-							}
-						}
-					}
-
-					const result = (await this.query.perform(
-						QueryPerform.UPDATE,
-						{ id: item[primary_key], schema, data: validate.instance },
-						x_request_id,
-					)) as FindOneResponseObject
-					await this.websocket.publish(schema, PublishType.UPDATE, result[schema.primary_key])
-					await this.webhooks.publish(
-						schema,
-						PublishType.UPDATE,
-						result[schema.primary_key],
-						auth.user_identifier,
-					)
-					successful++
-					data.push(result)
-				} catch (e) {
-					errored++
-					errors.push({
-						item: body.indexOf(item),
-						message: e.message,
-					})
-					continue
-				}
+		for (const item of body) {
+			//validate input data
+			const validate = await this.schema.validateData(schema, item)
+			if (!validate.valid) {
+				errored++
+				errors.push({
+					item: body.indexOf(item),
+					message: validate.message,
+				})
+				continue
 			}
 
-			return res.status(200).send({
-				total,
-				successful,
-				errored,
-				errors,
-				data,
-			} as UpdateManyResponseObject)
+			const validateKey = await this.schema.validateData(schema, { [primary_key]: item[primary_key] })
+			if (!validateKey.valid) {
+				errored++
+				errors.push({
+					item: body.indexOf(item),
+					message: validateKey.message,
+				})
+				continue
+			}
+
+			//validate uniqueness
+			const uniqueValidation = (await this.query.perform(
+				QueryPerform.UNIQUE,
+				{
+					schema,
+					data: item,
+					id: item[primary_key],
+				},
+				x_request_id,
+			)) as IsUniqueResponse
+
+			if (!uniqueValidation.valid) {
+				errored++
+				errors.push({
+					item: body.indexOf(item),
+					message: uniqueValidation.message,
+				})
+				continue
+			}
+
+			const where = <DataSourceWhere[]>[
+				{
+					column: primary_key,
+					operator: WhereOperator.equals,
+					value: item[primary_key],
+				},
+			]
+
+			//Check record exists
+
+			const record = (await this.query.perform(
+				QueryPerform.FIND_ONE,
+				{
+					schema,
+					where,
+				},
+				x_request_id,
+			)) as FindOneResponseObject
+
+			if (!record) {
+				errored++
+				errors.push({
+					item: body.indexOf(item),
+					message: `Record with id ${item[primary_key]} not found`,
+				})
+				continue
+			}
+
+			//Perform role validation on each record
+			if (auth.user_identifier) {
+				const permission = await this.roles.tablePermission({
+					identifier: auth.user_identifier,
+					table: table_name,
+					access: RolePermission.WRITE,
+					data: {
+						...record,
+						...item,
+					},
+					x_request_id,
+				})
+
+				if (!permission.valid) {
+					errored++
+					errors.push({
+						item: body.indexOf(item),
+						message: this.response.text((permission as AuthTablePermissionFailResponse).message),
+					})
+					continue
+				}
+
+				fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
+			}
+
+			try {
+				const result = (await this.query.perform(
+					QueryPerform.UPDATE,
+					{ id: item[primary_key], schema, data: validate.instance },
+					x_request_id,
+				)) as FindOneResponseObject
+				await this.websocket.publish(schema, PublishType.UPDATE, result[schema.primary_key])
+				await this.webhooks.publish(
+					schema,
+					PublishType.UPDATE,
+					result[schema.primary_key],
+					auth.user_identifier,
+				)
+				successful++
+
+				if (fields.length) {
+					const filtered = {}
+					for (const field of fields) {
+						filtered[field] = result[field]
+					}
+					data.push(filtered)
+					continue
+				}
+
+				data.push(result)
+			} catch (e) {
+				errored++
+				errors.push({
+					item: body.indexOf(item),
+					message: e.message,
+				})
+				continue
+			}
 		}
 
-		return res.status(400).send(this.response.text('Body must be an array'))
+		return res.status(200).send({
+			total,
+			successful,
+			errored,
+			errors,
+			data,
+		} as UpdateManyResponseObject)
+	}
+
+	@Patch('*/:id')
+	async updateByIdPatch(
+		@Req() req,
+		@Res() res,
+		@Body() body: Partial<any>,
+		@Headers() headers: HeaderParams,
+		@Param('id') id: string,
+	): Promise<FindOneResponseObject> {
+		return await this.updateById(req, res, body, headers, id)
 	}
 
 	@Patch('*/')

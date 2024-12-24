@@ -12,7 +12,7 @@ import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { WebsocketService } from './modules/websocket/websocket.service'
-import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
+import { AuthTablePermissionFailResponse } from './types/auth.types'
 import {
 	DataSourceConfig,
 	DataSourceSchema,
@@ -58,36 +58,25 @@ export class DeleteController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({
+		// Is the table public?
+		let auth = await this.authentication.public({
 			table: table_name,
+			access_level: RolePermission.DELETE,
 			x_request_id,
-			access: RolePermission.DELETE,
-			headers: req.headers,
-			body: req.body,
-			query: req.query,
 		})
+
+		// If not public, perform auth
 		if (!auth.valid) {
-			return res.status(401).send(this.response.text(auth.message))
-		}
-
-		//perform role check
-
-		const role_where = []
-
-		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission({
-				identifier: auth.user_identifier,
+			auth = await this.authentication.auth({
 				table: table_name,
-				access: RolePermission.DELETE,
 				x_request_id,
+				access: RolePermission.DELETE,
+				headers: req.headers,
+				body: req.body,
+				query: req.query,
 			})
-
-			if (!permission.valid) {
-				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-			}
-
-			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
+			if (!auth.valid) {
+				return res.status(401).send(this.response.text(auth.message))
 			}
 		}
 
@@ -111,10 +100,6 @@ export class DeleteController {
 			},
 		]
 
-		if (role_where.length > 0) {
-			where.concat(role_where)
-		}
-
 		//Check record exists
 
 		const record = (await this.query.perform(
@@ -130,6 +115,21 @@ export class DeleteController {
 			return res.status(400).send(this.response.text(`Record with id ${id} not found`))
 		}
 
+		//perform role check
+		if (auth.user_identifier) {
+			const permission = await this.roles.tablePermission({
+				identifier: auth.user_identifier,
+				table: table_name,
+				access: RolePermission.DELETE,
+				data: record,
+				x_request_id,
+			})
+
+			if (!permission.valid) {
+				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+			}
+		}
+
 		//Soft or Hard delete check
 		const databaseConfig: DataSourceConfig = this.configService.get('database')
 
@@ -140,44 +140,6 @@ export class DeleteController {
 		}
 
 		try {
-			if (table_name === LLANA_WEBHOOK_TABLE) {
-				//perform auth on webhook table
-				const auth = await this.authentication.auth({
-					table: record.table,
-					x_request_id,
-					access: RolePermission.READ,
-					headers: req.headers,
-					body: req.body,
-					query: req.query,
-				})
-				if (!auth.valid) {
-					return res.status(401).send(auth.message)
-				}
-
-				//perform role check
-				if (auth.user_identifier) {
-					const { valid, message } = (await this.roles.tablePermission({
-						identifier: auth.user_identifier,
-						table: record.table,
-						access: RolePermission.READ,
-						x_request_id,
-					})) as AuthTablePermissionFailResponse
-
-					if (!valid) {
-						return res.status(401).send(this.response.text(message))
-					}
-				}
-				const result = await this.query.perform(
-					QueryPerform.DELETE,
-					{
-						id: id,
-						schema,
-					},
-					x_request_id,
-				)
-				return res.status(200).send(result)
-			}
-
 			const result = await this.query.perform(
 				QueryPerform.DELETE,
 				{
@@ -200,7 +162,7 @@ export class DeleteController {
 		@Req() req,
 		@Res() res,
 		@Headers() headers: HeaderParams,
-		@Body() body: Partial<any>[],
+		@Body() body: Partial<any> | Partial<any>[],
 	): Promise<DeleteManyResponseObject> {
 		const x_request_id = headers['x-request-id']
 		let table_name = UrlToTable(req.originalUrl, 1)
@@ -217,36 +179,25 @@ export class DeleteController {
 			return res.status(404).send(this.response.text(e.message))
 		}
 
-		const auth = await this.authentication.auth({
+		// Is the table public?
+		let auth = await this.authentication.public({
 			table: table_name,
+			access_level: RolePermission.DELETE,
 			x_request_id,
-			access: RolePermission.DELETE,
-			headers: req.headers,
-			body: req.body,
-			query: req.query,
 		})
+
+		// If not public, perform auth
 		if (!auth.valid) {
-			return res.status(401).send(this.response.text(auth.message))
-		}
-
-		//perform role check
-
-		const role_where = []
-
-		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission({
-				identifier: auth.user_identifier,
+			auth = await this.authentication.auth({
 				table: table_name,
-				access: RolePermission.DELETE,
 				x_request_id,
+				access: RolePermission.DELETE,
+				headers: req.headers,
+				body: req.body,
+				query: req.query,
 			})
-
-			if (!permission.valid) {
-				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-			}
-
-			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).restriction) {
-				role_where.push((permission as AuthTablePermissionSuccessResponse).restriction)
+			if (!auth.valid) {
+				return res.status(401).send(this.response.text(auth.message))
 			}
 		}
 
@@ -264,6 +215,24 @@ export class DeleteController {
 			const errors = []
 
 			for (const item of body) {
+				if (auth.user_identifier) {
+					const permission = await this.roles.tablePermission({
+						identifier: auth.user_identifier,
+						table: table_name,
+						access: RolePermission.DELETE,
+						data: item,
+						x_request_id,
+					})
+
+					if (!permission.valid) {
+						errored++
+						errors.push({
+							item: body.indexOf(item),
+							message: this.response.text((permission as AuthTablePermissionFailResponse).message),
+						})
+					}
+				}
+
 				const id = item[primary_key]
 
 				const validateKey = await this.schema.validateData(schema, { [primary_key]: id })
@@ -278,10 +247,6 @@ export class DeleteController {
 						value: id,
 					},
 				]
-
-				if (role_where.length > 0) {
-					where.concat(role_where)
-				}
 
 				//Check record exists
 
@@ -316,35 +281,6 @@ export class DeleteController {
 				}
 
 				try {
-					if (table_name === LLANA_WEBHOOK_TABLE) {
-						//perform auth on webhook table
-						const auth = await this.authentication.auth({
-							table: record.table,
-							x_request_id,
-							access: RolePermission.READ,
-							headers: req.headers,
-							body: req.body,
-							query: req.query,
-						})
-						if (!auth.valid) {
-							return res.status(401).send(auth.message)
-						}
-
-						//perform role check
-						if (auth.user_identifier) {
-							const { valid, message } = (await this.roles.tablePermission({
-								identifier: auth.user_identifier,
-								table: record.table,
-								access: RolePermission.READ,
-								x_request_id,
-							})) as AuthTablePermissionFailResponse
-
-							if (!valid) {
-								return res.status(401).send(this.response.text(message))
-							}
-						}
-					}
-
 					await this.query.perform(
 						QueryPerform.DELETE,
 						{

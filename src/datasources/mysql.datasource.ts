@@ -595,7 +595,6 @@ export class MySQL {
 	 */
 
 	private pipeObjectFromDataSource(options: DataSourceFindOneOptions, data: { [key: string]: any }): object {
-
 		for (const key in data) {
 			let column
 
