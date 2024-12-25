@@ -257,10 +257,22 @@ export class Oracle {
 	async createTable(schema: DataSourceSchema, x_request_id?: string): Promise<boolean> {
 		try {
 			const columns = schema.columns.map(column => {
-				let column_string = `"${column.field}" ${this.columnTypeToDataSource(column.type)}`
+				// Oracle uses uppercase for system identifiers
+				const columnName = column.field.toUpperCase()
+				let columnType = this.columnTypeToDataSource(column.type)
+				
+				// For auto-increment columns, use NUMBER
+				if (column.auto_increment) {
+					columnType = OracleColumnType.NUMBER
+				}
+				
+				let column_string = `"${columnName}" ${columnType}`
 
-				if (column.type === DataSourceColumnType.STRING) {
+				// Add precision/length specifications after the type
+				if (column.type === DataSourceColumnType.STRING || column.type === DataSourceColumnType.ENUM) {
 					column_string += `(${column.extra?.length ?? 255})`
+				} else if (column.type === DataSourceColumnType.NUMBER && column.auto_increment) {
+					column_string = `"${columnName}" ${OracleColumnType.NUMBER}(38)`  // Maximum precision for auto-increment
 				}
 
 				if (column.required) {
@@ -282,26 +294,48 @@ export class Oracle {
 				return column_string
 			})
 
-			const command = `CREATE TABLE "${schema.table}" (${columns.join(', ')})`
+			// Oracle defaults to uppercase, so we need to be explicit about case
+			const tableName = schema.table.toUpperCase()
+			const command = `CREATE TABLE "${tableName}" (${columns.join(', ')})`
 
 			await this.query({ sql: command })
 
 			// Handle auto_increment columns using sequences
 			for (const column of schema.columns) {
 				if (column.auto_increment) {
-					const seqName = `${schema.table}_${column.field}_seq`
+					const seqName = `${schema.table.toUpperCase()}_${column.field.toUpperCase()}_SEQ`
+					const columnName = column.field.toUpperCase()
+					
+					// Drop sequence if exists (to avoid errors on retries)
+					await this.query({ 
+						sql: `BEGIN
+							EXECUTE IMMEDIATE 'DROP SEQUENCE ${seqName}';
+							EXCEPTION WHEN OTHERS THEN NULL;
+						END;`
+					})
+					
+					// Create sequence
 					await this.query({ 
 						sql: `CREATE SEQUENCE ${seqName} START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE` 
 					})
 					
+					// Drop trigger if exists
+					await this.query({ 
+						sql: `BEGIN
+							EXECUTE IMMEDIATE 'DROP TRIGGER "${schema.table.toUpperCase()}_${columnName}_TRG"';
+							EXCEPTION WHEN OTHERS THEN NULL;
+						END;`
+					})
+					
+					// Create trigger
 					await this.query({
 						sql: `
-							CREATE OR REPLACE TRIGGER "${schema.table}_${column.field}_trg"
-							BEFORE INSERT ON "${schema.table}"
+							CREATE OR REPLACE TRIGGER "${schema.table.toUpperCase()}_${columnName}_TRG"
+							BEFORE INSERT ON "${schema.table.toUpperCase()}"
 							FOR EACH ROW
 							BEGIN
-								IF :new."${column.field}" IS NULL THEN
-									SELECT ${seqName}.NEXTVAL INTO :new."${column.field}" FROM dual;
+								IF :new."${columnName}" IS NULL THEN
+									SELECT ${seqName}.NEXTVAL INTO :new."${columnName}" FROM dual;
 								END IF;
 							END;
 						`
@@ -314,14 +348,14 @@ export class Oracle {
 				if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
 					const enumValues = column.enums.map(v => `'${v}'`).join(', ')
 					await this.query({
-						sql: `ALTER TABLE "${schema.table}" ADD CONSTRAINT "CK_${schema.table}_${column.field}" CHECK ("${column.field}" IN (${enumValues}))`
+						sql: `ALTER TABLE "${schema.table.toUpperCase()}" ADD CONSTRAINT "CK_${schema.table.toUpperCase()}_${column.field.toUpperCase()}" CHECK ("${column.field}" IN (${enumValues}))`
 					})
 				}
 			}
 
 			if (schema.relations?.length) {
 				for (const relation of schema.relations) {
-					const command = `ALTER TABLE "${schema.table}" ADD CONSTRAINT "FK_${schema.table}_${relation.column}" FOREIGN KEY ("${relation.column}") REFERENCES "${relation.org_table}"("${relation.org_column}")`
+					const command = `ALTER TABLE "${schema.table.toUpperCase()}" ADD CONSTRAINT "FK_${schema.table.toUpperCase()}_${relation.column.toUpperCase()}" FOREIGN KEY ("${relation.column}") REFERENCES "${relation.org_table.toUpperCase()}"("${relation.org_column}")`
 					await this.query({ sql: command })
 				}
 			}
@@ -601,7 +635,7 @@ export class Oracle {
 			case DataSourceColumnType.NUMBER:
 				return OracleColumnType.NUMBER
 			case DataSourceColumnType.BOOLEAN:
-				return OracleColumnType.BOOLEAN
+				return OracleColumnType.BOOLEAN  // Already defined as NUMBER(1)
 			case DataSourceColumnType.DATE:
 				return OracleColumnType.TIMESTAMP
 			case DataSourceColumnType.JSON:
