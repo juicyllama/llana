@@ -68,7 +68,11 @@ export class AppBootup implements OnApplicationBootstrap {
 			APP_BOOT_CONTEXT,
 		)) as ListTablesResponseObject
 
-		if (!database.tables.includes(LLANA_PUBLIC_TABLES)) {
+		// Oracle stores table names in uppercase
+		const tableExists = database.tables.some(table => 
+			table.toLowerCase() === LLANA_PUBLIC_TABLES.toLowerCase()
+		)
+		if (!tableExists) {
 			this.logger.log(`Creating ${LLANA_PUBLIC_TABLES} schema as it does not exist`, APP_BOOT_CONTEXT)
 
 			/**

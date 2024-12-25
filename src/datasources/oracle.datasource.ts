@@ -296,9 +296,19 @@ export class Oracle {
 
 			// Oracle defaults to uppercase, so we need to be explicit about case
 			const tableName = schema.table.toUpperCase()
+			
+			// Drop table if it exists (to handle retries gracefully)
+			await this.query({ 
+				sql: `BEGIN
+					EXECUTE IMMEDIATE 'DROP TABLE "${tableName}" CASCADE CONSTRAINTS';
+					EXCEPTION WHEN OTHERS THEN NULL;
+				END;`
+			})
+			
 			const command = `CREATE TABLE "${tableName}" (${columns.join(', ')})`
-
-			await this.query({ sql: command })
+			
+			this.logger.debug(`[${DATABASE_TYPE}][createTable] Executing SQL: ${command}`, x_request_id)
+			await this.query({ sql: command, x_request_id })
 
 			// Handle auto_increment columns using sequences
 			for (const column of schema.columns) {
@@ -363,7 +373,24 @@ export class Oracle {
 			return true
 		} catch (e) {
 			this.logger.error(
-				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table} - ${e}`,
+				`[${DATABASE_TYPE}][createTable] Error creating table ${schema.table}:`,
+				x_request_id,
+			)
+			this.logger.error(`Schema: ${JSON.stringify(schema, null, 2)}`, x_request_id)
+			this.logger.error(`Error: ${e.message}\n${e.stack}`, x_request_id)
+			
+			// Log the actual SQL that failed
+			const columnDefinitions = schema.columns.map(column => {
+				const columnName = column.field.toUpperCase()
+				let columnType = this.columnTypeToDataSource(column.type)
+				if (column.auto_increment) {
+					columnType = OracleColumnType.NUMBER
+				}
+				return `"${columnName}" ${columnType}`
+			}).join(', ')
+			
+			this.logger.error(
+				`[${DATABASE_TYPE}][createTable] Attempted SQL: CREATE TABLE "${schema.table.toUpperCase()}" (${columnDefinitions})`,
 				x_request_id,
 			)
 			return false
