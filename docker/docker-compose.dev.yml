@@ -139,6 +139,7 @@ services:
             - llana-network
         healthcheck:
             test: ["CMD", "sqlplus", "-L", "system/pass@//localhost:1521/XE", "AS", "SYSDBA", "SELECT", "1", "FROM", "DUAL"]
-            interval: 30s
-            timeout: 10s
-            retries: 5
+            interval: 60s
+            timeout: 30s
+            retries: 10
+            start_period: 120s
