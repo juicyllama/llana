@@ -18,6 +18,9 @@ volumes:
     llana-mssql-data:
         name: llana-mssql-data
         driver: local
+    llana-oracle-data:
+        name: llana-oracle-data
+        driver: local
 
 services:
     llana-mysql:
@@ -119,3 +122,23 @@ services:
                 echo "Script Execution is complete. Waiting for MS SQL Process to terminate 🎉"
 
                 wait $$pid
+
+    llana-oracle:
+        image: container-registry.oracle.com/database/express:latest
+        restart: always
+        container_name: llana-oracle
+        ports:
+            - '1521:1521'
+        environment:
+            ORACLE_PWD: pass
+            ORACLE_CHARACTERSET: AL32UTF8
+        volumes:
+            - llana-oracle-data:/opt/oracle/oradata
+            - ../demo/databases/oracle.sql:/docker-entrypoint-initdb.d/oracle.sql
+        networks:
+            - llana-network
+        healthcheck:
+            test: ["CMD", "sqlplus", "-L", "system/pass@//localhost:1521/XE", "AS", "SYSDBA", "SELECT", "1", "FROM", "DUAL"]
+            interval: 30s
+            timeout: 10s
+            retries: 5

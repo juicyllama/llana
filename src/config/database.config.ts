@@ -10,7 +10,7 @@ export default registerAs(
 	() =>
 		<DataSourceConfig>{
 			type: getDatabaseType(process.env.DATABASE_URI),
-			host: process.env.DATABASE_URI,
+			host: process.env.DATABASE_URI?.startsWith('oracle://') ? process.env.DATABASE_URI?.replace('oracle://', '') : process.env.DATABASE_URI,
 			defaults: {
 				limit: Number(process.env.DEFAULT_LIMIT) || 20,
 				relations: {
