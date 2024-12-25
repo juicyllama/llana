@@ -575,9 +575,9 @@ describe('App > Controller > Post', () => {
 
 	afterAll(async () => {
 		for (let customer of customers) {
-			if(customer[customerSchema.primary_key]){
+			if (customer[customerSchema.primary_key]) {
 				await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
-			}	
+			}
 		}
 		await userTestingService.deleteUser(user[userSchema.primary_key])
 		await app.close()
