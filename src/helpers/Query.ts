@@ -181,7 +181,7 @@ export class Query {
 					break
 			}
 
-			throw new Error(`Error ${pluralAction}`)
+			throw new Error(`Error ${pluralAction}: ${e.message}`)
 		}
 	}
 
