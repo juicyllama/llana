@@ -5,6 +5,7 @@ import { Airtable } from '../datasources/airtable.datasource'
 import { Mongo } from '../datasources/mongo.datasource'
 import { MSSQL } from '../datasources/mssql.datasource'
 import { MySQL } from '../datasources/mysql.datasource'
+import { Oracle } from '../datasources/oracle.datasource'
 import { Postgres } from '../datasources/postgres.datasource'
 import {
 	DeleteResponseObject,
@@ -46,6 +47,7 @@ export class Query {
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
 		private readonly airtable: Airtable,
+		private readonly oracle: Oracle,
 	) {}
 
 	async perform(
@@ -201,6 +203,8 @@ export class Query {
 				return await this.mssql.createTable(schema, x_request_id)
 			case DataSourceType.AIRTABLE:
 				return await this.airtable.createTable(schema, x_request_id)
+			case DataSourceType.ORACLE:
+				return await this.oracle.createTable(schema, x_request_id)
 			default:
 				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
@@ -229,6 +233,9 @@ export class Query {
 				break
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.createOne(options, x_request_id)
+				break
+			case DataSourceType.ORACLE:
+				result = await this.oracle.createOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -265,6 +272,9 @@ export class Query {
 				break
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.findOne(options, x_request_id)
+				break
+			case DataSourceType.ORACLE:
+				result = await this.oracle.findOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -306,6 +316,9 @@ export class Query {
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.findMany(options, x_request_id)
 				break
+			case DataSourceType.ORACLE:
+				result = await this.oracle.findMany(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -342,6 +355,9 @@ export class Query {
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.updateOne(options, x_request_id)
 				break
+			case DataSourceType.ORACLE:
+				result = await this.oracle.updateOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
@@ -377,6 +393,9 @@ export class Query {
 				break
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.deleteOne(options, x_request_id)
+				break
+			case DataSourceType.ORACLE:
+				result = await this.oracle.deleteOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -415,6 +434,9 @@ export class Query {
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.uniqueCheck(options, x_request_id)
 				break
+			case DataSourceType.ORACLE:
+				result = await this.oracle.uniqueCheck(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
@@ -448,6 +470,8 @@ export class Query {
 				return await this.mssql.truncate(table_name)
 			case DataSourceType.AIRTABLE:
 				return await this.airtable.truncate(table_name)
+			case DataSourceType.ORACLE:
+				return await this.oracle.truncate(table_name)
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -527,6 +551,9 @@ export class Query {
 				break
 			case DataSourceType.AIRTABLE:
 				tables = await this.airtable.listTables({ x_request_id })
+				break
+			case DataSourceType.ORACLE:
+				tables = await this.oracle.listTables({ x_request_id })
 				break
 			default:
 				this.logger.error(
