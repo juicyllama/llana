@@ -286,9 +286,42 @@ export class Oracle {
 
 			await this.query({ sql: command })
 
+			// Handle auto_increment columns using sequences
+			for (const column of schema.columns) {
+				if (column.auto_increment) {
+					const seqName = `${schema.table}_${column.field}_seq`
+					await this.query({ 
+						sql: `CREATE SEQUENCE ${seqName} START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE` 
+					})
+					
+					await this.query({
+						sql: `
+							CREATE OR REPLACE TRIGGER "${schema.table}_${column.field}_trg"
+							BEFORE INSERT ON "${schema.table}"
+							FOR EACH ROW
+							BEGIN
+								IF :new."${column.field}" IS NULL THEN
+									SELECT ${seqName}.NEXTVAL INTO :new."${column.field}" FROM dual;
+								END IF;
+							END;
+						`
+					})
+				}
+			}
+
+			// Add CHECK constraints for ENUM columns
+			for (const column of schema.columns) {
+				if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
+					const enumValues = column.enums.map(v => `'${v}'`).join(', ')
+					await this.query({
+						sql: `ALTER TABLE "${schema.table}" ADD CONSTRAINT "CK_${schema.table}_${column.field}" CHECK ("${column.field}" IN (${enumValues}))`
+					})
+				}
+			}
+
 			if (schema.relations?.length) {
 				for (const relation of schema.relations) {
-					const command = `ALTER TABLE "${schema.table}" ADD CONSTRAINT FK_${schema.table}_${relation.column} FOREIGN KEY (${relation.column}) REFERENCES ${relation.org_table}(${relation.org_column})`
+					const command = `ALTER TABLE "${schema.table}" ADD CONSTRAINT "FK_${schema.table}_${relation.column}" FOREIGN KEY ("${relation.column}") REFERENCES "${relation.org_table}"("${relation.org_column}")`
 					await this.query({ sql: command })
 				}
 			}
