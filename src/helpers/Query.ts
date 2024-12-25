@@ -518,6 +518,8 @@ export class Query {
 				return await this.mssql.checkConnection({ x_request_id: options.x_request_id })
 			case DataSourceType.AIRTABLE:
 				return await this.airtable.checkConnection({ x_request_id: options.x_request_id })
+			case DataSourceType.ORACLE:
+				return await this.oracle.checkConnection({ x_request_id: options.x_request_id })
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`,

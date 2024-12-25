@@ -43,7 +43,7 @@ export class Oracle {
 	/**
 	 * Check if the data source is available
 	 */
-	async checkDataSource(options: { x_request_id?: string }): Promise<boolean> {
+	async checkConnection(options: { x_request_id?: string }): Promise<boolean> {
 		try {
 			const connection = await oracledb.getConnection(this.configService.get('database.host'))
 			await connection.close()

@@ -3,7 +3,7 @@
 ## Objective is to run over each data source and run the tests, allowing us to fully test every datasource each time we run the tests
 
 ## Create array of data sources (string[])
-data_sources="mysql postgresql mongodb mssql"
+data_sources="mysql postgresql mongodb mssql oracle"
 
 errored=false
 
