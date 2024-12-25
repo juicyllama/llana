@@ -25,7 +25,7 @@ export function deconstructConnectionString(connectionString: string): {
 		}
 	}
 
-	const regex = /^(?<type>.*?):\/\/(?<username>.*?):(?<password>.*?)@(?<host>.*?):(?<port>\d+)\/(?<database>.*?)$/
+	const regex = /^(?<type>.*?):\/\/(?<username>.*?):(?<password>.*?)@(?<host>.*?)(?::(?<port>\d+))?\/(?<database>.*?)$/
 	const match = connectionString.match(regex)
 
 	if (!match || !match.groups) {
@@ -70,6 +70,8 @@ export function getDatabaseType(uri: string): DataSourceType {
 		return DataSourceType.MSSQL
 	} else if (uri.includes('airtable')) {
 		return DataSourceType.AIRTABLE
+	} else if (uri.includes('oracle')) {
+		return DataSourceType.ORACLE
 	} else {
 		throw new Error('Database type not supported')
 	}

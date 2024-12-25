@@ -45,7 +45,12 @@ export class Oracle {
 	 */
 	async checkConnection(options: { x_request_id?: string }): Promise<boolean> {
 		try {
-			const connection = await oracledb.getConnection(this.configService.get('database.host'))
+			const config = {
+				user: this.configService.get('database.username'),
+				password: this.configService.get('database.password'),
+				connectString: `${this.configService.get('database.host')}/${this.configService.get('database.database')}`
+			}
+			const connection = await oracledb.getConnection(config)
 			await connection.close()
 			return true
 		} catch (e) {
@@ -66,7 +71,12 @@ export class Oracle {
 			if (!oracledb) {
 				throw new Error(`${DATABASE_TYPE} library is not initialized`)
 			}
-			connection = await oracledb.getConnection(this.configService.get('database.host'))
+			const config = {
+				user: this.configService.get('database.username'),
+				password: this.configService.get('database.password'),
+				connectString: `${this.configService.get('database.host')}/${this.configService.get('database.database')}`
+			}
+			connection = await oracledb.getConnection(config)
 		} catch (e) {
 			this.logger.error(`[${DATABASE_TYPE}] Error creating database connection - ${e.message}`)
 			throw new Error('Error creating database connection')

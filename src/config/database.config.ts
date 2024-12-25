@@ -10,7 +10,18 @@ export default registerAs(
 	() =>
 		<DataSourceConfig>{
 			type: getDatabaseType(process.env.DATABASE_URI),
-			host: process.env.DATABASE_URI?.startsWith('oracle://') ? process.env.DATABASE_URI?.replace('oracle://', '') : process.env.DATABASE_URI,
+			host: process.env.DATABASE_URI?.startsWith('oracle://') 
+				? new URL(process.env.DATABASE_URI).host
+				: process.env.DATABASE_URI,
+			username: process.env.DATABASE_URI?.startsWith('oracle://')
+				? new URL(process.env.DATABASE_URI).username
+				: undefined,
+			password: process.env.DATABASE_URI?.startsWith('oracle://')
+				? new URL(process.env.DATABASE_URI).password
+				: undefined,
+			database: process.env.DATABASE_URI?.startsWith('oracle://')
+				? new URL(process.env.DATABASE_URI).pathname.slice(1)
+				: undefined,
 			defaults: {
 				limit: Number(process.env.DEFAULT_LIMIT) || 20,
 				relations: {
