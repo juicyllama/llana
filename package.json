@@ -47,7 +47,7 @@
 		"test:postgresql": "export DATABASE_URI=postgresql://user:pass@localhost:5432/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"test:mongodb": "export DATABASE_URI=mongodb://user:pass@localhost:27017/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"test:mssql": "export DATABASE_URI=mssql://sa:S7!0nGpAw0rD@localhost:1433/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
-		"test:oracle": "export DATABASE_URI=oracle://system:pass@localhost:1521/XE && jest --bail --runInBand --detectOpenHandles --forceExit",
+		"test:oracle": "export DATABASE_URI=oracle://system:pass@localhost:1521/FREEPDB1 && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"seed:airtable": "ts-node ./demo/databases/airtable.ts"
 	},
 	"dependencies": {

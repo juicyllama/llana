@@ -29,6 +29,7 @@ import {
 import { OracleColumnType } from '../types/datasources/oracle.types'
 import { SortCondition } from '../types/schema.types'
 import { replaceQ } from '../utils/String'
+import { deconstructConnectionString } from '../helpers/Database'
 
 const DATABASE_TYPE = DataSourceType.ORACLE
 
@@ -45,12 +46,15 @@ export class Oracle {
 	 */
 	async checkConnection(options: { x_request_id?: string }): Promise<boolean> {
 		try {
-			const config = {
-				user: this.configService.get('database.username'),
-				password: this.configService.get('database.password'),
-				connectString: `${this.configService.get('database.host')}/${this.configService.get('database.database')}`
-			}
-			const connection = await oracledb.getConnection(config)
+
+			const config = deconstructConnectionString(this.configService.get('database.host'))
+
+			const connection = await oracledb.getConnection({
+				user: config.username,
+				password: config.password,
+				connectString: `${config.host}:${config.port}/${config.database}`
+				
+			})
 			await connection.close()
 			return true
 		} catch (e) {
@@ -71,12 +75,15 @@ export class Oracle {
 			if (!oracledb) {
 				throw new Error(`${DATABASE_TYPE} library is not initialized`)
 			}
-			const config = {
-				user: this.configService.get('database.username'),
-				password: this.configService.get('database.password'),
-				connectString: `${this.configService.get('database.host')}/${this.configService.get('database.database')}`
-			}
-			connection = await oracledb.getConnection(config)
+			const config = deconstructConnectionString(this.configService.get('database.host'))
+
+			connection = await oracledb.getConnection({
+				user: config.username,
+				password: config.password,
+				connectString: `${config.host}:${config.port}/${config.database}`
+				
+			})
+
 		} catch (e) {
 			this.logger.error(`[${DATABASE_TYPE}] Error creating database connection - ${e.message}`)
 			throw new Error('Error creating database connection')
@@ -279,7 +286,7 @@ export class Oracle {
 					column_string += ' NOT NULL'
 				}
 
-				if (column.unique_key) {
+				if (!column.primary_key && column.unique_key) {
 					column_string += ' UNIQUE'
 				}
 
@@ -288,7 +295,11 @@ export class Oracle {
 				}
 
 				if (column.default !== null && column.default !== undefined) {
-					column_string += ` DEFAULT ${column.default}`
+					if(column.type === DataSourceColumnType.BOOLEAN) {
+						column.default = column.default ? 1 : 0
+					}else{
+						column_string += ` DEFAULT ${column.default}`
+					}
 				}
 
 				return column_string
@@ -326,7 +337,7 @@ export class Oracle {
 					
 					// Create sequence
 					await this.query({ 
-						sql: `CREATE SEQUENCE ${seqName} START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE` 
+						sql: `CREATE SEQUENCE "${seqName}" START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE` 
 					})
 					
 					// Drop trigger if exists
@@ -354,14 +365,14 @@ export class Oracle {
 			}
 
 			// Add CHECK constraints for ENUM columns
-			for (const column of schema.columns) {
-				if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
-					const enumValues = column.enums.map(v => `'${v}'`).join(', ')
-					await this.query({
-						sql: `ALTER TABLE "${schema.table.toUpperCase()}" ADD CONSTRAINT "CK_${schema.table.toUpperCase()}_${column.field.toUpperCase()}" CHECK ("${column.field}" IN (${enumValues}))`
-					})
-				}
-			}
+			// for (const column of schema.columns) {
+			// 	if (column.type === DataSourceColumnType.ENUM && column.enums?.length) {
+			// 		const enumValues = column.enums.map(v => `'${v}'`).join(', ')
+			// 		await this.query({
+			// 			sql: `ALTER TABLE "${schema.table.toUpperCase()}" ADD CONSTRAINT "CK_${schema.table.toUpperCase()}_${column.field.toUpperCase()}" CHECK ("${column.field}" IN (${enumValues}))`
+			// 		})
+			// 	}
+			// }
 
 			if (schema.relations?.length) {
 				for (const relation of schema.relations) {
@@ -429,7 +440,7 @@ export class Oracle {
 
 		values.push(...dataValues)
 
-		const command = `INSERT INTO "${table_name}" ("${columns.join('", "')}") VALUES (${values.map((_, i) => `:${i + 1}`).join(', ')}) RETURNING *`
+		const command = `INSERT INTO "${table_name.toUpperCase()}" (${columns.join(', ').toUpperCase()}) VALUES (${values.map((_, i) => `:${i + 1}`).join(', ')}) RETURNING *`
 
 		const result = await this.query({ sql: command, values, x_request_id })
 
