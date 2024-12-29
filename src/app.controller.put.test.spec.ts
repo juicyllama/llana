@@ -271,6 +271,41 @@ describe('App > Controller > Put', () => {
 				await authTestingService.deletePublicTablesRecord(public_table_record)
 			}
 		})
+
+		it('Can update with WRITE permissions and allowed fields', async function () {
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.WRITE,
+				allowed_fields: 'companyName',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.put(`/Customer/${customers[0][customerSchema.primary_key]}`)
+					.send({
+						companyName: 'Anything here',
+					})
+					.expect(200)
+
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeUndefined()
+				expect(result.body.contactTitle).toBeUndefined()
+				expect(result.body.address).toBeUndefined()
+				expect(result.body.city).toBeUndefined()
+				expect(result.body.region).toBeUndefined()
+				expect(result.body.postalCode).toBeUndefined()
+				expect(result.body.country).toBeUndefined()
+				expect(result.body.phone).toBeUndefined()
+				expect(result.body.fax).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
 	})
 
 	describe('Role Based Updating', () => {
@@ -546,6 +581,53 @@ describe('App > Controller > Put', () => {
 				throw e
 			} finally {
 				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('When allowed_fields are passed, only return these fields, even when there is a public_table view', async function () {
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.WRITE,
+				allowed_fields: 'companyName',
+			})
+
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.WRITE,
+				own_records: RolePermission.WRITE,
+				allowed_fields: 'companyName,contactName',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.put(`/Customer/${customers[3][customerSchema.primary_key]}`)
+					.send({
+						companyName: 'Anything here',
+					})
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeDefined()
+				expect(result.body.contactTitle).toBeUndefined()
+				expect(result.body.address).toBeUndefined()
+				expect(result.body.city).toBeUndefined()
+				expect(result.body.region).toBeUndefined()
+				expect(result.body.postalCode).toBeUndefined()
+				expect(result.body.country).toBeUndefined()
+				expect(result.body.phone).toBeUndefined()
+				expect(result.body.fax).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+				await authTestingService.deletePublicTablesRecord(public_table_record)
 			}
 		})
 

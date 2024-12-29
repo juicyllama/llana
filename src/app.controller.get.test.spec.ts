@@ -347,9 +347,48 @@ describe('App > Controller > Get', () => {
 			})
 
 			try {
-				await request(app.getHttpServer())
+				const result = await request(app.getHttpServer())
 					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
 					.expect(200)
+
+				expect(result.body).toBeDefined()
+				expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
+				expect(result.body.custId).toBeDefined()
+				expect(result.body.employeeId).toBeDefined()
+				expect(result.body.shipperId).toBeDefined()
+				expect(result.body.shipName).toBeDefined()
+				expect(result.body.freight).toBeDefined()
+				expect(result.body.orderDate).toBeDefined()
+				expect(result.body.shipCity).toBeDefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+
+		it('Can fetch with READ permissions and allowed fields', async function () {
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: salesOrderSchema.table,
+				access_level: RolePermission.READ,
+				allowed_fields: 'freight,orderDate',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+					.expect(200)
+
+				expect(result.body).toBeDefined()
+				expect(result.body[salesOrderSchema.primary_key]).toBeUndefined()
+				expect(result.body.custId).toBeUndefined()
+				expect(result.body.employeeId).toBeUndefined()
+				expect(result.body.shipperId).toBeUndefined()
+				expect(result.body.shipName).toBeUndefined()
+				expect(result.body.freight).toBeDefined()
+				expect(result.body.orderDate).toBeDefined()
+				expect(result.body.shipCity).toBeUndefined()
 			} catch (e) {
 				logger.error(e)
 				throw e
@@ -579,6 +618,50 @@ describe('App > Controller > Get', () => {
 				throw e
 			} finally {
 				await authTestingService.deleteRole(role)
+			}
+		})
+
+		it('When allowed_fields are passed, only return these fields, even when there is a public_table view', async function () {
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.WRITE,
+				allowed_fields: 'companyName',
+			})
+
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.WRITE,
+				own_records: RolePermission.WRITE,
+				allowed_fields: 'companyName,contactName',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.get(`/Customer/${customer[customerSchema.primary_key]}`)
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(200)
+
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeDefined()
+				expect(result.body.contactTitle).toBeUndefined()
+				expect(result.body.address).toBeUndefined()
+				expect(result.body.city).toBeUndefined()
+				expect(result.body.region).toBeUndefined()
+				expect(result.body.postalCode).toBeUndefined()
+				expect(result.body.country).toBeUndefined()
+				expect(result.body.phone).toBeUndefined()
+				expect(result.body.fax).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+				await authTestingService.deletePublicTablesRecord(public_table_record)
 			}
 		})
 

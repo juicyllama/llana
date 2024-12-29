@@ -102,3 +102,15 @@ export function plural(word: string, amount?: number): string {
 	}
 	return word
 }
+
+/**
+ * Convert a comma separated string to an array
+ */
+
+export function commaStringToArray(string: string): string[] {
+	if (!string) {
+		return []
+	}
+
+	return string.split(',').map(field => field.trim())
+}

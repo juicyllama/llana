@@ -11,6 +11,7 @@ import { DataSourceFindOneOptions, QueryPerform, WhereOperator } from '../types/
 import { RolePermission } from '../types/roles.types'
 import { Env } from '../utils/Env'
 import { findDotNotation } from '../utils/Find'
+import { commaStringToArray } from '../utils/String'
 import { Logger } from './Logger'
 import { Query } from './Query'
 import { comparePermissions } from './Roles'
@@ -78,6 +79,7 @@ export class Authentication {
 						return {
 							valid: true,
 							message: 'Public Access Granted',
+							allowed_fields: commaStringToArray(record.allowed_fields),
 						}
 					}
 				}
