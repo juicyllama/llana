@@ -80,7 +80,6 @@ export class Airtable {
 				},
 			})
 			this.logger.error(`Data passed: `, options.x_request_id)
-			console.dir(options.data, { depth: null })
 		}
 	}
 

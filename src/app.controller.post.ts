@@ -48,12 +48,6 @@ export class PostController {
 		let schema: DataSourceSchema
 		let queryFields = []
 
-		try {
-			schema = await this.schema.getSchema({ table: table_name, x_request_id })
-		} catch (e) {
-			return res.status(404).send(this.response.text(e.message))
-		}
-
 		// Is the table public?
 		const public_auth = await this.authentication.public({
 			table: table_name,
@@ -79,128 +73,109 @@ export class PostController {
 			body: req.body,
 			query: req.query,
 		})
+
 		if (!public_auth.valid && !auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
-		if (body instanceof Array) {
-			const total = body.length
-			let successful = 0
-			let errored = 0
-			const errors = []
-			const data: FindOneResponseObject[] = []
+		let singular = false
 
-			for (const item of body) {
-				//perform role check
-				if (auth.user_identifier) {
-					const permission = await this.roles.tablePermission({
-						identifier: auth.user_identifier,
-						table: table_name,
-						access: RolePermission.WRITE,
-						data: item,
-						x_request_id,
-					})
+		if (!(body instanceof Array)) {
+			body = [body]
+			singular = true
+		}
 
-					if (!public_auth.valid && !permission.valid) {
-						errored++
-						errors.push({
-							item: body.indexOf(item),
-							message: this.response.text((permission as AuthTablePermissionFailResponse).message),
-						})
-						continue
-					}
+		const total = body.length
+		let successful = 0
+		let errored = 0
+		const errors = []
+		const data: FindOneResponseObject[] = []
 
-					if (permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
-						if (!queryFields?.length) {
-							queryFields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
-						} else {
-							queryFields.push(...(permission as AuthTablePermissionSuccessResponse).allowed_fields)
-							queryFields = queryFields.filter(field =>
-								(permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field),
-							)
-						}
-					}
-				}
-
-				const insertResult = await this.createOneRecord(
-					{
-						schema,
-						data: item,
-					},
-					auth.user_identifier,
-					queryFields,
+		for (const item of body as Partial<any>[]) {
+			//perform role check
+			if (auth.user_identifier) {
+				const permission = await this.roles.tablePermission({
+					identifier: auth.user_identifier,
+					table: table_name,
+					access: RolePermission.WRITE,
+					data: item,
 					x_request_id,
-				)
+				})
 
-				if (!insertResult.valid) {
+				if (!public_auth.valid && !permission.valid) {
+					if (singular) {
+						return res
+							.status(401)
+							.send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+					}
+
 					errored++
 					errors.push({
-						item: Array.isArray(body) ? body.findIndex(i => i === item) : -1,
-						message: insertResult.message,
+						item: body.indexOf(item),
+						message: this.response.text((permission as AuthTablePermissionFailResponse).message),
 					})
 					continue
 				}
 
-				data.push(insertResult.result)
-				await this.websocket.publish(schema, PublishType.INSERT, insertResult.result[schema.primary_key])
-				await this.webhook.publish(
-					schema,
-					PublishType.INSERT,
-					insertResult.result[schema.primary_key],
-					auth.user_identifier,
-				)
-				successful++
-			}
-
-			return res.status(201).send({
-				total,
-				successful,
-				errored,
-				errors,
-				data,
-			} as CreateManyResponseObject)
-		}
-
-		//perform role check
-		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission({
-				identifier: auth.user_identifier,
-				table: table_name,
-				access: RolePermission.WRITE,
-				data: body,
-				x_request_id,
-			})
-
-			if (!public_auth.valid && !permission.valid) {
-				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
-			}
-
-			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
-				if (!queryFields?.length) {
-					queryFields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
-				} else {
-					queryFields.push(...(permission as AuthTablePermissionSuccessResponse).allowed_fields)
-					queryFields = queryFields.filter(field =>
-						(permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field),
-					)
+				if (permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
+					if (!queryFields?.length) {
+						queryFields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
+					} else {
+						queryFields.push(...(permission as AuthTablePermissionSuccessResponse).allowed_fields)
+						queryFields = queryFields.filter(field =>
+							(permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field),
+						)
+					}
 				}
 			}
-		}
 
-		const insertResult = await this.createOneRecord(
-			{
+			try {
+				schema = await this.schema.getSchema({ table: table_name, x_request_id })
+			} catch (e) {
+				return res.status(404).send(this.response.text(e.message))
+			}
+
+			const insertResult = await this.createOneRecord(
+				{
+					schema,
+					data: item,
+				},
+				auth.user_identifier,
+				queryFields,
+				x_request_id,
+			)
+
+			if (!insertResult.valid) {
+				errored++
+				errors.push({
+					item: Array.isArray(body) ? body.findIndex(i => i === item) : -1,
+					message: insertResult.message,
+				})
+				continue
+			}
+
+			data.push(insertResult.result)
+			await this.websocket.publish(schema, PublishType.INSERT, insertResult.result[schema.primary_key])
+			await this.webhook.publish(
 				schema,
-				data: body,
-			},
-			auth.user_identifier,
-			queryFields,
-			x_request_id,
-		)
-
-		if (!insertResult.valid) {
-			return res.status(400).send(this.response.text(insertResult.message))
+				PublishType.INSERT,
+				insertResult.result[schema.primary_key],
+				auth.user_identifier,
+			)
+			successful++
 		}
-		return res.status(201).send(insertResult.result)
+
+		if (singular) {
+			return res.status(201).send(data[0]) as FindOneResponseObject
+		}
+
+		return res.status(201).send({
+			total,
+			successful,
+			errored,
+			errors,
+			data,
+		} as CreateManyResponseObject)
 	}
 
 	/**

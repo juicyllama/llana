@@ -23,6 +23,7 @@ import roles from './config/roles.config'
 import { envValidationSchema } from './config/env.validation'
 import { RolePermission } from './types/roles.types'
 import { UserTestingService } from './testing/user.testing.service'
+import { stat } from 'fs'
 
 // Type the config imports
 const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
@@ -178,7 +179,6 @@ describe('App > Controller > Get', () => {
 					.set('Authorization', `Bearer ${jwt}`)
 					.expect(200)
 			)
-
 			expect(result.body).toBeDefined()
 			expect(result.body.shipName).toBeDefined()
 			expect(result.body.freight).toBeUndefined()
@@ -204,10 +204,15 @@ describe('App > Controller > Get', () => {
 
 	describe('List', () => {
 		it('All', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+			const result = await request(app.getHttpServer()).get(`/SalesOrder/`).set('Authorization', `Bearer ${jwt}`)
+			//.expect(200)
+
+			console.log({
+				result: {
+					status: result.status,
+					statusText: result.text,
+				},
+			})
 
 			expect(result.body).toBeDefined()
 			expect(result.body.total).toBeDefined()
@@ -293,8 +298,6 @@ describe('App > Controller > Get', () => {
 		})
 	})
 
-	// TODO expand to test enums, relations, and other fields
-	// validate response according to the schema
 	describe('Validate response types', () => {
 		let result: any = {}
 
@@ -412,6 +415,49 @@ describe('App > Controller > Get', () => {
 				throw e
 			} finally {
 				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+
+		it('Can fetch with READ permissions and allowed fields, check relation permissions', async function () {
+			const public_table_customers = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.READ,
+				allowed_fields: 'companyName',
+			})
+
+			const public_table_sales = await authTestingService.createPublicTablesRecord({
+				table: salesOrderSchema.table,
+				access_level: RolePermission.READ,
+				allowed_fields: 'orderId,custId,freight,orderDate',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?relations=Customer`)
+					.expect(200)
+
+				console.log(result.body)
+
+				expect(result.body).toBeDefined()
+				expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
+				expect(result.body.custId).toBeDefined()
+				expect(result.body.employeeId).toBeUndefined()
+				expect(result.body.shipperId).toBeUndefined()
+				expect(result.body.shipName).toBeUndefined()
+				expect(result.body.freight).toBeDefined()
+				expect(result.body.orderDate).toBeDefined()
+				expect(result.body.shipCity).toBeUndefined()
+				expect(result.body.Customer[0]).toBeDefined()
+				expect(result.body.Customer[0][customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.Customer[0].companyName).toBeDefined()
+				expect(result.body.Customer[0].contactName).toBeUndefined()
+				expect(result.body.Customer[0].contactTitle).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deletePublicTablesRecord(public_table_customers)
+				await authTestingService.deletePublicTablesRecord(public_table_sales)
 			}
 		})
 	})

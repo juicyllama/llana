@@ -64,12 +64,6 @@ export class GetController {
 		const role_where = []
 		let queryFields = []
 
-		try {
-			schema = await this.schema.getSchema({ table: table_name, x_request_id })
-		} catch (e) {
-			return res.status(404).send(this.response.text(e.message))
-		}
-
 		// Is the table public?
 		const public_auth = await this.authentication.public({
 			table: table_name,
@@ -128,9 +122,10 @@ export class GetController {
 			}
 		}
 
-		// Only return fields that the user has access to
-		if (queryFields?.length) {
-			schema.columns = schema.columns.filter(col => queryFields.includes(col.field))
+		try {
+			schema = await this.schema.getSchema({ table: table_name, x_request_id, fields: queryFields })
+		} catch (e) {
+			return res.status(404).send(this.response.text(e.message))
 		}
 
 		return res.status(200).send(schema)
@@ -164,12 +159,6 @@ export class GetController {
 		}
 
 		const postQueryRelations = []
-
-		try {
-			options.schema = await this.schema.getSchema({ table: table_name, x_request_id })
-		} catch (e) {
-			return res.status(404).send(this.response.text(e.message))
-		}
 
 		// Is the table public?
 		const public_auth = await this.authentication.public({
@@ -241,6 +230,12 @@ export class GetController {
 			}
 		}
 
+		try {
+			options.schema = await this.schema.getSchema({ table: table_name, x_request_id, fields: queryFields })
+		} catch (e) {
+			return res.status(404).send(this.response.text(e.message))
+		}
+
 		//validate :id field
 		primary_key = this.schema.getPrimaryKey(options.schema)
 
@@ -290,6 +285,39 @@ export class GetController {
 
 			for (const relation of relations) {
 				if (!postQueryRelations.find(r => r.table === relation.table)) {
+					// Check if the relation has allowed_field restrictions
+					const relation_public_auth = await this.authentication.public({
+						table: relation.table,
+						access_level: RolePermission.READ,
+						x_request_id,
+					})
+
+					if (relation_public_auth.valid && relation_public_auth.allowed_fields?.length) {
+						relation.columns = relation.columns.filter(field =>
+							relation_public_auth.allowed_fields.includes(field),
+						)
+					}
+
+					// If not public, check role table permissions
+					if (auth.user_identifier) {
+						let permission = await this.roles.tablePermission({
+							identifier: auth.user_identifier,
+							table: relation.table,
+							access: RolePermission.READ,
+							x_request_id,
+						})
+
+						if (
+							permission.valid &&
+							(permission as AuthTablePermissionSuccessResponse).allowed_fields?.length
+						) {
+							relation.columns.push(...(permission as AuthTablePermissionSuccessResponse).allowed_fields)
+							relation.columns = relation.columns.filter(field =>
+								(permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field),
+							)
+						}
+					}
+
 					postQueryRelations.push(relation)
 				}
 			}
@@ -359,12 +387,6 @@ export class GetController {
 		}
 
 		const postQueryRelations = []
-
-		try {
-			options.schema = await this.schema.getSchema({ table: table_name, x_request_id })
-		} catch (e) {
-			return res.status(404).send(this.response.text(e.message))
-		}
 
 		// Is the table public?
 		const public_auth = await this.authentication.public({
@@ -436,6 +458,12 @@ export class GetController {
 			}
 		}
 
+		try {
+			options.schema = await this.schema.getSchema({ table: table_name, x_request_id, fields: queryFields })
+		} catch (e) {
+			return res.status(404).send(this.response.text(e.message))
+		}
+
 		const { limit, offset } = this.pagination.get(queryParams)
 		options.limit = limit
 		options.offset = offset
@@ -458,6 +486,39 @@ export class GetController {
 
 			for (const relation of relations) {
 				if (!postQueryRelations.find(r => r.table === relation.table)) {
+					// Check if the relation has allowed_field restrictions
+					const relation_public_auth = await this.authentication.public({
+						table: relation.table,
+						access_level: RolePermission.READ,
+						x_request_id,
+					})
+
+					if (relation_public_auth.valid && relation_public_auth.allowed_fields?.length) {
+						relation.columns = relation.columns.filter(field =>
+							relation_public_auth.allowed_fields.includes(field),
+						)
+					}
+
+					// If not public, check role table permissions
+					if (auth.user_identifier) {
+						let permission = await this.roles.tablePermission({
+							identifier: auth.user_identifier,
+							table: relation.table,
+							access: RolePermission.READ,
+							x_request_id,
+						})
+
+						if (
+							permission.valid &&
+							(permission as AuthTablePermissionSuccessResponse).allowed_fields?.length
+						) {
+							relation.columns.push(...(permission as AuthTablePermissionSuccessResponse).allowed_fields)
+							relation.columns = relation.columns.filter(field =>
+								(permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field),
+							)
+						}
+					}
+
 					postQueryRelations.push(relation)
 				}
 			}
@@ -526,6 +587,7 @@ export class GetController {
 					)
 				}
 			}
+
 			return res.status(200).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))

@@ -100,6 +100,10 @@ export interface ColumnExtraNumber {
 	decimal: number // Number of decimal places
 }
 
+export interface ColumnExtraString {
+	length: number // Size of the string field
+}
+
 export interface DataSourceSchemaColumn {
 	field: string
 	type: DataSourceColumnType
@@ -110,7 +114,7 @@ export interface DataSourceSchemaColumn {
 	foreign_key: boolean
 	auto_increment?: boolean
 	default?: any
-	extra?: any | ColumnExtraNumber
+	extra?: any | ColumnExtraNumber | ColumnExtraString
 	enums?: string[]
 }
 
