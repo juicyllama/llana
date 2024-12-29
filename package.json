@@ -37,6 +37,8 @@
 		"start:debug": "nest start --debug --watch",
 		"start:ngrok": "~/ngrok http http://localhost:3000/ --subdomain=llana",
 		"docker:dev": "sh ./scripts/docker.dev.sh",
+		"docker:dev:up": "docker compose -f ./docker/docker-compose.dev.yml up --build --detach",
+		"docker:dev:down": "docker compose -f ./docker/docker-compose.dev.yml down  --remove-orphans --volumes",
 		"docker:prod:build": "sh ./scripts/docker.build.prod.sh",
 		"docker:prod:test": "sh ./scripts/docker.prod.sh",
 		"precommit": "npm run test && npm run lint && npm run format",

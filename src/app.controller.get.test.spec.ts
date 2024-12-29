@@ -838,8 +838,6 @@ describe('App > Controller > Get', () => {
 					.set('Authorization', `Bearer ${jwt}`)
 					.expect(200)
 
-					console.log(result.body)
-
 				expect(result.body).toBeDefined()
 				expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
 				expect(result.body.custId).toBeDefined()
