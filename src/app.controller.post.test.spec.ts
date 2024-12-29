@@ -160,6 +160,40 @@ describe('App > Controller > Post', () => {
 			}
 		})
 
+		it('Can create with WRITE permissions and allowed fields', async function () {
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.WRITE,
+				allowed_fields: 'companyName',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(userId))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(201)
+				customers.push(result.body)
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeUndefined()
+				expect(result.body.contactTitle).toBeUndefined()
+				expect(result.body.address).toBeUndefined()
+				expect(result.body.city).toBeUndefined()
+				expect(result.body.region).toBeUndefined()
+				expect(result.body.postalCode).toBeUndefined()
+				expect(result.body.country).toBeUndefined()
+				expect(result.body.phone).toBeUndefined()
+				expect(result.body.fax).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+
 		it('Can create with WRITE permissions', async function () {
 			const public_table_record = await authTestingService.createPublicTablesRecord({
 				table: customerSchema.table,
@@ -519,6 +553,51 @@ describe('App > Controller > Post', () => {
 			}
 		})
 
+		it('When allowed_fields are passed, only return these fields, even when there is a public_table view', async function () {
+			const public_table_record = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.WRITE,
+				allowed_fields: 'companyName',
+			})
+
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.WRITE,
+				own_records: RolePermission.WRITE,
+				allowed_fields: 'companyName,contactName',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(userId))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(201)
+				customers.push(result.body)
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeDefined()
+				expect(result.body.contactTitle).toBeUndefined()
+				expect(result.body.address).toBeUndefined()
+				expect(result.body.city).toBeUndefined()
+				expect(result.body.region).toBeUndefined()
+				expect(result.body.postalCode).toBeUndefined()
+				expect(result.body.country).toBeUndefined()
+				expect(result.body.phone).toBeUndefined()
+				expect(result.body.fax).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+
 		it('When allowed_fields are passed, only return these fields (multiple)', async function () {
 			const role = await authTestingService.createRole({
 				custom: true,
@@ -575,9 +654,9 @@ describe('App > Controller > Post', () => {
 
 	afterAll(async () => {
 		for (let customer of customers) {
-			if(customer[customerSchema.primary_key]){
+			if (customer[customerSchema.primary_key]) {
 				await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
-			}	
+			}
 		}
 		await userTestingService.deleteUser(user[userSchema.primary_key])
 		await app.close()

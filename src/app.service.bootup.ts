@@ -81,6 +81,7 @@ export class AppBootup implements OnApplicationBootstrap {
 			 * |--------|---------|--------|
 			 * |`table` | `string` | The table this rule applies to |
 			 * |`access_level` | `enum` | The permission level to the public, either `READ` `WRITE` `DELETE`|
+			 * |`allowed_fields` | `string` | A comma separated list of fields that are restricted for this role |
 			 */
 
 			const schema: DataSourceSchema = {
@@ -118,6 +119,15 @@ export class AppBootup implements OnApplicationBootstrap {
 						unique_key: false,
 						foreign_key: false,
 						enums: ['READ', 'WRITE', 'DELETE'],
+					},
+					{
+						field: 'allowed_fields',
+						type: DataSourceColumnType.STRING,
+						nullable: true,
+						required: false,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
 					},
 				],
 			}

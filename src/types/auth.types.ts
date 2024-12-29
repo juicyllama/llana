@@ -51,6 +51,7 @@ export interface AuthRestrictionsResponse {
 	valid: boolean
 	message?: string
 	user_identifier?: string
+	allowed_fields?: string[]
 }
 
 export interface AuthTablePermissionSuccessResponse extends AuthTablePermissionResponse {

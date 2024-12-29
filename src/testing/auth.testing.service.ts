@@ -35,6 +35,7 @@ export class AuthTestingService {
 	async createPublicTablesRecord(data: {
 		table: string
 		access_level: RolePermission
+		allowed_fields?: string
 	}): Promise<FindOneResponseObject> {
 		const schema = await this.schema.getSchema({ table: LLANA_PUBLIC_TABLES, x_request_id: 'test' })
 		return (await this.query.perform(QueryPerform.CREATE, <DataSourceCreateOneOptions>{

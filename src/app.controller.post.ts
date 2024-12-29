@@ -46,7 +46,7 @@ export class PostController {
 		}
 
 		let schema: DataSourceSchema
-		let fields = []
+		let queryFields = []
 
 		try {
 			schema = await this.schema.getSchema({ table: table_name, x_request_id })
@@ -55,25 +55,32 @@ export class PostController {
 		}
 
 		// Is the table public?
-		let auth = await this.authentication.public({
+		const public_auth = await this.authentication.public({
 			table: table_name,
 			access_level: RolePermission.WRITE,
 			x_request_id,
 		})
 
-		// If not public, perform auth
-		if (!auth.valid) {
-			auth = await this.authentication.auth({
-				table: table_name,
-				x_request_id,
-				access: RolePermission.WRITE,
-				headers: req.headers,
-				body: req.body,
-				query: req.query,
-			})
-			if (!auth.valid) {
-				return res.status(401).send(this.response.text(auth.message))
+		if (public_auth.valid && public_auth.allowed_fields?.length) {
+			if (!queryFields?.length) {
+				queryFields = public_auth.allowed_fields
+			} else {
+				queryFields = queryFields.filter(field => public_auth.allowed_fields.includes(field))
 			}
+		}
+
+		// If not public, perform auth
+
+		const auth = await this.authentication.auth({
+			table: table_name,
+			x_request_id,
+			access: RolePermission.WRITE,
+			headers: req.headers,
+			body: req.body,
+			query: req.query,
+		})
+		if (!public_auth.valid && !auth.valid) {
+			return res.status(401).send(this.response.text(auth.message))
 		}
 
 		if (body instanceof Array) {
@@ -94,7 +101,7 @@ export class PostController {
 						x_request_id,
 					})
 
-					if (!permission.valid) {
+					if (!public_auth.valid && !permission.valid) {
 						errored++
 						errors.push({
 							item: body.indexOf(item),
@@ -103,7 +110,16 @@ export class PostController {
 						continue
 					}
 
-					fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
+					if (permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
+						if (!queryFields?.length) {
+							queryFields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
+						} else {
+							queryFields.push(...(permission as AuthTablePermissionSuccessResponse).allowed_fields)
+							queryFields = queryFields.filter(field =>
+								(permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field),
+							)
+						}
+					}
 				}
 
 				const insertResult = await this.createOneRecord(
@@ -112,7 +128,7 @@ export class PostController {
 						data: item,
 					},
 					auth.user_identifier,
-					fields,
+					queryFields,
 					x_request_id,
 				)
 
@@ -155,11 +171,20 @@ export class PostController {
 				x_request_id,
 			})
 
-			if (!permission.valid) {
+			if (!public_auth.valid && !permission.valid) {
 				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
 
-			fields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
+			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
+				if (!queryFields?.length) {
+					queryFields = (permission as AuthTablePermissionSuccessResponse).allowed_fields
+				} else {
+					queryFields.push(...(permission as AuthTablePermissionSuccessResponse).allowed_fields)
+					queryFields = queryFields.filter(field =>
+						(permission as AuthTablePermissionSuccessResponse).allowed_fields.includes(field),
+					)
+				}
+			}
 		}
 
 		const insertResult = await this.createOneRecord(
@@ -168,7 +193,7 @@ export class PostController {
 				data: body,
 			},
 			auth.user_identifier,
-			fields,
+			queryFields,
 			x_request_id,
 		)
 
