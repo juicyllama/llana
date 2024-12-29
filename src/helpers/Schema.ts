@@ -47,63 +47,80 @@ export class Schema {
 	 * Get Table Schema
 	 */
 
-	async getSchema(options: { table: string; x_request_id?: string }): Promise<DataSourceSchema> {
+	async getSchema(options: { table: string; x_request_id?: string; fields?: string[] }): Promise<DataSourceSchema> {
 		if (!options.table) {
 			throw new Error('Table name not provided')
 		}
 
 		//check cache for schema
-		let result: DataSourceSchema = await this.cacheManager.get(`schema:${options.table}`)
+		let result: DataSourceSchema = await this.cacheManager.get(
+			`schema:${options.table}:${options.fields?.join(',')}`,
+		)
 
-		if (result?.table) {
-			this.logger.debug(`[GetSchema] Cache hit for ${options.table} ${options.x_request_id ?? ''}`)
-			return {
-				...result,
-				_x_request_id: options.x_request_id,
+		if (!result) {
+			try {
+				switch (this.configService.get<string>('database.type')) {
+					case DataSourceType.MYSQL:
+						result = await this.mysql.getSchema({
+							table: options.table,
+							x_request_id: options.x_request_id,
+						})
+						break
+					case DataSourceType.POSTGRES:
+						result = await this.postgres.getSchema({
+							table: options.table,
+							x_request_id: options.x_request_id,
+						})
+						break
+					case DataSourceType.MONGODB:
+						result = await this.mongo.getSchema({
+							table: options.table,
+							x_request_id: options.x_request_id,
+						})
+						break
+					case DataSourceType.MSSQL:
+						result = await this.mssql.getSchema({
+							table: options.table,
+							x_request_id: options.x_request_id,
+						})
+						break
+					case DataSourceType.AIRTABLE:
+						result = await this.airtable.getSchema({
+							table: options.table,
+							x_request_id: options.x_request_id,
+						})
+						break
+					default:
+						this.logger.error(
+							`[GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`,
+							options.x_request_id,
+						)
+				}
+
+				if (!result?.table) {
+					throw new Error(`Schema not found for ${options.table}`)
+				}
+
+				await this.cacheManager.set(
+					`schema:${options.table}:${options.fields?.join(',')}`,
+					result,
+					this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL,
+				)
+			} catch (e) {
+				this.logger.debug(`[GetSchema] ${e.message} ${options.x_request_id ?? ''}`)
+				throw new Error(`Error processing schema for ${options.table}`)
 			}
 		}
 
-		try {
-			switch (this.configService.get<string>('database.type')) {
-				case DataSourceType.MYSQL:
-					result = await this.mysql.getSchema({ table: options.table, x_request_id: options.x_request_id })
-					break
-				case DataSourceType.POSTGRES:
-					result = await this.postgres.getSchema({ table: options.table, x_request_id: options.x_request_id })
-					break
-				case DataSourceType.MONGODB:
-					result = await this.mongo.getSchema({ table: options.table, x_request_id: options.x_request_id })
-					break
-				case DataSourceType.MSSQL:
-					result = await this.mssql.getSchema({ table: options.table, x_request_id: options.x_request_id })
-					break
-				case DataSourceType.AIRTABLE:
-					result = await this.airtable.getSchema({ table: options.table, x_request_id: options.x_request_id })
-					break
-				default:
-					this.logger.error(
-						`[GetSchema] Database type ${this.configService.get<string>('database.type')} not supported yet`,
-						options.x_request_id,
-					)
-			}
+		//filter fields if provided
+		if (options.fields?.length) {
+			const columns = result.columns.filter(col => options.fields.includes(col.field) || col.primary_key)
+			result.columns = columns
+		}
 
-			if (!result?.table) {
-				throw new Error(`Schema not found for ${options.table}`)
-			}
-
-			await this.cacheManager.set(
-				`schema:${options.table}`,
-				result,
-				this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL,
-			)
-
-			return {
-				...result,
-				_x_request_id: options.x_request_id,
-			}
-		} catch (e) {
-			this.logger.debug(`[GetSchema] ${e.message} ${options.x_request_id ?? ''}`)
-			throw new Error(`Error processing schema for ${options.table}`)
+		return {
+			...result,
+			_x_request_id: options.x_request_id,
 		}
 	}
 

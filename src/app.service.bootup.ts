@@ -22,6 +22,7 @@ import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
 import {
 	ColumnExtraNumber,
+	ColumnExtraString,
 	DataSourceColumnType,
 	DataSourceSchema,
 	PublishType,
@@ -128,6 +129,9 @@ export class AppBootup implements OnApplicationBootstrap {
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
+						extra: <ColumnExtraString>{
+							length: 1020,
+						},
 					},
 				],
 			}
@@ -259,6 +263,9 @@ export class AppBootup implements OnApplicationBootstrap {
 						primary_key: false,
 						unique_key: false,
 						foreign_key: false,
+						extra: <ColumnExtraString>{
+							length: 1020,
+						},
 					},
 				],
 			}

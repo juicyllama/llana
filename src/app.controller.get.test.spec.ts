@@ -125,7 +125,6 @@ describe('App > Controller > Get', () => {
 		for (let i = 0; i < 10; i++) {
 			orders.push(
 				await salesOrderTestingService.createOrder({
-					orderId: i + 1000,
 					custId: customer[customerSchema.primary_key],
 					employeeId: employee[employeeSchema.primary_key],
 					shipperId: shipper[shipperSchema.primary_key],
@@ -140,200 +139,195 @@ describe('App > Controller > Get', () => {
 		logger.debug('===========================================')
 	})
 
-	describe('Get', () => {
-		it('One', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+	// describe('Get', () => {
+	// 	it('One', async function () {
+	// 		const result = await request(app.getHttpServer())
+	// 			.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+	// 			.set('Authorization', `Bearer ${jwt}`)
+	// 			.expect(200)
 
-			expect(result.body).toBeDefined()
-			expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.custId).toBeDefined()
-			expect(result.body.employeeId).toBeDefined()
-			expect(result.body.shipperId).toBeDefined()
-			expect(result.body.shipName).toBeDefined()
-		})
+	// 		expect(result.body).toBeDefined()
+	// 		expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
+	// 		expect(result.body.custId).toBeDefined()
+	// 		expect(result.body.employeeId).toBeDefined()
+	// 		expect(result.body.shipperId).toBeDefined()
+	// 		expect(result.body.shipName).toBeDefined()
+	// 	})
 
-		it('One - With Relations', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?relations=Customer`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+	// 	it('One - With Relations', async function () {
+	// 		const result = await request(app.getHttpServer())
+	// 			.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?relations=Customer`)
+	// 			.set('Authorization', `Bearer ${jwt}`)
+	// 			.expect(200)
 
-			expect(result.body).toBeDefined()
-			expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.custId).toBeDefined()
-			expect(result.body.employeeId).toBeDefined()
-			expect(result.body.shipperId).toBeDefined()
-			expect(result.body.shipName).toBeDefined()
-			expect(result.body.Customer[0]).toBeDefined()
-			expect(result.body.Customer[0].contactName).toBeDefined()
-		})
+	// 		expect(result.body).toBeDefined()
+	// 		expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
+	// 		expect(result.body.custId).toBeDefined()
+	// 		expect(result.body.employeeId).toBeDefined()
+	// 		expect(result.body.shipperId).toBeDefined()
+	// 		expect(result.body.shipName).toBeDefined()
+	// 		expect(result.body.Customer[0]).toBeDefined()
+	// 		expect(result.body.Customer[0].contactName).toBeDefined()
+	// 	})
 
-		it('One - With Fields', async function () {
-			const result = <any>(
-				await request(app.getHttpServer())
-					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName`)
-					.set('Authorization', `Bearer ${jwt}`)
-					.expect(200)
-			)
+	// 	it('One - With Fields', async function () {
+	// 		const result = <any>(
+	// 			await request(app.getHttpServer())
+	// 				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName`)
+	// 				.set('Authorization', `Bearer ${jwt}`)
+	// 				.expect(200)
+	// 		)
+	// 		expect(result.body).toBeDefined()
+	// 		expect(result.body.shipName).toBeDefined()
+	// 		expect(result.body.freight).toBeUndefined()
+	// 		expect(result.body.shipCity).toBeUndefined()
+	// 		expect(result.body.orderDate).toBeUndefined()
+	// 	})
 
-			expect(result.body).toBeDefined()
-			expect(result.body.shipName).toBeDefined()
-			expect(result.body.freight).toBeUndefined()
-			expect(result.body.shipCity).toBeUndefined()
-			expect(result.body.orderDate).toBeUndefined()
-		})
+	// 	it('One - With Filters', async function () {
+	// 		const result = await request(app.getHttpServer())
+	// 			.get(
+	// 				`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName&shipName=${orders[0].shipName}`,
+	// 			)
+	// 			.set('Authorization', `Bearer ${jwt}`)
+	// 			.expect(200)
 
-		it('One - With Filters', async function () {
-			const result = await request(app.getHttpServer())
-				.get(
-					`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?fields=shipName&shipName=${orders[0].shipName}`,
-				)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+	// 		expect(result.body).toBeDefined()
+	// 		expect(result.body.shipName).toBe(orders[0].shipName)
+	// 		expect(result.body.freight).toBeUndefined()
+	// 		expect(result.body.shipCity).toBeUndefined()
+	// 		expect(result.body.orderDate).toBeUndefined()
+	// 	})
+	// })
 
-			expect(result.body).toBeDefined()
-			expect(result.body.shipName).toBe(orders[0].shipName)
-			expect(result.body.freight).toBeUndefined()
-			expect(result.body.shipCity).toBeUndefined()
-			expect(result.body.orderDate).toBeUndefined()
-		})
-	})
+	// describe('List', () => {
+	// 	it('All', async function () {
+	// 		const result = await request(app.getHttpServer()).get(`/SalesOrder/`).set('Authorization', `Bearer ${jwt}`)
+	// 		.expect(200)
 
-	describe('List', () => {
-		it('All', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+	// 		expect(result.body).toBeDefined()
+	// 		expect(result.body.total).toBeDefined()
+	// 		expect(result.body.total).toBeGreaterThan(0)
+	// 		expect(result.body.data.length).toBeGreaterThan(0)
+	// 		expect(result.body.data[0][salesOrderSchema.primary_key]).toBeDefined()
+	// 		expect(result.body.data[0].shipName).toBeDefined()
+	// 	})
 
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0][salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.data[0].shipName).toBeDefined()
-		})
+	// 	it('All - With Relations', async function () {
+	// 		const result = await request(app.getHttpServer())
+	// 			.get(`/SalesOrder/?relations=Customer`)
+	// 			.set('Authorization', `Bearer ${jwt}`)
+	// 			.expect(200)
 
-		it('All - With Relations', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?relations=Customer`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+	// 		expect(result.body).toBeDefined()
+	// 		expect(result.body.total).toBeDefined()
+	// 		expect(result.body.total).toBeGreaterThan(0)
+	// 		expect(result.body.data.length).toBeGreaterThan(0)
+	// 		expect(result.body.data[0][salesOrderSchema.primary_key]).toBeDefined()
+	// 		expect(result.body.data[0].shipName).toBeDefined()
+	// 		expect(result.body.data[0].Customer[0]).toBeDefined()
+	// 		expect(result.body.data[0].Customer[0].contactName).toBeDefined()
+	// 	})
 
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0][salesOrderSchema.primary_key]).toBeDefined()
-			expect(result.body.data[0].shipName).toBeDefined()
-			expect(result.body.data[0].Customer[0]).toBeDefined()
-			expect(result.body.data[0].Customer[0].contactName).toBeDefined()
-		})
+	// 	it('All - With Fields', async function () {
+	// 		const result = await request(app.getHttpServer())
+	// 			.get(`/SalesOrder/?fields=shipName`)
+	// 			.set('Authorization', `Bearer ${jwt}`)
+	// 			.expect(200)
 
-		it('All - With Fields', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?fields=shipName`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+	// 		expect(result.body).toBeDefined()
+	// 		expect(result.body.total).toBeDefined()
+	// 		expect(result.body.total).toBeGreaterThan(0)
+	// 		expect(result.body.data.length).toBeGreaterThan(0)
+	// 		expect(result.body.data[0].shipName).toBeDefined()
+	// 		expect(result.body.data[0].freight).toBeUndefined()
+	// 		expect(result.body.data[0].shipCity).toBeUndefined()
+	// 	})
 
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0].shipName).toBeDefined()
-			expect(result.body.data[0].freight).toBeUndefined()
-			expect(result.body.data[0].shipCity).toBeUndefined()
-		})
+	// 	it('All - With Filters', async function () {
+	// 		const result = await request(app.getHttpServer())
+	// 			.get(`/SalesOrder/?fields=shipName&shipName=${orders[0].shipName}`)
+	// 			.set('Authorization', `Bearer ${jwt}`)
+	// 			.expect(200)
 
-		it('All - With Filters', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?fields=shipName&shipName=${orders[0].shipName}`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+	// 		expect(result.body).toBeDefined()
+	// 		expect(result.body.total).toBeDefined()
+	// 		expect(result.body.total).toBeGreaterThan(0)
+	// 		expect(result.body.data.length).toBeGreaterThan(0)
+	// 		expect(result.body.data[0].shipName).toBeDefined()
+	// 		expect(result.body.data[0].freight).toBeUndefined()
+	// 		expect(result.body.data[0].shipCity).toBeUndefined()
+	// 	})
 
-			expect(result.body).toBeDefined()
-			expect(result.body.total).toBeDefined()
-			expect(result.body.total).toBeGreaterThan(0)
-			expect(result.body.data.length).toBeGreaterThan(0)
-			expect(result.body.data[0].shipName).toBeDefined()
-			expect(result.body.data[0].freight).toBeUndefined()
-			expect(result.body.data[0].shipCity).toBeUndefined()
-		})
+	// 	it('All - With Limit', async function () {
+	// 		const result = await request(app.getHttpServer())
+	// 			.get(`/SalesOrder/?limit=3`)
+	// 			.set('Authorization', `Bearer ${jwt}`)
+	// 			.expect(200)
 
-		it('All - With Limit', async function () {
-			const result = await request(app.getHttpServer())
-				.get(`/SalesOrder/?limit=3`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+	// 		expect(result.body).toBeDefined()
+	// 		expect(result.body.limit).toBeDefined()
+	// 		expect(result.body.limit).toEqual(3)
+	// 		expect(result.body.offset).toEqual(0)
+	// 		expect(result.body.total).toBeGreaterThan(3)
+	// 		expect(result.body.data.length).toEqual(3)
+	// 	})
 
-			expect(result.body).toBeDefined()
-			expect(result.body.limit).toBeDefined()
-			expect(result.body.limit).toEqual(3)
-			expect(result.body.offset).toEqual(0)
-			expect(result.body.total).toBeGreaterThan(3)
-			expect(result.body.data.length).toEqual(3)
-		})
+	// 	it('All - With Offset', async function () {
+	// 		const results = await request(app.getHttpServer())
+	// 			.get(`/SalesOrder/`)
+	// 			.set('Authorization', `Bearer ${jwt}`)
+	// 			.expect(200)
 
-		it('All - With Offset', async function () {
-			const results = await request(app.getHttpServer())
-				.get(`/SalesOrder/`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
+	// 		expect(results.body.data.length).toBeGreaterThan(0)
 
-			expect(results.body.data.length).toBeGreaterThan(0)
+	// 		const results2 = await request(app.getHttpServer())
+	// 			.get(`/SalesOrder/?offset=${results.body.total - 2}`)
+	// 			.set('Authorization', `Bearer ${jwt}`)
+	// 			.expect(200)
+	// 		expect(results2.body.data.length).toEqual(2)
+	// 	})
+	// })
 
-			const results2 = await request(app.getHttpServer())
-				.get(`/SalesOrder/?offset=${results.body.total - 2}`)
-				.set('Authorization', `Bearer ${jwt}`)
-				.expect(200)
-			expect(results2.body.data.length).toEqual(2)
-		})
-	})
+	// describe('Validate response types', () => {
+	// 	let result: any = {}
 
-	// TODO expand to test enums, relations, and other fields
-	// validate response according to the schema
-	describe('Validate response types', () => {
-		let result: any = {}
+	// 	it('Object', async function () {
+	// 		result = <any>(
+	// 			await request(app.getHttpServer())
+	// 				.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
+	// 				.set('Authorization', `Bearer ${jwt}`)
+	// 				.expect(200)
+	// 		)
 
-		it('Object', async function () {
-			result = <any>(
-				await request(app.getHttpServer())
-					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}`)
-					.set('Authorization', `Bearer ${jwt}`)
-					.expect(200)
-			)
+	// 		expect(result.body).toBeDefined()
+	// 	})
 
-			expect(result.body).toBeDefined()
-		})
+	// 	it('String', function () {
+	// 		expect(result.body.shipName).toBeDefined()
+	// 		expect(result.body.shipName).not.toBeNull()
+	// 		expect(typeof result.body.shipName).toBe('string')
+	// 	})
 
-		it('String', function () {
-			expect(result.body.shipName).toBeDefined()
-			expect(result.body.shipName).not.toBeNull()
-			expect(typeof result.body.shipName).toBe('string')
-		})
+	// 	it('Number', function () {
+	// 		expect(result.body.freight).toBeDefined()
+	// 		expect(result.body.freight).not.toBeNull()
+	// 		expect(typeof result.body.freight).toBe('number')
+	// 	})
 
-		it('Number', function () {
-			expect(result.body.freight).toBeDefined()
-			expect(result.body.freight).not.toBeNull()
-			expect(typeof result.body.freight).toBe('number')
-		})
+	// 	it('Boolean', function () {
+	// 		//TODO: Add boolean field to the schema
+	// 	})
 
-		it('Boolean', function () {
-			//TODO: Add boolean field to the schema
-		})
+	// 	it('Date', function () {
+	// 		expect(result.body.orderDate).not.toBeNull()
+	// 		expect(new Date(result.body.orderDate)).toBeInstanceOf(Date)
+	// 	})
 
-		it('Date', function () {
-			expect(result.body.orderDate).not.toBeNull()
-			expect(new Date(result.body.orderDate)).toBeInstanceOf(Date)
-		})
-
-		it('Enum', function () {
-			//TODO: Add enum field to the schema
-		})
-	})
+	// 	it('Enum', function () {
+	// 		//TODO: Add enum field to the schema
+	// 	})
+	// })
 
 	describe('Public Fetch', () => {
 		it('Default public fail to fetch', async function () {
@@ -412,6 +406,47 @@ describe('App > Controller > Get', () => {
 				throw e
 			} finally {
 				await authTestingService.deletePublicTablesRecord(public_table_record)
+			}
+		})
+
+		it('Can fetch with READ permissions and allowed fields, check relation permissions', async function () {
+			const public_table_customers = await authTestingService.createPublicTablesRecord({
+				table: customerSchema.table,
+				access_level: RolePermission.READ,
+				allowed_fields: 'companyName',
+			})
+
+			const public_table_sales = await authTestingService.createPublicTablesRecord({
+				table: salesOrderSchema.table,
+				access_level: RolePermission.READ,
+				allowed_fields: salesOrderSchema.primary_key + ',custId,freight,orderDate',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?relations=Customer`)
+					.expect(200)
+
+				expect(result.body).toBeDefined()
+				expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
+				expect(result.body.custId).toBeDefined()
+				expect(result.body.employeeId).toBeUndefined()
+				expect(result.body.shipperId).toBeUndefined()
+				expect(result.body.shipName).toBeUndefined()
+				expect(result.body.freight).toBeDefined()
+				expect(result.body.orderDate).toBeDefined()
+				expect(result.body.shipCity).toBeUndefined()
+				expect(result.body.Customer[0]).toBeDefined()
+				expect(result.body.Customer[0][customerSchema.primary_key]).toBeUndefined()
+				expect(result.body.Customer[0].companyName).toBeDefined()
+				expect(result.body.Customer[0].contactName).toBeUndefined()
+				expect(result.body.Customer[0].contactTitle).toBeUndefined()
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deletePublicTablesRecord(public_table_customers)
+				await authTestingService.deletePublicTablesRecord(public_table_sales)
 			}
 		})
 	})

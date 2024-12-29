@@ -815,8 +815,6 @@ const build = async (table: string, tableRequest: AxiosRequestConfig<any>, recor
 			}
 		} catch (error) {
 			logger.error(`Error creating ${table} records`, DOMAIN)
-			console.dir(error.response?.data, { depth: null })
-			console.dir(recordsRequest, { depth: null })
 			throw new Error(`Error creating ${table} records`)
 		}
 	} catch (error) {
@@ -847,8 +845,6 @@ const build = async (table: string, tableRequest: AxiosRequestConfig<any>, recor
 			}
 		} else {
 			logger.error(`Error creating ${table} table`, DOMAIN)
-			console.dir(error.response.data, { depth: null })
-			console.dir(tableRequest, { depth: null })
 			throw new Error(`Error creating ${table} table`)
 		}
 	}
