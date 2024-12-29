@@ -132,12 +132,7 @@ export interface DataSourceCreateOneOptions {
 
 export interface DataSourceRelations {
 	table: string
-	join: {
-		table: string
-		column: string
-		org_table: string
-		org_column: string
-	}
+	join: DataSourceSchemaRelation
 	columns?: string[]
 	where?: DataSourceWhere
 	schema: DataSourceSchema
