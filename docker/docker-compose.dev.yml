@@ -38,6 +38,12 @@ services:
             - ../demo/databases/mysql.sql:/docker-entrypoint-initdb.d/init.sql
         networks:
             - llana-network
+        healthcheck: 
+            test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+            start_period: 10s
 
     llana-postgres:
         image: postgres

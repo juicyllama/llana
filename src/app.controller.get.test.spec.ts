@@ -205,14 +205,7 @@ describe('App > Controller > Get', () => {
 	describe('List', () => {
 		it('All', async function () {
 			const result = await request(app.getHttpServer()).get(`/SalesOrder/`).set('Authorization', `Bearer ${jwt}`)
-			//.expect(200)
-
-			console.log({
-				result: {
-					status: result.status,
-					statusText: result.text,
-				},
-			})
+			.expect(200)
 
 			expect(result.body).toBeDefined()
 			expect(result.body.total).toBeDefined()
@@ -435,8 +428,6 @@ describe('App > Controller > Get', () => {
 				const result = await request(app.getHttpServer())
 					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?relations=Customer`)
 					.expect(200)
-
-				console.log(result.body)
 
 				expect(result.body).toBeDefined()
 				expect(result.body[salesOrderSchema.primary_key]).toBeDefined()
