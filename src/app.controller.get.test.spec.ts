@@ -320,8 +320,13 @@ describe('App > Controller > Get', () => {
 		})
 
 		it('Date', function () {
+
+			console.log(result.body)
+
 			expect(result.body.orderDate).not.toBeNull()
 			expect(new Date(result.body.orderDate)).toBeInstanceOf(Date)
+			expect(result.body.orderDate).toBeTruthy()
+			expect(result.body.deletedAt).toBeFalsy()
 		})
 
 		it('Enum', function () {
