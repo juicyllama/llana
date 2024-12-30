@@ -166,6 +166,10 @@ export class PostController {
 		}
 
 		if (singular) {
+			if(errors.length) {
+				return res.status(400).send(errors[0].message)
+			}
+
 			return res.status(201).send(data[0]) as FindOneResponseObject
 		}
 

@@ -490,6 +490,38 @@ describe('App > Controller > Post', () => {
 				await authTestingService.deleteRole(role)
 			}
 		})
+
+		it('NONE authed table role, DELETE own records, should be able to create own record', async function () {
+			const role = await authTestingService.createRole({
+				custom: true,
+				table: customerSchema.table,
+				identity_column: 'userId',
+				role: 'ADMIN',
+				records: RolePermission.NONE,
+				own_records: RolePermission.DELETE,
+				allowed_fields: customerSchema.primary_key+',companyName,contactName',
+			})
+
+			try {
+				const result = await request(app.getHttpServer())
+					.post(`/Customer/`)
+					.send(customerTestingService.mockCustomer(userId))
+					.set('Authorization', `Bearer ${jwt}`)
+					.expect(201)
+
+					customers.push(result.body)
+					expect(result.body).toBeDefined()
+					expect(result.body[customerSchema.primary_key]).toBeDefined()
+					expect(result.body.companyName).toBeDefined()
+					expect(result.body.contactName).toBeDefined()
+
+			} catch (e) {
+				logger.error(e)
+				throw e
+			} finally {
+				await authTestingService.deleteRole(role)
+			}
+		})
 	})
 
 	describe('Allowed Fields Results', () => {
