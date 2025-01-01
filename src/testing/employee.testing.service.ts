@@ -82,7 +82,7 @@ export class EmployeeTestingService {
 			QueryPerform.DELETE,
 			{
 				schema: employeeTableSchema,
-				id: employee_id,
+				[employeeTableSchema.primary_key]: employee_id,
 			},
 			'testing',
 		)

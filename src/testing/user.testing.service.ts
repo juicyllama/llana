@@ -53,7 +53,7 @@ export class UserTestingService {
 			QueryPerform.DELETE,
 			{
 				schema: userSchema,
-				id: user_id,
+				[userSchema.primary_key]: user_id,
 			},
 			'testing',
 		)

@@ -33,18 +33,6 @@ CREATE TABLE IF NOT EXISTS `UserApiKey` (
 
 INSERT IGNORE INTO `UserApiKey` (`id`, `userId`, `apiKey`, `createdAt`, `updatedAt`, `deletedAt`) VALUES (1, 1, 'Ex@mp1eS$Cu7eAp!K3y', '2000-01-01 00:00:00', '2000-01-01 00:00:00', NULL);
 
-CREATE TABLE IF NOT EXISTS Category (
-  categoryId INT AUTO_INCREMENT NOT NULL
-  ,categoryName VARCHAR(15) NOT NULL
-  ,description TEXT NULL
-  ,picture BLOB NULL
-  ,createdAt datetime DEFAULT CURRENT_TIMESTAMP
-  ,updatedAt datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  ,deletedAt datetime DEFAULT NULL
-  ,PRIMARY KEY (categoryId)
-  ) ENGINE=INNODB;
-
-
 CREATE TABLE IF NOT EXISTS Customer (
   custId INT AUTO_INCREMENT NOT NULL
   ,userId int NOT NULL
@@ -85,7 +73,7 @@ CREATE TABLE IF NOT EXISTS Employee (
   ,mobile VARCHAR(24) NULL
   ,email VARCHAR(225) NULL
   ,photo BLOB NULL
-  ,notes BLOB NULL
+  ,notes TEXT NULL
   ,photoPath VARCHAR(255) NULL
   ,mgrid INT NULL
   ,createdAt datetime DEFAULT CURRENT_TIMESTAMP

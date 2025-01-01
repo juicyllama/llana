@@ -64,7 +64,7 @@ export class CustomerTestingService {
 			QueryPerform.DELETE,
 			{
 				schema: customerTableSchema,
-				id: customer_id,
+				[customerTableSchema.primary_key]: customer_id,
 			},
 			'testing',
 		)

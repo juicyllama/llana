@@ -65,7 +65,7 @@ export class ShipperTestingService {
 			QueryPerform.DELETE,
 			{
 				schema: shipperTableSchema,
-				id: shipper_id,
+				[shipperTableSchema.primary_key]: shipper_id,
 			},
 			'testing',
 		)
