@@ -277,7 +277,7 @@ export class MySQL {
 
 		values.push(...dataValues)
 
-		const command = `INSERT INTO ${table_name} (\`${columns.join('`, `')}\`) VALUES ( ?${values.map(() => ``).join(', ?')} )`
+		const command = `INSERT INTO ${table_name} (\`${columns.join('`, `')}\`) VALUES ( ?${values.map(() => ``).join(", ?")} )`
 
 		const result = await this.query({ sql: command, values, x_request_id })
 
