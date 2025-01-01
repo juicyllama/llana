@@ -9,9 +9,10 @@ import {
 } from '@nestjs/websockets'
 import Redis from 'ioredis'
 import { Server } from 'socket.io'
-import { Authentication } from 'src/helpers/Authentication'
-import { HostCheckMiddleware } from 'src/middleware/HostCheck'
-import { RolePermission } from 'src/types/roles.types'
+import { Authentication } from '../../helpers/Authentication'
+import { Roles } from '../../helpers/Roles'
+import { HostCheckMiddleware } from '../../middleware/HostCheck'
+import { RolePermission } from '../../types/roles.types'
 
 import { Logger } from '../../helpers/Logger'
 import { REDIS_SUB_CLIENT_TOKEN, WebsocketRedisEvent, WEBSOCKETS_REDIS_CHANNEL } from './websocket.constants'
@@ -35,6 +36,7 @@ export class WebsocketGateway
 
 	constructor(
 		private readonly logger: Logger,
+		private readonly roles: Roles,
 		private readonly _authentication: Authentication,
 		private readonly hostCheckMiddleware: HostCheckMiddleware,
 		@Inject(REDIS_SUB_CLIENT_TOKEN) private readonly redisSubClient: Redis,
@@ -86,12 +88,26 @@ export class WebsocketGateway
 		}
 		this.logger.debug(`[WebsocketGateway${this.testInstanceId}] Connected users: ${JSON.stringify(userSockets)}`)
 		for (const [sub, socketId] of Object.entries(userSockets)) {
-			const auth = await this.authentication.auth({
+
+			const public_auth = await this.authentication.public({
 				table: msg.tableName,
-				access: RolePermission.READ,
-				user_identifier: sub,
+				access_level: RolePermission.READ
 			})
-			if (auth.valid) {
+
+			const permission = await this.roles.tablePermission({
+				identifier: sub,
+				table: msg.tableName,
+				access: RolePermission.READ
+			})
+
+					if (!public_auth.valid && !permission.valid) {
+						this.logger.debug(
+							`[WebsocketGateway${this.testInstanceId}] User ${sub} not authorized to receive event for table ${msg.tableName}`,
+						)
+						return
+					}
+
+
 				this.logger.debug(
 					`[WebsocketGateway${this.testInstanceId}] Emitting ${msg.tableName} ${msg.publishType} for #${msg.id} to ${socketId} (User: ${sub})`,
 				)
@@ -99,11 +115,7 @@ export class WebsocketGateway
 					type: msg.publishType,
 					[msg.primaryKey]: msg.id,
 				})
-			} else {
-				this.logger.debug(
-					`[WebsocketGateway${this.testInstanceId}] User ${sub} not authorized to receive event for table ${msg.tableName}`,
-				)
-			}
+
 		}
 		return
 	}

@@ -164,7 +164,7 @@ export class Authentication {
 		//Get the API key from the request
 		switch (auth.location) {
 			case AuthLocation.HEADER:
-				if (!options.headers[auth.name]) {
+				if (!options.headers?.length || !options.headers[auth.name]) {
 					return {
 						valid: false,
 						message: `API key header ${auth.name} required`,
@@ -174,7 +174,7 @@ export class Authentication {
 				break
 
 			case AuthLocation.QUERY:
-				if (!options.query[auth.name]) {
+				if (!options.query?.length || !options.query[auth.name]) {
 					return {
 						valid: false,
 						message: `API key query ${auth.name} required`,
@@ -184,7 +184,7 @@ export class Authentication {
 				break
 
 			case AuthLocation.BODY:
-				if (!options.body[auth.name]) {
+				if (!options.body?.length || !options.body[auth.name]) {
 					return {
 						valid: false,
 						message: `API key body ${auth.name} required`,
@@ -351,6 +351,14 @@ export class Authentication {
 		headers?: any
 		x_request_id?: string
 	}): Promise<AuthRestrictionsResponse> {
+
+		if (!options.headers) {
+			return {
+				valid: false,
+				message: 'Missing authorization header',
+			}
+		}
+
 		const authHeader = options.headers['Authorization'] || options.headers['authorization']
 
 		if (!authHeader) {
