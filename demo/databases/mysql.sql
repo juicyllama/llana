@@ -117,7 +117,6 @@ CREATE TABLE IF NOT EXISTS SalesOrder (
       REFERENCES Shipper(shipperId)
    ,FOREIGN KEY (custId)
       REFERENCES Customer(custId) 
-
   ) ENGINE=INNODB;
 
 

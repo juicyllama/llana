@@ -139,9 +139,7 @@ describe('App > Controller > Post', () => {
 	})
 
 	describe('Create with special characters', () => {
-		
 		it('Create One with special characters !@#$%^&*()_+', async function () {
-
 			const mock = customerTestingService.mockCustomer(userId)
 			mock.companyName = 'Test Company Name - !@#$%^&*()_+'
 
@@ -157,9 +155,8 @@ describe('App > Controller > Post', () => {
 			expect(result.body.contactName).toBeDefined()
 			customers.push(result.body)
 		})
-		
-		it('Create One with comma', async function () {
 
+		it('Create One with comma', async function () {
 			const mock = customerTestingService.mockCustomer(userId)
 			mock.companyName = 'Test Company Name, with comma'
 
@@ -185,7 +182,7 @@ describe('App > Controller > Post', () => {
 		// 		.post(`/Employee/`)
 		// 		.send(mock)
 		// 		.set('Authorization', `Bearer ${jwt}`)
-			
+
 		// 	console.log(result.body)
 		// 		//.expect(201)
 
@@ -193,9 +190,7 @@ describe('App > Controller > Post', () => {
 		// 	expect(result.body.notes).toBeDefined()
 		// 	customers.push(result.body)
 		// })
-
 	})
-
 
 	describe('Public Creation', () => {
 		it('Default public fail to create', async function () {
@@ -563,7 +558,7 @@ describe('App > Controller > Post', () => {
 				role: 'ADMIN',
 				records: RolePermission.NONE,
 				own_records: RolePermission.DELETE,
-				allowed_fields: customerSchema.primary_key+',companyName,contactName',
+				allowed_fields: customerSchema.primary_key + ',companyName,contactName',
 			})
 
 			try {
@@ -573,12 +568,11 @@ describe('App > Controller > Post', () => {
 					.set('Authorization', `Bearer ${jwt}`)
 					.expect(201)
 
-					customers.push(result.body)
-					expect(result.body).toBeDefined()
-					expect(result.body[customerSchema.primary_key]).toBeDefined()
-					expect(result.body.companyName).toBeDefined()
-					expect(result.body.contactName).toBeDefined()
-
+				customers.push(result.body)
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeDefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeDefined()
 			} catch (e) {
 				logger.error(e)
 				throw e

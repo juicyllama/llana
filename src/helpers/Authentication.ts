@@ -351,7 +351,6 @@ export class Authentication {
 		headers?: any
 		x_request_id?: string
 	}): Promise<AuthRestrictionsResponse> {
-
 		if (!options.headers) {
 			return {
 				valid: false,

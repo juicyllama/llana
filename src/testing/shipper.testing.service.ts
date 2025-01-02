@@ -59,13 +59,13 @@ export class ShipperTestingService {
 		)) as FindOneResponseObject
 	}
 
-	async deleteShipper(shipper_id: any): Promise<void> {
+	async deleteShipper(id: any): Promise<void> {
 		const shipperTableSchema = await this.schema.getSchema({ table })
 		await this.query.perform(
 			QueryPerform.DELETE,
 			{
 				schema: shipperTableSchema,
-				[shipperTableSchema.primary_key]: shipper_id,
+				id,
 			},
 			'testing',
 		)

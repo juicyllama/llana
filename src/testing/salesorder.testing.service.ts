@@ -61,7 +61,7 @@ export class SalesOrderTestingService {
 			QueryPerform.DELETE,
 			{
 				schema: salesOrderTableSchema,
-				[salesOrderTableSchema.primary_key]: id,
+				id,
 			},
 			'testing',
 		)
