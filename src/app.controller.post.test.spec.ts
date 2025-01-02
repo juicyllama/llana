@@ -8,6 +8,7 @@ import { AppModule } from './app.module'
 import { AuthTestingService } from './testing/auth.testing.service'
 import { DataSourceSchema } from './types/datasource.types'
 import { UserTestingService } from './testing/user.testing.service'
+import { EmployeeTestingService } from './testing/employee.testing.service'
 import { Logger } from './helpers/Logger'
 import { TIMEOUT } from './testing/testing.const'
 
@@ -18,6 +19,7 @@ import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
 import { envValidationSchema } from './config/env.validation'
+import exp from 'constants'
 import { RolePermission } from './types/roles.types'
 
 // Type the config imports
@@ -29,6 +31,7 @@ describe('App > Controller > Post', () => {
 	let authTestingService: AuthTestingService
 	let customerTestingService: CustomerTestingService
 	let userTestingService: UserTestingService
+	let employeeTestingService: EmployeeTestingService
 
 	let customerSchema: DataSourceSchema
 	let userSchema: DataSourceSchema
@@ -58,8 +61,8 @@ describe('App > Controller > Post', () => {
 				}),
 				AppModule,
 			],
-			providers: [AuthTestingService, CustomerTestingService, UserTestingService],
-			exports: [AuthTestingService, CustomerTestingService, UserTestingService],
+			providers: [AuthTestingService, CustomerTestingService, UserTestingService, EmployeeTestingService],
+			exports: [AuthTestingService, CustomerTestingService, UserTestingService, EmployeeTestingService],
 		}).compile()
 
 		app = moduleRef.createNestApplication()
@@ -68,6 +71,7 @@ describe('App > Controller > Post', () => {
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
 		userTestingService = app.get<UserTestingService>(UserTestingService)
+		employeeTestingService = app.get<EmployeeTestingService>(EmployeeTestingService)
 
 		customerSchema = await customerTestingService.getSchema()
 		userSchema = await userTestingService.getSchema()
@@ -110,6 +114,7 @@ describe('App > Controller > Post', () => {
 			expect(result.body.contactName).toBeDefined()
 			customers.push(result.body)
 		})
+
 		it('Create Many', async function () {
 			const result = await request(app.getHttpServer())
 				.post(`/Customer/`)
@@ -131,6 +136,60 @@ describe('App > Controller > Post', () => {
 			customers.push(result.body.data[0])
 			customers.push(result.body.data[1])
 		})
+	})
+
+	describe('Create with special characters', () => {
+		it('Create One with special characters !@#$%^&*()_+', async function () {
+			const mock = customerTestingService.mockCustomer(userId)
+			mock.companyName = 'Test Company Name - !@#$%^&*()_+'
+
+			const result = await request(app.getHttpServer())
+				.post(`/Customer/`)
+				.send(mock)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(201)
+
+			expect(result.body).toBeDefined()
+			expect(result.body[customerSchema.primary_key]).toBeDefined()
+			expect(result.body.companyName).toBeDefined()
+			expect(result.body.contactName).toBeDefined()
+			customers.push(result.body)
+		})
+
+		it('Create One with comma', async function () {
+			const mock = customerTestingService.mockCustomer(userId)
+			mock.companyName = 'Test Company Name, with comma'
+
+			const result = await request(app.getHttpServer())
+				.post(`/Customer/`)
+				.send(mock)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(201)
+
+			expect(result.body).toBeDefined()
+			expect(result.body[customerSchema.primary_key]).toBeDefined()
+			expect(result.body.companyName).toBeDefined()
+			expect(result.body.contactName).toBeDefined()
+			customers.push(result.body)
+		})
+
+		// it('Create One with comma in TEXT field', async function () {
+
+		// 	const mock = employeeTestingService.mockEmployee()
+		// 	mock.notes = 'Test note, with comma'
+
+		// 	const result = await request(app.getHttpServer())
+		// 		.post(`/Employee/`)
+		// 		.send(mock)
+		// 		.set('Authorization', `Bearer ${jwt}`)
+
+		// 	console.log(result.body)
+		// 		//.expect(201)
+
+		// 	expect(result.body).toBeDefined()
+		// 	expect(result.body.notes).toBeDefined()
+		// 	customers.push(result.body)
+		// })
 	})
 
 	describe('Public Creation', () => {
@@ -499,7 +558,7 @@ describe('App > Controller > Post', () => {
 				role: 'ADMIN',
 				records: RolePermission.NONE,
 				own_records: RolePermission.DELETE,
-				allowed_fields: customerSchema.primary_key+',companyName,contactName',
+				allowed_fields: customerSchema.primary_key + ',companyName,contactName',
 			})
 
 			try {
@@ -509,12 +568,11 @@ describe('App > Controller > Post', () => {
 					.set('Authorization', `Bearer ${jwt}`)
 					.expect(201)
 
-					customers.push(result.body)
-					expect(result.body).toBeDefined()
-					expect(result.body[customerSchema.primary_key]).toBeDefined()
-					expect(result.body.companyName).toBeDefined()
-					expect(result.body.contactName).toBeDefined()
-
+				customers.push(result.body)
+				expect(result.body).toBeDefined()
+				expect(result.body[customerSchema.primary_key]).toBeDefined()
+				expect(result.body.companyName).toBeDefined()
+				expect(result.body.contactName).toBeDefined()
 			} catch (e) {
 				logger.error(e)
 				throw e

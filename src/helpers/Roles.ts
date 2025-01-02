@@ -37,7 +37,7 @@ export class Roles {
 		identifier: string
 		table: string
 		access: RolePermission
-		x_request_id: string
+		x_request_id?: string
 		data?: any //Used for Create and Update to check if the user has permission to update the record
 	}): Promise<AuthTablePermissionSuccessResponse | AuthTablePermissionFailResponse> {
 		const config = this.configService.get<RolesConfig>('roles')

@@ -56,11 +56,11 @@ export class SalesOrderTestingService {
 	}
 
 	async deleteOrder(id: any): Promise<void> {
-		const customerTableSchema = await this.schema.getSchema({ table })
+		const salesOrderTableSchema = await this.schema.getSchema({ table })
 		await this.query.perform(
 			QueryPerform.DELETE,
 			{
-				schema: customerTableSchema,
+				schema: salesOrderTableSchema,
 				id,
 			},
 			'testing',

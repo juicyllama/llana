@@ -47,13 +47,13 @@ export class UserTestingService {
 		)) as FindOneResponseObject
 	}
 
-	async deleteUser(user_id: any): Promise<void> {
+	async deleteUser(id: any): Promise<void> {
 		const userSchema = await this.schema.getSchema({ table })
 		await this.query.perform(
 			QueryPerform.DELETE,
 			{
 				schema: userSchema,
-				id: user_id,
+				id,
 			},
 			'testing',
 		)

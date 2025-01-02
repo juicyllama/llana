@@ -202,8 +202,10 @@ describe('App > Controller > Get', () => {
 
 	describe('List', () => {
 		it('All', async function () {
-			const result = await request(app.getHttpServer()).get(`/SalesOrder/`).set('Authorization', `Bearer ${jwt}`)
-			.expect(200)
+			const result = await request(app.getHttpServer())
+				.get(`/SalesOrder/`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
 
 			expect(result.body).toBeDefined()
 			expect(result.body.total).toBeDefined()
@@ -320,9 +322,6 @@ describe('App > Controller > Get', () => {
 		})
 
 		it('Date', function () {
-
-			console.log(result.body)
-
 			expect(result.body.orderDate).not.toBeNull()
 			expect(new Date(result.body.orderDate)).toBeInstanceOf(Date)
 			expect(result.body.orderDate).toBeTruthy()
@@ -815,16 +814,15 @@ describe('App > Controller > Get', () => {
 		})
 
 		it('When allowed_fields are passed, only return these fields even with fields passe, with relations', async function () {
-			
 			const role_salesOrder = await authTestingService.createRole({
 				custom: true,
 				table: salesOrderSchema.table,
 				role: 'ADMIN',
 				records: RolePermission.WRITE,
 				own_records: RolePermission.WRITE,
-				allowed_fields: salesOrderSchema.primary_key+',custId,shipName',
+				allowed_fields: salesOrderSchema.primary_key + ',custId,shipName',
 			})
-			
+
 			const role_customer = await authTestingService.createRole({
 				custom: true,
 				table: customerSchema.table,
@@ -837,9 +835,7 @@ describe('App > Controller > Get', () => {
 
 			try {
 				const result = await request(app.getHttpServer())
-					.get(
-						`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?relations=Customer`,
-					)
+					.get(`/SalesOrder/${orders[0][salesOrderSchema.primary_key]}?relations=Customer`)
 					.set('Authorization', `Bearer ${jwt}`)
 					.expect(200)
 
@@ -866,12 +862,16 @@ describe('App > Controller > Get', () => {
 				await authTestingService.deleteRole(role_customer)
 			}
 		})
-
 	})
 
 	afterAll(async () => {
-		for (let i = 0; i < 10; i++) {
-			await salesOrderTestingService.deleteOrder(orders[i][salesOrderSchema.primary_key])
+		console.log(salesOrderSchema.primary_key)
+
+		console.log(orders)
+
+		for (const order of orders) {
+			console.log('delete order #' + order[salesOrderSchema.primary_key])
+			await salesOrderTestingService.deleteOrder(order[salesOrderSchema.primary_key])
 		}
 		await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
 		await employeeTestingService.deleteEmployee(employee[employeeSchema.primary_key])

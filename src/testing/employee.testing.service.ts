@@ -76,13 +76,13 @@ export class EmployeeTestingService {
 		)) as FindOneResponseObject
 	}
 
-	async deleteEmployee(employee_id: any): Promise<void> {
+	async deleteEmployee(id: any): Promise<void> {
 		const employeeTableSchema = await this.schema.getSchema({ table })
 		await this.query.perform(
 			QueryPerform.DELETE,
 			{
 				schema: employeeTableSchema,
-				id: employee_id,
+				id,
 			},
 			'testing',
 		)

@@ -611,7 +611,7 @@ export class MySQL {
 					data[key] = data[key] === 1
 					break
 				case DataSourceColumnType.DATE:
-					if(data[key] !== null) {
+					if (data[key] !== null) {
 						data[key] = new Date(data[key]).toISOString()
 					}
 					break

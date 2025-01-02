@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Headers, Param, Req, Res, Query as QueryParams } from '@nestjs/common'
+import { Body, Controller, Delete, Headers, Param, Query as QueryParams, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { LLANA_WEBHOOK_TABLE } from './app.constants'
@@ -42,7 +42,7 @@ export class DeleteController {
 		@Res() res,
 		@Headers() headers: HeaderParams,
 		@Param('id') id: string,
-		@QueryParams('hard') hard = false
+		@QueryParams('hard') hard = false,
 	): Promise<DeleteResponseObject> {
 		const x_request_id = headers['x-request-id']
 		let table_name = UrlToTable(req.originalUrl, 1)
@@ -136,7 +136,11 @@ export class DeleteController {
 
 		let softDelete: string = null
 
-		if (!hard && databaseConfig.deletes.soft && schema.columns.find(col => col.field === databaseConfig.deletes.soft)) {
+		if (
+			!hard &&
+			databaseConfig.deletes.soft &&
+			schema.columns.find(col => col.field === databaseConfig.deletes.soft)
+		) {
 			softDelete = databaseConfig.deletes.soft
 		}
 
@@ -164,7 +168,7 @@ export class DeleteController {
 		@Res() res,
 		@Headers() headers: HeaderParams,
 		@Body() body: Partial<any> | Partial<any>[],
-		@QueryParams('hard') hard = false
+		@QueryParams('hard') hard = false,
 	): Promise<DeleteManyResponseObject> {
 		const x_request_id = headers['x-request-id']
 		let table_name = UrlToTable(req.originalUrl, 1)
