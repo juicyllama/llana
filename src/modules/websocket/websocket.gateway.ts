@@ -97,7 +97,7 @@ export class WebsocketGateway
 				this.logger.debug(
 					`[WebsocketGateway] User ${sub} not authorized to receive event for table ${msg.tableName}`,
 				)
-				return
+				continue
 			}
 
 			this.logger.debug(
