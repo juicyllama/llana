@@ -2,6 +2,7 @@ import { SortCondition } from './schema.types'
 
 export enum DataSourceType {
 	MYSQL = 'mysql',
+	ORACLE = 'oracle',
 	POSTGRES = 'postgres',
 	MONGODB = 'mongodb',
 	MSSQL = 'mssql',

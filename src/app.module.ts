@@ -25,6 +25,7 @@ import { Mongo } from './datasources/mongo.datasource'
 import { MSSQL } from './datasources/mssql.datasource'
 import { MySQL } from './datasources/mysql.datasource'
 import { Postgres } from './datasources/postgres.datasource'
+import { Oracle } from './datasources/oracle.datasource'
 import { Authentication } from './helpers/Authentication'
 import { Documentation } from './helpers/Documentation'
 import { Encryption } from './helpers/Encryption'
@@ -86,6 +87,7 @@ function createPubSubOnlyRedisClient() {
 		Mongo,
 		MySQL,
 		MSSQL,
+		Oracle,
 		Pagination,
 		Postgres,
 		Query,
@@ -117,6 +119,7 @@ function createPubSubOnlyRedisClient() {
 		Mongo,
 		MySQL,
 		MSSQL,
+		Oracle,
 		Pagination,
 		Postgres,
 		Query,
