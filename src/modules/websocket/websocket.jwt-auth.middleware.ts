@@ -2,6 +2,7 @@ import { Socket } from 'socket.io'
 import { Authentication } from 'src/helpers/Authentication'
 import { HostCheckMiddleware } from 'src/middleware/HostCheck'
 import { RolePermission } from 'src/types/roles.types'
+
 import { Logger } from '../../helpers/Logger'
 
 export type SocketIOMiddleware = {
