@@ -1,0 +1,95 @@
+type Query {
+  getCustomer(id: ID!): Customer
+  getCustomers: [Customer]
+  getEmployee(id: ID!): Employee
+  getEmployees: [Employee]
+  getShipper(id: ID!): Shipper
+  getShippers: [Shipper]
+}
+
+type Mutation {
+  createCustomer(input: CustomerInput!): Customer
+  updateCustomer(id: ID!, input: CustomerInput!): Customer
+  deleteCustomer(id: ID!): Boolean
+  createEmployee(input: EmployeeInput!): Employee
+  updateEmployee(id: ID!, input: EmployeeInput!): Employee
+  deleteEmployee(id: ID!): Boolean
+  createShipper(input: ShipperInput!): Shipper
+  updateShipper(id: ID!, input: ShipperInput!): Shipper
+  deleteShipper(id: ID!): Boolean
+}
+
+type Customer {
+  id: ID!
+  companyName: String!
+  contactName: String
+  contactTitle: String
+  address: String
+  city: String
+  region: String
+  postalCode: String
+  country: String
+  phone: String
+  fax: String
+}
+
+input CustomerInput {
+  companyName: String!
+  contactName: String
+  contactTitle: String
+  address: String
+  city: String
+  region: String
+  postalCode: String
+  country: String
+  phone: String
+  fax: String
+}
+
+type Employee {
+  id: ID!
+  lastName: String!
+  firstName: String!
+  title: String
+  titleOfCourtesy: String
+  birthDate: String
+  hireDate: String
+  address: String
+  city: String
+  region: String
+  postalCode: String
+  country: String
+  homePhone: String
+  extension: String
+  notes: String
+  reportsTo: ID
+}
+
+input EmployeeInput {
+  lastName: String!
+  firstName: String!
+  title: String
+  titleOfCourtesy: String
+  birthDate: String
+  hireDate: String
+  address: String
+  city: String
+  region: String
+  postalCode: String
+  country: String
+  homePhone: String
+  extension: String
+  notes: String
+  reportsTo: ID
+}
+
+type Shipper {
+  id: ID!
+  companyName: String!
+  phone: String
+}
+
+input ShipperInput {
+  companyName: String!
+  phone: String
+}

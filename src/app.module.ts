@@ -4,6 +4,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { ScheduleModule } from '@nestjs/schedule'
 import Redis from 'ioredis'
+import { GraphQLModule } from '@nestjs/graphql'
+import { join } from 'path'
 
 import { AuthController } from './app.controller.auth'
 import { DeleteController } from './app.controller.delete'
@@ -41,6 +43,7 @@ import { REDIS_PUB_CLIENT_TOKEN, REDIS_SUB_CLIENT_TOKEN } from './modules/websoc
 import { WebsocketGateway } from './modules/websocket/websocket.gateway'
 import { WebsocketService } from './modules/websocket/websocket.service'
 import { Env } from './utils/Env'
+import { Resolvers } from './graphql/resolvers'
 
 const singleServerRedisPubsub = new RedisMockWithPubSub() // in-memory pubsub for testing or single server setup
 
@@ -72,6 +75,9 @@ function createPubSubOnlyRedisClient() {
 			isGlobal: true,
 		}),
 		ScheduleModule.forRoot(),
+		GraphQLModule.forRoot({
+			autoSchemaFile: join(process.cwd(), 'src/graphql/schema.gql'),
+		}),
 	],
 	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
 	providers: [
@@ -96,6 +102,7 @@ function createPubSubOnlyRedisClient() {
 		Webhook,
 		WebsocketGateway,
 		WebsocketService,
+		Resolvers,
 		{
 			provide: REDIS_PUB_CLIENT_TOKEN,
 			useFactory: createPubSubOnlyRedisClient,
