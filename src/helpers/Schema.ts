@@ -474,6 +474,7 @@ export class Schema {
 	 */
 
 	async validateWhereParams(options: { schema: DataSourceSchema; params: any }): Promise<validateWhereResponse> {
+
 		const where: DataSourceWhere[] = []
 
 		for (const param in options.params) {
@@ -525,7 +526,20 @@ export class Schema {
 				}
 			}
 
-			const validation = await this.validateData(options.schema, { [column]: value })
+			let validation
+
+			if(operator === WhereOperator.in || operator === WhereOperator.not_in){
+
+				const valueArray = Array.isArray(value) ? value : value.toString().split(',').map(v => v.trim())
+				for(const val of valueArray){
+					validation = await this.validateData(options.schema, { [column]: val })
+					if (!validation.valid) {
+						return validation
+					}
+				}
+			}else{
+				validation = await this.validateData(options.schema, { [column]: value })
+			}
 
 			if (!validation.valid) {
 				return validation
