@@ -535,22 +535,29 @@ export class Postgres {
 					command += `"${table_name}"."${w.column}"`
 				}
 
-				command += ` ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '$' + index : ''}  AND `
+				if(w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
+					const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
+					const placeholders = valueArray.map(() => `$${index++}`).join(',')
+					command += ` ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders}) AND `
+				}else{
+					command += ` ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '$' + index : ''}  AND `
+				}
 
 				index++
 			}
 
 			command = command.slice(0, -4)
 
-			const where_values = options.where.map(w => w.value)
-			if (where_values.length) {
-				for (const w in where_values) {
-					if (where_values[w] === undefined) {
-						continue
-					}
-					values.push(where_values[w])
-				}
-			}
+			for (const w of options.where) {
+							if (w.value === undefined || w.operator === WhereOperator.null || w.operator === WhereOperator.not_null) continue
+							
+							if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
+								const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
+								values.push(...valueArray)
+							} else {
+								values.push(w.value)
+							}
+						}
 		}
 
 		return [command.trim(), values]

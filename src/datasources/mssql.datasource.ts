@@ -650,20 +650,27 @@ export class MSSQL {
 				if (w.operator === WhereOperator.search) {
 					return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} LIKE '?'`
 				} else if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
-					return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator} (?)`
+
+					const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
+					const placeholders = valueArray.map(() => `'?'`).join(',')
+					return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders})`
+			
 				} else {
 					return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? `'?'` : ''}`
 				}
 			}).join(' AND ')} `
-			const where_values = options.where.map(w => w.value)
-			if (where_values.length) {
-				for (const w in where_values) {
-					if (where_values[w] === undefined) {
-						continue
-					}
-					values.push(where_values[w])
-				}
-			}
+			
+			// Process values for WHERE clause
+						for (const w of options.where) {
+							if (w.value === undefined || w.operator === WhereOperator.null || w.operator === WhereOperator.not_null) continue
+							
+							if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
+								const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
+								values.push(...valueArray)
+							} else {
+								values.push(w.value)
+							}
+						}
 		}
 
 		if (!count) {

@@ -632,13 +632,13 @@ export class Mongo {
 
 				case WhereOperator.in:
 					filter[w.column] = {
-						$in: w.value,
+						$in: Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
 					}
 					break
 
 				case WhereOperator.not_in:
 					filter[w.column] = {
-						$nin: w.value,
+						$nin: Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
 					}
 					break
 
