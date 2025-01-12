@@ -201,6 +201,7 @@ describe('App > Controller > Get', () => {
 	})
 
 	describe('List', () => {
+
 		it('All', async function () {
 			const result = await request(app.getHttpServer())
 				.get(`/SalesOrder/`)
@@ -288,6 +289,34 @@ describe('App > Controller > Get', () => {
 				.set('Authorization', `Bearer ${jwt}`)
 				.expect(200)
 			expect(results2.body.data.length).toEqual(2)
+		})
+
+		it('Filters records with "in" operator', async function () {
+			const shipNames = [orders[0].shipName, orders[1].shipName]
+			const result = await request(app.getHttpServer())
+				.get(`/SalesOrder/?shipName[in]=${shipNames.join(',')}`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+
+			expect(result.body).toBeDefined()
+			expect(result.body.total).toBeDefined()
+			expect(result.body.total).toBeGreaterThan(0)
+			expect(result.body.data.length).toBeGreaterThan(0)
+			expect(result.body.data.every(order => shipNames.includes(order.shipName))).toBe(true)
+		})
+
+		it('Filters records with "not_in" operator', async function () {
+			const shipNames = [orders[0].shipName, orders[1].shipName]
+			const result = await request(app.getHttpServer())
+				.get(`/SalesOrder/?shipName[not_in]=${shipNames.join(',')}`)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(200)
+
+			expect(result.body).toBeDefined()
+			expect(result.body.total).toBeDefined()
+			expect(result.body.total).toBeGreaterThan(0)
+			expect(result.body.data.length).toBeGreaterThan(0)
+			expect(result.body.data.every(order => !shipNames.includes(order.shipName))).toBe(true)
 		})
 	})
 

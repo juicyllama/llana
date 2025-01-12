@@ -549,13 +549,13 @@ export class Documentation {
 					operators = `\`${column.field}=2021-01-01\`, \`${column.field}[gt]=2021-01-01\`, \`${column.field}[lt]=2021-01-01\`, \`${column.field}[gte]=2021-01-01\`, \`${column.field}[lte]=2021-01-01\`, \`${column.field}[null]\`, \`${column.field}[not_null]\``
 					break
 				case DataSourceColumnType.STRING:
-					operators = `\`${column.field}=value\`, \`${column.field}[search]=value\`, \`${column.field}[like]=value\`, \`${column.field}[not_like]=value\`, \`${column.field}[null]\`, \`${column.field}[not_null]\``
+					operators = `\`${column.field}=value\`, \`${column.field}[search]=value\`, \`${column.field}[like]=value\`,  \`${column.field}[in]=value\`, \`${column.field}[null]\`, \`${column.field}[not_null]\``
 					break
 				case DataSourceColumnType.NUMBER:
-					operators = `\`${column.field}=1\`, \`${column.field}[gt]=1\`, \`${column.field}[lt]=1\`, \`${column.field}[gte]=1\`, \`${column.field}[lte]=1\`, \`${column.field}[null]\`, \`${column.field}[not_null]\``
+					operators = `\`${column.field}=1\`, \`${column.field}[gt]=1\`, \`${column.field}[lt]=1\`, \`${column.field}[gte]=1\`, \`${column.field}[lte]=1\`, \`${column.field}[not_like]=value\`, \`${column.field}[not_in]=value\`, \`${column.field}[null]\`, \`${column.field}[not_null]\``
 					break
 				case DataSourceColumnType.ENUM:
-					operators = `\`${column.field}=value\`, \`${column.field}[null]\`, \`${column.field}[not_null].\``
+					operators = `\`${column.field}=value\`, \`${column.field}[null]\`, \`${column.field}[not_null].\`, \`${column.field}[not_like]=value\`, \`${column.field}[not_in]=value\``
 					if (column.enums?.length) {
 						operators += `Enums are: \`${column.enums?.join('`, `')}\`.`
 					}
