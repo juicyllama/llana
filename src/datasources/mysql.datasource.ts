@@ -663,8 +663,9 @@ export class MySQL {
 				}
 			}
 
-			// Add deletedAt IS NULL condition if not already present
-			if (!options.where.some(w => w.column === 'deletedAt')) {
+			// Add deletedAt IS NULL condition if not already present and if the column exists
+			const hasDeletedAtColumn = options.schema.columns.some(col => col.field === 'deletedAt');
+			if (hasDeletedAtColumn && !options.where.some(w => w.column === 'deletedAt')) {
 				options.where.push({
 					column: 'deletedAt',
 					operator: WhereOperator.null,
