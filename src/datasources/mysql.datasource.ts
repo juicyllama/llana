@@ -663,7 +663,15 @@ export class MySQL {
 				}
 			}
 
-			command += `${options.where.map(w => `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}  `).join(' AND ')} `
+			command += `${options.where.map(w => {
+				if (w.operator === WhereOperator.search) {
+					return `${w.column.includes('.') ? w.column : table_name + '.' + w.column} LIKE ?`
+				} else if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
+					return `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator} (?)`
+				} else {
+					return `${w.column.includes('.') ? w.column : table_name + '.' + w.column} ${w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '?' : ''}`
+				}
+			}).join(' AND ')} `
 			const where_values = options.where.map(w => w.value)
 			if (where_values.length) {
 				for (const w in where_values) {

@@ -902,17 +902,19 @@ export class Airtable {
 					filter += `{${w.column}}<="${w.value}",`
 					break
 
-				// case WhereOperator.in:
-				// 	filter[w.column] = {
-				// 		$in: w.value,
-				// 	}
-				// 	break
+				case WhereOperator.in:
+					if (!Array.isArray(w.value)) {
+						w.value = w.value.toString().split(',')
+					}
+					filter += `OR(${w.value.map(v => `{${w.column}}="${v}"`).join(',')}),`
+					break
 
-				// case WhereOperator.not_in:
-				// 	filter[w.column] = {
-				// 		$nin: w.value,
-				// 	}
-				// 	break
+				case WhereOperator.not_in:
+					if (!Array.isArray(w.value)) {
+						w.value = w.value.toString().split(',')
+					}
+					filter += `NOT(OR(${w.value.map(v => `{${w.column}}="${v}"`).join(',')})),`
+					break
 
 				case WhereOperator.like:
 				case WhereOperator.search:
