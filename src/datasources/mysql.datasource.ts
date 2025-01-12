@@ -680,7 +680,7 @@ export class MySQL {
 				} else if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
 					const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
 					const placeholders = valueArray.map(() => '?').join(',')
-					return `${columnRef} ${w.operator} (${placeholders})`
+					return `${columnRef} ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders})`
 				} else if (w.operator === WhereOperator.equals || w.operator === WhereOperator.not_equals) {
 					return `${columnRef} ${w.operator} ?`
 				} else if (w.operator === WhereOperator.null || w.operator === WhereOperator.not_null) {
