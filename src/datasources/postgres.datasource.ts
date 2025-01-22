@@ -636,7 +636,10 @@ export class Postgres {
 			switch (column.type) {
 				case DataSourceColumnType.BOOLEAN:
 					// PostgreSQL supports native boolean type, so we just ensure it's a boolean
-					options.data[column.field] = Boolean(options.data[column.field])
+					// Only convert to boolean if it's not already a boolean
+					if (typeof options.data[column.field] !== 'boolean') {
+						options.data[column.field] = Boolean(options.data[column.field])
+					}
 					break
 				case DataSourceColumnType.DATE:
 					if (options.data[column.field]) {
@@ -682,7 +685,8 @@ export class Postgres {
 		switch (type) {
 			case DataSourceColumnType.BOOLEAN:
 				// PostgreSQL returns native boolean values, so we just ensure it's a proper boolean
-				return Boolean(value)
+				// Only convert to boolean if it's not already a boolean
+				return typeof value === 'boolean' ? value : Boolean(value)
 			case DataSourceColumnType.DATE:
 				return new Date(value).toISOString()
 			case DataSourceColumnType.NUMBER:
