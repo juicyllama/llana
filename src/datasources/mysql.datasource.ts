@@ -664,38 +664,51 @@ export class MySQL {
 			}
 
 			// Add deletedAt IS NULL condition if not already present and if the column exists
-			const hasDeletedAtColumn = options.schema.columns.some(col => col.field === 'deletedAt');
+			const hasDeletedAtColumn = options.schema.columns.some(col => col.field === 'deletedAt')
 			if (hasDeletedAtColumn && !options.where.some(w => w.column === 'deletedAt')) {
 				options.where.push({
 					column: 'deletedAt',
 					operator: WhereOperator.null,
-					value: null
-				});
+					value: null,
+				})
 			}
 
-			command += `${options.where.map(w => {
-				const columnRef = w.column.includes('.') ? w.column : `\`${table_name}\`.\`${w.column}\``
-				if (w.operator === WhereOperator.search) {
-					return `${columnRef} LIKE ?`
-				} else if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
-					const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
-					const placeholders = valueArray.map(() => '?').join(',')
-					return `${columnRef} ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders})`
-				} else if (w.operator === WhereOperator.equals || w.operator === WhereOperator.not_equals) {
-					return `${columnRef} ${w.operator} ?`
-				} else if (w.operator === WhereOperator.null || w.operator === WhereOperator.not_null) {
-					return `${columnRef} ${w.operator}`
-				} else {
-					return `${columnRef} ${w.operator} ?`
-				}
-			}).join(' AND ')} `
+			command += `${options.where
+				.map(w => {
+					const columnRef = w.column.includes('.') ? w.column : `\`${table_name}\`.\`${w.column}\``
+					if (w.operator === WhereOperator.search) {
+						return `${columnRef} LIKE ?`
+					} else if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
+						const valueArray = Array.isArray(w.value)
+							? w.value
+							: w.value
+									.toString()
+									.split(',')
+									.map(v => v.trim())
+						const placeholders = valueArray.map(() => '?').join(',')
+						return `${columnRef} ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders})`
+					} else if (w.operator === WhereOperator.equals || w.operator === WhereOperator.not_equals) {
+						return `${columnRef} ${w.operator} ?`
+					} else if (w.operator === WhereOperator.null || w.operator === WhereOperator.not_null) {
+						return `${columnRef} ${w.operator}`
+					} else {
+						return `${columnRef} ${w.operator} ?`
+					}
+				})
+				.join(' AND ')} `
 
 			// Process values for WHERE clause
 			for (const w of options.where) {
-				if (w.value === undefined || w.operator === WhereOperator.null || w.operator === WhereOperator.not_null) continue
-				
+				if (w.value === undefined || w.operator === WhereOperator.null || w.operator === WhereOperator.not_null)
+					continue
+
 				if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
-					const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
+					const valueArray = Array.isArray(w.value)
+						? w.value
+						: w.value
+								.toString()
+								.split(',')
+								.map(v => v.trim())
 					values.push(...valueArray)
 				} else {
 					values.push(w.value)

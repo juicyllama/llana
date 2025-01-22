@@ -201,7 +201,6 @@ describe('App > Controller > Get', () => {
 	})
 
 	describe('List', () => {
-
 		it('All', async function () {
 			const result = await request(app.getHttpServer())
 				.get(`/SalesOrder/`)
