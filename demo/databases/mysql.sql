@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS Customer (
   custId INT AUTO_INCREMENT NOT NULL
   ,userId int NOT NULL
   ,companyName VARCHAR(40) NOT NULL
-  ,contactName VARCHAR(30) NULL
+  ,contactName VARCHAR(60) NULL
   ,contactTitle VARCHAR(30) NULL
   ,address VARCHAR(60) NULL
   ,city VARCHAR(15) NULL
