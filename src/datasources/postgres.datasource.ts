@@ -542,7 +542,16 @@ export class Postgres {
 								.toString()
 								.split(',')
 								.map(v => v.trim())
-					const placeholders = valueArray.map(() => `$${index++}`).join(',')
+					// Get the column type from schema
+					const column = options.schema.columns.find(col => col.field === w.column)
+					// Convert each value based on its type
+					const typedValues = valueArray.map(v => {
+						if (column.type === DataSourceColumnType.BOOLEAN) {
+							return typeof v === 'boolean' ? v : Boolean(v)
+						}
+						return v
+					})
+					const placeholders = typedValues.map(() => `$${index++}`).join(',')
 					command += ` ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders}) AND `
 				} else {
 					command += ` ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '$' + index : ''}  AND `
@@ -564,7 +573,16 @@ export class Postgres {
 								.toString()
 								.split(',')
 								.map(v => v.trim())
-					values.push(...valueArray)
+					// Get the column type from schema
+					const column = options.schema.columns.find(col => col.field === w.column)
+					// Convert each value based on its type before pushing
+					const typedValues = valueArray.map(v => {
+						if (column.type === DataSourceColumnType.BOOLEAN) {
+							return typeof v === 'boolean' ? v : Boolean(v)
+						}
+						return v
+					})
+					values.push(...typedValues)
 				} else {
 					values.push(w.value)
 				}
