@@ -535,11 +535,16 @@ export class Postgres {
 					command += `"${table_name}"."${w.column}"`
 				}
 
-				if(w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
-					const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
+				if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
+					const valueArray = Array.isArray(w.value)
+						? w.value
+						: w.value
+								.toString()
+								.split(',')
+								.map(v => v.trim())
 					const placeholders = valueArray.map(() => `$${index++}`).join(',')
 					command += ` ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders}) AND `
-				}else{
+				} else {
 					command += ` ${w.operator === WhereOperator.search ? 'LIKE' : w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? '$' + index : ''}  AND `
 				}
 
@@ -549,15 +554,21 @@ export class Postgres {
 			command = command.slice(0, -4)
 
 			for (const w of options.where) {
-							if (w.value === undefined || w.operator === WhereOperator.null || w.operator === WhereOperator.not_null) continue
-							
-							if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
-								const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
-								values.push(...valueArray)
-							} else {
-								values.push(w.value)
-							}
-						}
+				if (w.value === undefined || w.operator === WhereOperator.null || w.operator === WhereOperator.not_null)
+					continue
+
+				if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
+					const valueArray = Array.isArray(w.value)
+						? w.value
+						: w.value
+								.toString()
+								.split(',')
+								.map(v => v.trim())
+					values.push(...valueArray)
+				} else {
+					values.push(w.value)
+				}
+			}
 		}
 
 		return [command.trim(), values]
@@ -618,17 +629,14 @@ export class Postgres {
 		options: DataSourceCreateOneOptions | DataSourceUpdateOneOptions,
 	): DataSourceCreateOneOptions | DataSourceUpdateOneOptions {
 		for (const column of options.schema.columns) {
-			if (!options.data[column.field]) {
+			if (options.data[column.field] === undefined || options.data[column.field] === null) {
 				continue
 			}
 
 			switch (column.type) {
 				case DataSourceColumnType.BOOLEAN:
-					if (options.data[column.field] === true) {
-						options.data[column.field] = 1
-					} else if (options.data[column.field] === false) {
-						options.data[column.field] = 0
-					}
+					// PostgreSQL supports native boolean type, so we just ensure it's a boolean
+					options.data[column.field] = Boolean(options.data[column.field])
 					break
 				case DataSourceColumnType.DATE:
 					if (options.data[column.field]) {
@@ -673,7 +681,8 @@ export class Postgres {
 
 		switch (type) {
 			case DataSourceColumnType.BOOLEAN:
-				return value === 1
+				// PostgreSQL returns native boolean values, so we just ensure it's a proper boolean
+				return Boolean(value)
 			case DataSourceColumnType.DATE:
 				return new Date(value).toISOString()
 			case DataSourceColumnType.NUMBER:
