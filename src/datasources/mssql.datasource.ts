@@ -646,31 +646,42 @@ export class MSSQL {
 				}
 			}
 
-			command += `${options.where.map(w => {
-				if (w.operator === WhereOperator.search) {
-					return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} LIKE '?'`
-				} else if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
+			command += `${options.where
+				.map(w => {
+					if (w.operator === WhereOperator.search) {
+						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} LIKE '?'`
+					} else if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
+						const valueArray = Array.isArray(w.value)
+							? w.value
+							: w.value
+									.toString()
+									.split(',')
+									.map(v => v.trim())
+						const placeholders = valueArray.map(() => `'?'`).join(',')
+						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders})`
+					} else {
+						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? `'?'` : ''}`
+					}
+				})
+				.join(' AND ')} `
 
-					const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
-					const placeholders = valueArray.map(() => `'?'`).join(',')
-					return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders})`
-			
-				} else {
-					return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? `'?'` : ''}`
-				}
-			}).join(' AND ')} `
-			
 			// Process values for WHERE clause
-						for (const w of options.where) {
-							if (w.value === undefined || w.operator === WhereOperator.null || w.operator === WhereOperator.not_null) continue
-							
-							if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
-								const valueArray = Array.isArray(w.value) ? w.value : w.value.toString().split(',').map(v => v.trim())
-								values.push(...valueArray)
-							} else {
-								values.push(w.value)
-							}
-						}
+			for (const w of options.where) {
+				if (w.value === undefined || w.operator === WhereOperator.null || w.operator === WhereOperator.not_null)
+					continue
+
+				if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
+					const valueArray = Array.isArray(w.value)
+						? w.value
+						: w.value
+								.toString()
+								.split(',')
+								.map(v => v.trim())
+					values.push(...valueArray)
+				} else {
+					values.push(w.value)
+				}
+			}
 		}
 
 		if (!count) {

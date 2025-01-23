@@ -45,7 +45,7 @@ CREATE TABLE "Customer"
      "userId"     INT NOT NULL, 
      "companyName"  VARCHAR (40) NOT NULL, 
       "email"      VARCHAR (255) NULL, 
-     "contactName"  VARCHAR (30) NULL, 
+     "contactName"  VARCHAR (60) NULL, 
      "contactTitle" VARCHAR (30) NULL, 
      address      VARCHAR (60) NULL, 
      city         VARCHAR (15) NULL, 
@@ -93,7 +93,7 @@ CREATE TABLE "Supplier"
   ( 
      "supplierId"   SERIAL PRIMARY KEY NOT NULL, 
      "companyName"  VARCHAR (40) NOT NULL, 
-     "contactName"  VARCHAR (30) NULL, 
+     "contactName"  VARCHAR (60) NULL, 
      "contactTitle" VARCHAR (30) NULL, 
      address       VARCHAR (60) NULL, 
      city          VARCHAR (15) NULL, 
