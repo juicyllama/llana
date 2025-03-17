@@ -29,7 +29,7 @@ import { WebsocketJwtAuthMiddleware } from './websocket.jwt-auth.middleware'
 export class WebsocketGateway
 	implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnApplicationShutdown
 {
-	private tablesToConnectedUserSockets: Record<string, Record<string, string>> = {} // table_name -> sub -> socket_id
+	private tablesToConnectedUserSockets: Record<string, Record<string, string[]>> = {} // table_name -> sub -> socket_id[]
 	@WebSocketServer() server: Server
 
 	constructor(
@@ -76,58 +76,52 @@ export class WebsocketGateway
 		if (!this.server) throw new Error(`[WebsocketGateway] Server not initialized`)
 		this.logger.debug(`[WebsocketGateway] Publishing ${msg.tableName} ${msg.publishType} for #${msg.id}`)
 		const userSockets = this.tablesToConnectedUserSockets[msg.tableName]
-		if (!userSockets) {
-			this.logger.debug(`[WebsocketGateway] No connected users for table ${msg.tableName}`)
-			return
-		}
 		this.logger.debug(`[WebsocketGateway] Connected users: ${JSON.stringify(userSockets)}`)
-		for (const [sub, socketId] of Object.entries(userSockets)) {
-			const public_auth = await this.authentication.public({
-				table: msg.tableName,
-				access_level: RolePermission.READ,
-			})
+		for (const [sub, socketIds] of Object.entries(userSockets)) {
+			for (const socketId of socketIds) {
+				const public_auth = await this.authentication.public({
+					table: msg.tableName,
+					access_level: RolePermission.READ,
+				})
 
-			const permission = await this.roles.tablePermission({
-				identifier: sub,
-				table: msg.tableName,
-				access: RolePermission.READ,
-			})
+				const permission = await this.roles.tablePermission({
+					identifier: sub,
+					table: msg.tableName,
+					access: RolePermission.READ,
+				})
 
-			if (!public_auth.valid && !permission.valid) {
+				if (!public_auth.valid && !permission.valid) {
+					this.logger.debug(
+						`[WebsocketGateway] User ${sub} not authorized to receive event for table ${msg.tableName}`,
+					)
+					continue
+				}
+
 				this.logger.debug(
-					`[WebsocketGateway] User ${sub} not authorized to receive event for table ${msg.tableName}`,
+					`[WebsocketGateway] Emitting ${msg.tableName} ${msg.publishType} for #${msg.id} to ${socketId} (User: ${sub})`,
 				)
-				continue
+				this.server.to(socketId).emit(msg.tableName, {
+					type: msg.publishType,
+					[msg.primaryKey]: msg.id,
+				})
 			}
-
-			this.logger.debug(
-				`[WebsocketGateway] Emitting ${msg.tableName} ${msg.publishType} for #${msg.id} to ${socketId} (User: ${sub})`,
-			)
-			this.server.to(socketId).emit(msg.tableName, {
-				type: msg.publishType,
-				[msg.primaryKey]: msg.id,
-			})
 		}
 		return
 	}
 
 	handleConnection(client: any) {
 		this.tablesToConnectedUserSockets[client.user.table] ||= {}
-		const existingSocket = this.tablesToConnectedUserSockets[client.user.table][client.user.sub]
-		if (existingSocket) {
-			this.logger.debug(
-				`[WebsocketGateway] User ${client.user.sub} already connected to table ${client.user.table}. Disconnecting existing socket ${existingSocket}`,
-			)
-			this.server.sockets.sockets.get(existingSocket)?.disconnect()
-		}
-		this.tablesToConnectedUserSockets[client.user.table][client.user.sub] = client.id
+		this.tablesToConnectedUserSockets[client.user.table][client.user.sub] ||= []
+		this.tablesToConnectedUserSockets[client.user.table][client.user.sub].push(client.id)
 		this.logger.debug(
 			`[WebsocketGateway] Client id: ${client.id} connected. table=${client.user.table} sub=${client.user.sub}. Number of connected clients: ${this.server.sockets.sockets.size}`,
 		)
 	}
 
 	handleDisconnect(client: any) {
-		delete this.tablesToConnectedUserSockets[client.user.table][client.user.sub]
+		this.tablesToConnectedUserSockets[client.user.table][client.user.sub] = (
+			this.tablesToConnectedUserSockets[client.user.table][client.user.sub] || []
+		).filter(socketId => socketId !== client.id)
 		this.logger.debug(
 			`[WebsocketGateway] Cliend id: ${client.id} disconnected. sub=${client.user.sub}. Number of connected clients: ${this.server.sockets.sockets.size}`,
 		)
