@@ -75,7 +75,7 @@ export class WebsocketGateway
 	private async emitToSockets(msg: WebsocketRedisEvent) {
 		if (!this.server) throw new Error(`[WebsocketGateway] Server not initialized`)
 		this.logger.debug(`[WebsocketGateway] Publishing ${msg.tableName} ${msg.publishType} for #${msg.id}`)
-		const userSockets = this.tablesToConnectedUserSockets[msg.tableName]
+		const userSockets = this.tablesToConnectedUserSockets[msg.tableName] || {}
 		this.logger.debug(`[WebsocketGateway] Connected users: ${JSON.stringify(userSockets)}`)
 		for (const [sub, socketIds] of Object.entries(userSockets)) {
 			for (const socketId of socketIds) {
