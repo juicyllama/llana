@@ -123,6 +123,12 @@ export class WebsocketGateway
 	}
 
 	handleDisconnect(client: any) {
+		if (!client.user?.table || !this.tablesToConnectedUserSockets[client.user.table]) {
+			this.logger.debug(
+				`[WebsocketGateway] Client id: ${client.id} disconnected. table=${client.user.table} sub=${client.user.sub}. Number of connected clients: ${this.server.sockets.sockets.size}`,
+			)
+			return
+		}
 		this.tablesToConnectedUserSockets[client.user.table][client.user.sub] = (
 			this.tablesToConnectedUserSockets[client.user.table][client.user.sub] || []
 		).filter(socketId => socketId !== client.id)
