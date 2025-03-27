@@ -2,11 +2,9 @@ import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 
-import { DEFAULT_ACCESS_TOKEN_EXPIRY_MINUTES, DEFAULT_REFRESH_TOKEN_EXPIRY_DAYS } from './auth/auth.constants'
 import { FindOneResponseObject } from './dtos/response.dto'
 import { Logger } from './helpers/Logger'
 import { Auth, AuthType } from './types/auth.types'
-import { Env } from './utils/Env'
 
 type LoginPayload = {
 	sub: string
@@ -52,7 +50,7 @@ export class AuthService {
 
 		const access_token = this.jwtService.sign(payload, {
 			secret: process.env.JWT_KEY,
-			expiresIn: `${Env.IsTest() ? 60 : process.env.JWT_ACCESS_TOKEN_EXPIRY_MINUTES || DEFAULT_ACCESS_TOKEN_EXPIRY_MINUTES}m`,
+			expiresIn: process.env.JWT_EXPIRES_IN,
 		})
 		return { access_token }
 	}
@@ -65,7 +63,7 @@ export class AuthService {
 
 		return this.jwtService.sign(payload, {
 			secret: process.env.JWT_REFRESH_KEY,
-			expiresIn: `${process.env.JWT_REFRESH_TOKEN_EXPIRY_DAYS || DEFAULT_REFRESH_TOKEN_EXPIRY_DAYS}d`,
+			expiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
 		})
 	}
 

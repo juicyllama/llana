@@ -11,5 +11,6 @@ services:
         environment:
             DATABASE_URI: ${DATABASE_URI}
             JWT_KEY: ${JWT_KEY}
+            JWT_REFRESH_KEY: ${JWT_REFRESH_KEY}
             HOSTS: ${HOSTS}
             SOFT_DELETE_COLUMN: ${SOFT_DELETE_COLUMN}

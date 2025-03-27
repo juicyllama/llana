@@ -13,12 +13,7 @@ import {
 import { CookieOptions, Response as ExpressResponse } from 'express'
 
 import { AuthService } from './app.service.auth'
-import {
-	ACCESS_TOKEN_COOKIE_NAME,
-	DEFAULT_ACCESS_TOKEN_EXPIRY_MINUTES,
-	DEFAULT_REFRESH_TOKEN_EXPIRY_DAYS,
-	REFRESH_TOKEN_COOKIE_NAME,
-} from './auth/auth.constants'
+import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from './auth/auth.constants'
 import { LocalAuthGuard } from './auth/guards/local-auth.guard'
 import { HeaderParams } from './dtos/requests.dto'
 import { FindOneResponseObject } from './dtos/response.dto'
@@ -193,8 +188,8 @@ function getAuthCookieOpts(isRefreshToken: boolean): CookieOptions {
 		secure: !isLocalhost, // Consider environment check for development vs. production
 		sameSite: isLocalhost ? 'lax' : 'none', // lax for localhost compatibility
 		maxAge: isRefreshToken
-			? Number(process.env.JWT_REFRESH_TOKEN_EXPIRY_DAYS || DEFAULT_REFRESH_TOKEN_EXPIRY_DAYS) * 86400 * 1000 // Days to milliseconds
-			: Number(process.env.JWT_ACCESS_TOKEN_EXPIRY_MINUTES || DEFAULT_ACCESS_TOKEN_EXPIRY_MINUTES) * 60 * 1000, // Minutes to milliseconds
+			? convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN)
+			: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN),
 		path: isRefreshToken ? '/auth/refresh' : '/',
 	}
 	if (!isLocalhost) {
@@ -209,5 +204,26 @@ function setAccessAndRefreshTokenCookies(res: ExpressResponse, accessToken: stri
 	// Set refresh token cookie, if refresh token is provided
 	if (refreshToken) {
 		res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getAuthCookieOpts(true))
+	}
+}
+
+function convertJwtExpiryToMs(expiry: string): number {
+	const match = expiry.match(/^(\d+)([dms])$/)
+	if (!match) {
+		throw new Error('Invalid JWT expiry format. Use formats like "14d", "2m", "3s".')
+	}
+
+	const value = parseInt(match[1], 10)
+	const unit = match[2]
+
+	switch (unit) {
+		case 'd': // days
+			return value * 86400 * 1000
+		case 'm': // minutes
+			return value * 60 * 1000
+		case 's': // seconds
+			return value * 1000
+		default:
+			throw new Error('Unsupported time unit in JWT expiry format.')
 	}
 }
