@@ -7,7 +7,6 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'Customer'
-let custId = 1
 
 @Injectable()
 export class CustomerTestingService {
@@ -18,7 +17,6 @@ export class CustomerTestingService {
 
 	mockCustomer(userId: any): any {
 		return {
-			custId: custId++,
 			userId,
 			companyName: faker.company.name(),
 			contactName: faker.person.firstName() + ', ' + faker.person.lastName(),
