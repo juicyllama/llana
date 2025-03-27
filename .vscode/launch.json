@@ -1,0 +1,36 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+     {
+        "name": "Start",
+        "type": "node",
+        "request": "launch",
+        "runtimeExecutable": "npm",
+        "console": "integratedTerminal",
+        "runtimeArgs": [
+          "run",
+          "start"
+        ],
+        "env": {
+            "LOG_LEVEL": "3",
+            "LOGGING": "query"
+        },
+        "cwd": "${workspaceFolder}"
+      },{
+        "name": "Test",
+        "type": "node",
+        "request": "launch",
+        "runtimeExecutable": "npm",
+        "console": "integratedTerminal",
+        "runtimeArgs": [
+          "run",
+          "test",
+          "--testPathPattern=app.controller.get.test.spec"
+        ],
+        "env": {
+            "LOG_LEVEL": "2",            
+        },
+        "cwd": "${workspaceFolder}"
+      }
+    ]
+}

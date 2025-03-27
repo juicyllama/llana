@@ -1,3 +1,5 @@
+import { Request } from 'express'
+
 import { DataSourceWhere } from './datasource.types'
 
 export interface Auth {
@@ -65,4 +67,16 @@ export interface AuthTablePermissionFailResponse extends AuthTablePermissionResp
 
 export interface AuthTablePermissionResponse {
 	valid: boolean
+}
+
+export interface AuthenticatedRequest extends Request {
+	user: any
+}
+
+export class LoginResponseDto {
+	access_token: string
+
+	constructor(token: string) {
+		this.access_token = token
+	}
 }

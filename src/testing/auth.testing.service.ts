@@ -18,9 +18,8 @@ export class AuthTestingService {
 
 	async login(): Promise<string> {
 		try {
-			const username = 'test@test.com'
-			const password = 'test'
-			const payload = await this.authService.signIn(username, password)
+			const email = 'test@test.com'
+			const payload = await this.authService.login({ email, id: 1 })
 			return payload.access_token
 		} catch (error) {
 			console.error('Login failed:', error)

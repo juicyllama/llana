@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import { Cache } from 'cache-manager'
+import { ACCESS_TOKEN_COOKIE_NAME } from 'src/auth/auth.constants'
 
 import { CACHE_DEFAULT_IDENTITY_DATA_TTL, LLANA_PUBLIC_TABLES } from '../app.constants'
 import { FindManyResponseObject } from '../dtos/response.dto'
@@ -348,38 +349,39 @@ export class Authentication {
 
 	private async handleJwtAuth(options: {
 		table: string
-		headers?: any
+		headers?: Record<string, any>
 		x_request_id?: string
 	}): Promise<AuthRestrictionsResponse> {
-		if (!options.headers) {
-			return {
-				valid: false,
-				message: 'Missing authorization header',
+		let token = null
+		if (options.headers) {
+			if (options.headers.authorization) {
+				// Check for Bearer token in Authorization header
+				const [bearer, bearerToken] = options.headers.authorization.split(' ')
+				if (bearer === 'Bearer' && bearerToken) {
+					token = bearerToken
+				}
+			}
+			if (!token && options.headers.cookie) {
+				// Manually parse the Cookie header
+				token = options.headers.cookie
+					.split(';')
+					.reverse() // reverse to find the last cookie with the name
+					.find(cookie => cookie.trim().startsWith(ACCESS_TOKEN_COOKIE_NAME + '='))
+					?.split('=')[1]
 			}
 		}
 
-		const authHeader = options.headers['Authorization'] || options.headers['authorization']
-
-		if (!authHeader) {
+		if (!token) {
 			return {
 				valid: false,
-				message: 'Missing authorization header',
-			}
-		}
-
-		const [bearer, jwt_token] = authHeader.split(' ')
-
-		if (bearer !== 'Bearer' || !jwt_token) {
-			return {
-				valid: false,
-				message: 'Invalid authorization format. Use: Bearer <token>',
+				message: `Missing authorization token. Use either <Bearer> token header or ${ACCESS_TOKEN_COOKIE_NAME} cookie`,
 			}
 		}
 
 		let payload
 
 		try {
-			payload = await this.jwtService.verifyAsync(jwt_token, {
+			payload = await this.jwtService.verifyAsync(token, {
 				secret: this.configService.get('JWT_KEY'),
 			})
 		} catch (e) {
