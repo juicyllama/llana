@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common'
-import * as jwt from 'jwt-simple'
+import * as jsonwebtoken from 'jsonwebtoken'
 import { Socket } from 'socket.io'
 
 import { Logger } from '../../helpers/Logger'
@@ -44,7 +44,7 @@ export class WebsocketJwtAuthGuard implements CanActivate {
 
 		try {
 			// ✅ Use `jsonwebtoken.verify()` to validate signature and expiration
-			const payload = jwt.decode(token, process.env.JWT_KEY)
+			const payload = jsonwebtoken.verify(token, process.env.JWT_KEY)
 			client.data.user = payload // ✅ Attach user to socket for easy access
 			return payload
 		} catch (error) {

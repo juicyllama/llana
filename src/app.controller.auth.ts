@@ -71,7 +71,7 @@ export class AuthController {
 		setAccessAndRefreshTokenCookies(res, newAccessToken, newRefreshToken)
 		this.logger.log('Refreshed token', {
 			sub: loginPayload.sub,
-			oldRefreshToken: '...' + oldRefreshToken.substring(-10),
+			oldRefreshToken: '...' + oldRefreshToken.slice(-10),
 		})
 		return res.status(200).send(new LoginResponseDto(newAccessToken))
 	}

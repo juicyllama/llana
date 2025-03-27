@@ -206,6 +206,9 @@ describe('App > Controller > Auth', () => {
 })
 
 export function getCookieValueFromHeader(res: any, cookieName: string) {
+	if (!res.headers['set-cookie']) {
+		return undefined
+	}
 	const cookies: Array<string> = castArray(res.headers['set-cookie'])
 	const cookie = cookies.find(cookie => cookie.startsWith(cookieName + '='))
 	return cookie?.split('=')[1].split(';')[0]
