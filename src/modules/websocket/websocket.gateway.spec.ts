@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
-import * as jwt from 'jwt-simple'
+import * as jsonwebtoken from 'jsonwebtoken'
 import { io, Socket } from 'socket.io-client' // Changed import
 import { DataSourceSchema, PublishType } from 'src/types/datasource.types'
 import { AppModule } from '../../app.module'
@@ -313,8 +313,8 @@ async function createApp(port: number): Promise<App> {
 
 	users.push(user1, user2)
 	tokens.push(
-		jwt.encode({ sub: user1[usersSchema.primary_key] }, process.env.JWT_KEY),
-		jwt.encode({ sub: user2[usersSchema.primary_key] }, process.env.JWT_KEY),
+		jsonwebtoken.sign({ sub: user1[usersSchema.primary_key] }, process.env.JWT_KEY),
+		jsonwebtoken.sign({ sub: user2[usersSchema.primary_key] }, process.env.JWT_KEY),
 	)
 
 	return { app, gateway, service, module }
