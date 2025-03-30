@@ -6,7 +6,7 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'SalesOrder'
-let orderNumber = 0
+let orderNumber = 1000
 
 @Injectable()
 export class SalesOrderTestingService {
@@ -18,6 +18,7 @@ export class SalesOrderTestingService {
 	mockOrder(): any {
 		orderNumber++
 		return {
+			orderId: orderNumber,
 			orderDate: new Date(Date.now() - orderNumber * 1000000).toISOString(),
 			requiredDate: new Date(Date.now() - orderNumber * 900000).toISOString(),
 			shippedDate: new Date(Date.now() - orderNumber * 800000).toISOString(),
@@ -25,7 +26,7 @@ export class SalesOrderTestingService {
 			shipName: `ShipName_${orderNumber}`,
 			shipAddress: `Address_${orderNumber}`,
 			shipCity: `City_${orderNumber}`.substring(0, 15),
-			shipPostalCode: `Postal_${orderNumber}`,
+			shipPostalCode: '123456',
 			shipCountry: `Country_${orderNumber}`,
 		}
 	}

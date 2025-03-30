@@ -6,7 +6,7 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'Shipper'
-let shipperNumber = 0
+let shipperNumber = 4000
 
 @Injectable()
 export class ShipperTestingService {
@@ -18,7 +18,8 @@ export class ShipperTestingService {
 	mockShipper(): any {
 		shipperNumber++
 		return {
-			phone: `555-000-${String(shipperNumber).padStart(4, '0')}`,
+			shipperId: shipperNumber,
+			phone: `555-000-1234`,
 			companyName: `CompanyName ${shipperNumber}`,
 		}
 	}

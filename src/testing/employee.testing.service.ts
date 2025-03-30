@@ -6,7 +6,7 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'Employee'
-let employeeNumber = 0
+let employeeNumber = 2000
 
 @Injectable()
 export class EmployeeTestingService {
@@ -18,21 +18,22 @@ export class EmployeeTestingService {
 	mockEmployee(): any {
 		employeeNumber++
 		return {
+			employeeId: employeeNumber,
 			email: `employee${employeeNumber}@example.com`,
 			notes: `Notes for employee ${employeeNumber}`,
-			phone: `555-000-${String(employeeNumber).padStart(4, '0')}`,
+			phone: `555-000-1234}`,
 			photo: `photo${employeeNumber}.jpg`,
 			title: `Title ${employeeNumber}`,
-			mobile: `555-111-${String(employeeNumber).padStart(4, '0')}`,
-			lastName: `LastName${employeeNumber}`,
-			firstName: `FirstName${employeeNumber}`,
+			mobile: `555-111-1234}`,
+			lastName: `LastName`,
+			firstName: `FirstName`,
 			hireDate: new Date(2000, 0, 1),
 			address: `Address ${employeeNumber}`,
 			city: `City${employeeNumber}`,
 			region: `Region${employeeNumber}`,
-			postalCode: `ZIP${String(employeeNumber).padStart(5, '0')}`,
+			postalCode: '123456',
 			country: `Country${employeeNumber}`,
-			extension: `Ext${employeeNumber}`,
+			extension: `Ext`,
 			birthDate: new Date(1980, 0, 1),
 			photoPath: `/photos/employee${employeeNumber}.jpg`,
 			titleOfCourtesy: `Mr./Ms. ${employeeNumber}`,
