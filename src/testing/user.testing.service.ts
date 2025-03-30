@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker'
 import { Injectable } from '@nestjs/common'
 
 import { FindOneResponseObject } from '../dtos/response.dto'
@@ -20,10 +19,10 @@ export class UserTestingService {
 		userNumber++
 		return {
 			email: `test-user${userNumber}@gmail.com`,
-			password: faker.internet.password(),
+			password: 'asdlkjh132093ERWF',
 			role: 'USER',
-			firstName: faker.person.firstName(),
-			lastName: faker.person.lastName(),
+			firstName: `First${userNumber}`,
+			lastName: `Last${userNumber}`,
 			...props,
 		}
 	}
