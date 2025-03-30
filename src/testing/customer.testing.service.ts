@@ -27,7 +27,7 @@ export class CustomerTestingService {
 			region: 'Center',
 			postalCode: '10092',
 			country: 'Germany',
-			email: `email${customerNumber}@example.com`,
+			email: `email${customerNumber}@test.com`,
 			phone: '030-3456789',
 			fax: '030-3456788',
 		}

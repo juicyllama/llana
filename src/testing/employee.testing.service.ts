@@ -19,7 +19,7 @@ export class EmployeeTestingService {
 		employeeNumber++
 		return {
 			employeeId: employeeNumber,
-			email: `employee${employeeNumber}@example.com`,
+			email: `employee${employeeNumber}@test.com`,
 			notes: `Notes for employee ${employeeNumber}`,
 			phone: `555-000-1234}`,
 			photo: `photo${employeeNumber}.jpg`,

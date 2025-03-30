@@ -96,14 +96,12 @@ export class Mongo {
 
 			const collections = await mongo.db.listCollections().toArray()
 			const tables = collections.map(c => c.name)
-
-			mongo.connection.close()
-
 			return tables
 		} catch (e) {
-			mongo.connection.close()
 			this.logger.error(`[${DATABASE_TYPE}] Error listing tables - ${e.message}`)
 			throw new Error(e)
+		} finally {
+			mongo.connection.close()
 		}
 	}
 
@@ -204,8 +202,6 @@ export class Mongo {
 				`[${DATABASE_TYPE}] Relations built for collection ${options.table}, relations: ${JSON.stringify(relations.map(r => r.table))}`,
 			)
 
-			mongo.connection.close()
-
 			const schema = {
 				table: options.table,
 				columns,
@@ -215,9 +211,10 @@ export class Mongo {
 
 			return schema
 		} catch (e) {
-			mongo.connection.close()
 			this.logger.warn(`[${DATABASE_TYPE}] Error getting schema - ${e.message}`)
 			throw new Error(e)
+		} finally {
+			mongo.connection.close()
 		}
 	}
 
@@ -238,7 +235,6 @@ export class Mongo {
 		try {
 			const result = await mongo.collection.insertOne(options.data as any)
 			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${x_request_id}`)
-			mongo.connection.close()
 			return await this.findOne(
 				{
 					schema: options.schema,
@@ -254,8 +250,9 @@ export class Mongo {
 					message: e.message,
 				},
 			})
-			mongo.connection.close()
 			throw new Error(e)
+		} finally {
+			mongo.connection.close()
 		}
 	}
 
@@ -287,7 +284,6 @@ export class Mongo {
 			}
 
 			this.logger.debug(`[${DATABASE_TYPE}] Result: ${JSON.stringify(result[0])}`, x_request_id)
-			mongo.connection.close()
 			return this.formatOutput(options, result[0])
 		} catch (e) {
 			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`, x_request_id)
@@ -297,8 +293,9 @@ export class Mongo {
 					message: e.message,
 				},
 			})
-			mongo.connection.close()
 			throw new Error(e)
+		} finally {
+			mongo.connection.close()
 		}
 	}
 
@@ -359,8 +356,6 @@ export class Mongo {
 				}
 			}
 
-			mongo.connection.close()
-
 			return {
 				limit: options.limit,
 				offset: options.offset,
@@ -385,8 +380,9 @@ export class Mongo {
 					message: e.message,
 				},
 			})
-			mongo.connection.close()
 			throw new Error(e)
+		} finally {
+			mongo.connection.close()
 		}
 	}
 
@@ -405,7 +401,6 @@ export class Mongo {
 			const mongoFilters = await this.whereToFilter(options.where)
 			const total = Number(await mongo.collection.countDocuments(mongoFilters))
 			this.logger.debug(`[${DATABASE_TYPE}] Total Records: ${total}`, x_request_id)
-			mongo.connection.close()
 			return total
 		} catch (e) {
 			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`, x_request_id)
@@ -415,8 +410,9 @@ export class Mongo {
 					message: e.message,
 				},
 			})
-			mongo.connection.close()
 			throw new Error(e)
+		} finally {
+			mongo.connection.close()
 		}
 	}
 
@@ -444,7 +440,6 @@ export class Mongo {
 			])
 			const result = await mongo.collection.updateOne(mongoFilters, { $set: options.data })
 			this.logger.debug(`[${DATABASE_TYPE}] Result: ${JSON.stringify(result)}`, x_request_id)
-			mongo.connection.close()
 			return this.findOne(
 				{
 					schema: options.schema,
@@ -460,8 +455,9 @@ export class Mongo {
 					message: e.message,
 				},
 			})
-			mongo.connection.close()
 			throw new Error(e)
+		} finally {
+			mongo.connection.close()
 		}
 	}
 
@@ -499,7 +495,6 @@ export class Mongo {
 			}
 
 			this.logger.debug(`[${DATABASE_TYPE}] Result: ${JSON.stringify(result)}`, x_request_id)
-			mongo.connection.close()
 			if (result) {
 				return {
 					deleted: 1,
@@ -513,8 +508,9 @@ export class Mongo {
 					message: e.message,
 				},
 			})
-			mongo.connection.close()
 			throw new Error(e)
+		} finally {
+			mongo.connection.close()
 		}
 	}
 
@@ -537,7 +533,6 @@ export class Mongo {
 				this.logger.debug(`[${DATABASE_TYPE}] Collection ${schema.table} created ${x_request_id ?? ''}`)
 			}
 
-			mongo.connection.close()
 			return true
 		} catch (e) {
 			this.logger.warn(`[${DATABASE_TYPE}] Error executing query ${x_request_id ?? ''}`)
@@ -546,8 +541,9 @@ export class Mongo {
 					message: e.message,
 				},
 			})
-			mongo.connection.close()
 			return false
+		} finally {
+			mongo.connection.close()
 		}
 	}
 
@@ -556,7 +552,6 @@ export class Mongo {
 
 		try {
 			await mongo.collection.deleteMany({})
-			mongo.connection.close()
 		} catch (e) {
 			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`)
 			this.logger.warn({
@@ -564,6 +559,7 @@ export class Mongo {
 					message: e.message,
 				},
 			})
+		} finally {
 			mongo.connection.close()
 		}
 	}

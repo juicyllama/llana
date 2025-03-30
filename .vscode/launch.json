@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
      {
-        "name": "Start",
+        "name": "start",
         "type": "node",
         "request": "launch",
         "runtimeExecutable": "npm",
@@ -17,7 +17,7 @@
         },
         "cwd": "${workspaceFolder}"
       },{
-        "name": "Test",
+        "name": "test",
         "type": "node",
         "request": "launch",
         "runtimeExecutable": "npm",
@@ -31,6 +31,35 @@
             "LOG_LEVEL": "2",            
         },
         "cwd": "${workspaceFolder}"
+      },
+      ,{
+        "name": "test:mongo",
+        "type": "node",
+        "request": "launch",
+        "runtimeExecutable": "npm",
+        "console": "integratedTerminal",
+        "runtimeArgs": [
+          "run",
+          "test:mongodb"
+        ],
+        "env": {
+            "LOG_LEVEL": "2",            
+        },
+        "cwd": "${workspaceFolder}"
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Debug Jest Tests",
+        "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
+        "args": ["--runInBand", "--watchAll=false"],
+        "console": "integratedTerminal",
+        "internalConsoleOptions": "openOnSessionStart",
+        "cwd": "${workspaceFolder}",
+        "env": {
+            "NODE_ENV": "test"
+        },
+        "skipFiles": ["<node_internals>/**"]
       }
     ]
 }
