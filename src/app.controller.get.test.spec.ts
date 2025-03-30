@@ -1,28 +1,28 @@
 import { INestApplication } from '@nestjs/common'
-import { Test } from '@nestjs/testing'
+import { ConfigFactory, ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
-import { ConfigModule, ConfigService, ConfigFactory } from '@nestjs/config'
+import { Test } from '@nestjs/testing'
 import * as request from 'supertest'
 import { CustomerTestingService } from './testing/customer.testing.service'
 
 import { AppModule } from './app.module'
+import { Logger } from './helpers/Logger'
 import { AuthTestingService } from './testing/auth.testing.service'
-import { SalesOrderTestingService } from './testing/salesorder.testing.service'
-import { DataSourceSchema } from './types/datasource.types'
 import { EmployeeTestingService } from './testing/employee.testing.service'
+import { SalesOrderTestingService } from './testing/salesorder.testing.service'
 import { ShipperTestingService } from './testing/shipper.testing.service'
 import { TIMEOUT } from './testing/testing.const'
-import { Logger } from './helpers/Logger'
+import { DataSourceSchema } from './types/datasource.types'
 
 // Import configs
 import auth from './config/auth.config'
 import database from './config/database.config'
+import { envValidationSchema } from './config/env.validation'
 import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
-import { envValidationSchema } from './config/env.validation'
-import { RolePermission } from './types/roles.types'
 import { UserTestingService } from './testing/user.testing.service'
+import { RolePermission } from './types/roles.types'
 
 // Type the config imports
 const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
@@ -108,13 +108,16 @@ describe('App > Controller > Get', () => {
 		jwt = await authTestingService.login()
 		userId = await authTestingService.getUserId(jwt)
 
-		user = await userTestingService.mockUser()
+		user = await userTestingService.mockUser({ email: 'app.controller.get.test.spec.user@gmail.com' })
 
 		const result = await request(app.getHttpServer())
 			.post(`/User/`)
 			.send(user)
 			.set('Authorization', `Bearer ${jwt}`)
-			.expect(201)
+
+			if (result.status !== 201) {
+			throw new Error('Failed to create user: ' + result.text)
+		}
 
 		user = result.body
 		customer = await customerTestingService.createCustomer({ userId: user[userSchema.primary_key] })

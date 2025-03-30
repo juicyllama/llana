@@ -308,13 +308,14 @@ async function createApp(port: number): Promise<App> {
 	const app = module.createNestApplication()
 	await app.listen(port)
 
-	const user1 = await userTestingService.createUser({})
-	const user2 = await userTestingService.createUser({})
+	// create users with port-based emails to overcome same email error because of different servers
+	const user1 = await userTestingService.createUser({ email: `${port}-user1@email.com` })
+	const user2 = await userTestingService.createUser({ email: `${port}-user2@email.com` })
 
 	users.push(user1, user2)
 	tokens.push(
-		jsonwebtoken.sign({ sub: user1[usersSchema.primary_key], email: user1.email }, process.env.JWT_KEY),
-		jsonwebtoken.sign({ sub: user2[usersSchema.primary_key], email: user2.email }, process.env.JWT_KEY),
+		jsonwebtoken.sign({ sub: user1[usersSchema.primary_key] }, process.env.JWT_KEY),
+		jsonwebtoken.sign({ sub: user2[usersSchema.primary_key] }, process.env.JWT_KEY),
 	)
 
 	return { app, gateway, service, module }

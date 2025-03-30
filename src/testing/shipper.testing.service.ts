@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker'
 import { Injectable } from '@nestjs/common'
 
 import { FindOneResponseObject } from '../dtos/response.dto'
@@ -7,6 +6,8 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'Shipper'
+let shipperNumber = 0
+
 @Injectable()
 export class ShipperTestingService {
 	constructor(
@@ -15,13 +16,10 @@ export class ShipperTestingService {
 	) {}
 
 	mockShipper(): any {
+		shipperNumber++
 		return {
-			shipperId: faker.number.int({
-				min: 1000,
-				max: 9999,
-			}),
-			phone: faker.phone.number(),
-			companyName: faker.company.name(),
+			phone: `555-000-${String(shipperNumber).padStart(4, '0')}`,
+			companyName: `CompanyName ${shipperNumber}`,
 		}
 	}
 

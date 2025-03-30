@@ -7,6 +7,7 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'User'
+let userNumber = 0
 
 @Injectable()
 export class UserTestingService {
@@ -15,13 +16,15 @@ export class UserTestingService {
 		private readonly schema: Schema,
 	) {}
 
-	mockUser(): any {
+	mockUser(props = {}): any {
+		userNumber++
 		return {
-			email: faker.internet.email(),
+			email: `test-user${userNumber}@gmail.com`,
 			password: faker.internet.password(),
 			role: 'USER',
 			firstName: faker.person.firstName(),
 			lastName: faker.person.lastName(),
+			...props,
 		}
 	}
 

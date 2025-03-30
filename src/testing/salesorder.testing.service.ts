@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker'
 import { Injectable } from '@nestjs/common'
 
 import { FindOneResponseObject } from '../dtos/response.dto'
@@ -7,6 +6,7 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'SalesOrder'
+let orderNumber = 0
 
 @Injectable()
 export class SalesOrderTestingService {
@@ -16,20 +16,17 @@ export class SalesOrderTestingService {
 	) {}
 
 	mockOrder(): any {
+		orderNumber++
 		return {
-			orderId: faker.number.int({
-				min: 1000,
-				max: 9999,
-			}),
-			orderDate: faker.date.past().toISOString(),
-			requiredDate: faker.date.past().toISOString(),
-			shippedDate: faker.date.past().toISOString(),
-			freight: faker.number.float(),
-			shipName: faker.company.name(),
-			shipAddress: faker.location.streetAddress(),
-			shipCity: faker.location.city().substring(0, 15),
-			shipPostalCode: faker.location.zipCode(),
-			shipCountry: faker.location.countryCode(),
+			orderDate: new Date(Date.now() - orderNumber * 1000000).toISOString(),
+			requiredDate: new Date(Date.now() - orderNumber * 900000).toISOString(),
+			shippedDate: new Date(Date.now() - orderNumber * 800000).toISOString(),
+			freight: orderNumber * 1.5,
+			shipName: `ShipName_${orderNumber}`,
+			shipAddress: `Address_${orderNumber}`,
+			shipCity: `City_${orderNumber}`.substring(0, 15),
+			shipPostalCode: `Postal_${orderNumber}`,
+			shipCountry: `Country_${orderNumber}`,
 		}
 	}
 

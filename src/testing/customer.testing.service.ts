@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker'
 import { Injectable } from '@nestjs/common'
 
 import { FindOneResponseObject } from '../dtos/response.dto'
@@ -7,6 +6,7 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'Customer'
+let customerNumber = 0
 
 @Injectable()
 export class CustomerTestingService {
@@ -16,19 +16,20 @@ export class CustomerTestingService {
 	) {}
 
 	mockCustomer(userId: any): any {
+		customerNumber++
 		return {
 			userId,
-			companyName: faker.company.name(),
-			contactName: faker.person.firstName() + ', ' + faker.person.lastName(),
-			contactTitle: faker.person.prefix(),
-			address: faker.location.streetAddress(),
-			city: faker.location.city().substring(0, 10),
-			region: faker.location.state(),
-			postalCode: faker.location.zipCode(),
-			country: faker.location.countryCode(),
-			email: faker.internet.email(),
-			phone: faker.phone.number(),
-			fax: faker.phone.number(),
+			companyName: `Company ${customerNumber}`,
+			contactName: `first${customerNumber} last${customerNumber}`,
+			contactTitle: 'CEO',
+			address: `Address ${customerNumber}`,
+			city: 'Berlin',
+			region: 'Center',
+			postalCode: '10092',
+			country: 'Germany',
+			email: `email${customerNumber}@example.com`,
+			phone: '030-3456789',
+			fax: '030-3456788',
 		}
 	}
 

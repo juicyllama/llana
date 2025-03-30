@@ -79,13 +79,16 @@ describe('App > Controller > Post', () => {
 		jwt = await authTestingService.login()
 		userId = await authTestingService.getUserId(jwt)
 
-		user = await userTestingService.mockUser()
+		user = await userTestingService.mockUser({ email: 'app.controller.post.test.spec.ts@gmail.com' })
 
 		const result = await request(app.getHttpServer())
 			.post(`/User/`)
 			.send(user)
 			.set('Authorization', `Bearer ${jwt}`)
-			.expect(201)
+
+		if (result.status !== 201) {
+			throw new Error('Failed to create user: ' + result.text)
+		}
 
 		expect(result.body).toBeDefined()
 		expect(result.body.email).toBeDefined()
