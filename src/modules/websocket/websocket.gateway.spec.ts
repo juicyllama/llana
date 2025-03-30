@@ -313,8 +313,8 @@ async function createApp(port: number): Promise<App> {
 
 	users.push(user1, user2)
 	tokens.push(
-		jsonwebtoken.sign({ sub: user1[usersSchema.primary_key] }, process.env.JWT_KEY),
-		jsonwebtoken.sign({ sub: user2[usersSchema.primary_key] }, process.env.JWT_KEY),
+		jsonwebtoken.sign({ sub: user1[usersSchema.primary_key], email: user1.email }, process.env.JWT_KEY),
+		jsonwebtoken.sign({ sub: user2[usersSchema.primary_key], email: user2.email }, process.env.JWT_KEY),
 	)
 
 	return { app, gateway, service, module }

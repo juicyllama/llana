@@ -64,7 +64,7 @@ export const WebsocketJwtAuthMiddleware = (
 			})
 
 			if (!auth.valid) {
-				logger.error(`[WebsocketJwtAuthMiddleware] Authentication failed: ${auth.message}`)
+				logger.debug(`[WebsocketJwtAuthMiddleware] Authentication failed: ${auth.message}`)
 				return next(new Error(auth.message))
 			}
 
@@ -72,7 +72,7 @@ export const WebsocketJwtAuthMiddleware = (
 			logger.debug(`[WebsocketJwtAuthMiddleware] User ${auth.user_identifier} authenticated`)
 			next()
 		} catch (err) {
-			logger.error(
+			logger.debug(
 				`[WebsocketJwtAuthMiddleware] Failed to authenticate user. headers=${JSON.stringify(client.handshake.headers)}`,
 				err,
 			)

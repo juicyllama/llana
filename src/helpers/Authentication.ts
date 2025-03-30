@@ -385,7 +385,7 @@ export class Authentication {
 				secret: this.configService.get('JWT_KEY'),
 			})
 		} catch (e) {
-			this.logger.error(`[Authentication][auth] JWT verification failed: ${e.message}`)
+			this.logger.debug(`[Authentication][auth] JWT verification failed: ${e.message}`)
 
 			switch (e.message) {
 				case 'jwt expired':

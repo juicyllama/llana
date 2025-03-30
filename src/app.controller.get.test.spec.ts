@@ -894,7 +894,7 @@ describe('App > Controller > Get', () => {
 
 	afterAll(async () => {
 		for (const order of orders) {
-			console.log('delete order #' + order[salesOrderSchema.primary_key])
+			// console.debug('delete order #' + order[salesOrderSchema.primary_key])
 			await salesOrderTestingService.deleteOrder(order[salesOrderSchema.primary_key])
 		}
 		await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
