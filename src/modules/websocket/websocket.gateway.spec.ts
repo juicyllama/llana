@@ -12,6 +12,9 @@ import { UserTestingService } from '../../testing/user.testing.service'
 import { RolePermission } from '../../types/roles.types'
 import { Logger } from '../../helpers/Logger'
 import { AuthTestingService } from '../../testing/auth.testing.service'
+import { ConfigModule } from '@nestjs/config'
+import jwt from '../../config/jwt.config'
+import { envValidationSchema } from 'src/config/env.validation'
 
 const logger = new Logger()
 
@@ -289,7 +292,13 @@ async function waitForSocketEvent(clientSocket: Socket, timeoutMs: number = 1000
 
 async function createApp(port: number): Promise<App> {
 	const module: TestingModule = await Test.createTestingModule({
-		imports: [AppModule],
+		imports: [
+			ConfigModule.forRoot({
+				load: [jwt],
+				validationSchema: envValidationSchema,
+			}),
+			AppModule,
+		],
 		providers: [CustomerTestingService, SalesOrderTestingService, UserTestingService, AuthTestingService],
 		exports: [CustomerTestingService, SalesOrderTestingService, UserTestingService, AuthTestingService],
 	}).compile()

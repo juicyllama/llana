@@ -24,13 +24,15 @@ export const WebsocketJwtAuthMiddleware = (
 ): SocketIOMiddleware => {
 	return async (client: AuthSocket, next) => {
 		try {
-			if (!client.handshake.headers['x-llana-table']) {
+			const table = (
+				client.handshake.auth?.['x-llana-table'] ?? client.handshake.headers?.['x-llana-table']
+			)?.toString()
+
+			if (!table) {
 				logger.debug('[WebsocketJwtAuthMiddleware] Socket Failed - No table provided')
 				logger.debug(client.handshake.headers)
 				return next(new Error('No Table Provided In Headers[x-llana-table]'))
 			}
-
-			const table = client.handshake.headers['x-llana-table'].toString()
 
 			if (!hostCheckMiddleware.validateHost(client.handshake, '[WebsocketJwtAuthMiddleware]')) {
 				logger.debug('[WebsocketJwtAuthMiddleware] Socket Host Failed - Unauthorized')

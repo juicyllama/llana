@@ -22,7 +22,7 @@ import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Schema } from './helpers/Schema'
-import { AuthenticatedRequest, LoginResponseDto } from './types/auth.types'
+import { AuthenticatedRequest } from './types/auth.types'
 import { DataSourceFindOneOptions, QueryPerform, WhereOperator } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 
@@ -49,10 +49,10 @@ export class AuthController {
 			throw new BadRequestException('Authentication is disabled')
 		}
 
-		const { access_token: accessToken } = await this.authService.login(req.user)
+		const { access_token } = await this.authService.login(req.user)
 		const refreshToken = await this.authService.createRefreshToken(req.user)
-		setAccessAndRefreshTokenCookies(res, accessToken, refreshToken)
-		return res.status(200).send(new LoginResponseDto(accessToken))
+		setAccessAndRefreshTokenCookies(res, access_token, refreshToken)
+		return res.status(200).json({ access_token })
 	}
 
 	@Post('refresh')
@@ -73,7 +73,7 @@ export class AuthController {
 			sub: loginPayload.sub,
 			oldRefreshToken: '...' + oldRefreshToken.slice(-10),
 		})
-		return res.status(200).send(new LoginResponseDto(newAccessToken))
+		return res.status(200).json({ access_token: newAccessToken })
 	}
 
 	@Post('logout')
