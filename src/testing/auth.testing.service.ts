@@ -28,8 +28,8 @@ export class AuthTestingService {
 	async login(): Promise<string> {
 		try {
 			const email = 'test@test.com'
-			const [, id] = await this.findUser(email)
-			const payload = await this.authService.login({ email, id: id })
+			const [, sub] = await this.findUser(email)
+			const payload = await this.authService.login({ email, sub })
 			return payload.access_token
 		} catch (error) {
 			console.error('Login failed:', error)

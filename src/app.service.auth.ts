@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt'
 
 import { FindOneResponseObject } from './dtos/response.dto'
 import { Logger } from './helpers/Logger'
+import { Schema } from './helpers/Schema'
 import { Auth, AuthType } from './types/auth.types'
 
 type LoginPayload = {
@@ -18,19 +19,30 @@ type User = FindOneResponseObject & {
 
 @Injectable()
 export class AuthService {
+	private authSchema: any
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly jwtService: JwtService,
 		private readonly logger: Logger,
+		private readonly schema: Schema,
 	) {}
+
+	private async getUserPK() {
+		if (!this.authSchema) {
+			const authentications = this.configService.get<Auth[]>('auth')
+			const jwtAuthConfig = authentications.find(auth => auth.type === AuthType.JWT)
+			this.authSchema = await this.schema.getSchema({ table: jwtAuthConfig.table.name })
+		}
+		return this.authSchema.primary_key
+	}
 
 	async getUserId(jwt: string): Promise<any> {
 		const payload = await this.jwtService.verifyAsync(jwt)
 		return payload.sub
 	}
 
-	constructLoginPayload(user: User | LoginPayload) {
-		const payload = { sub: user.sub || user['id'], email: user.email } // in case of User object
+	private async constructLoginPayload(user: User | LoginPayload) {
+		const payload = { sub: user[await this.getUserPK()] || user.sub, email: user.email } // in case of User object
 		if (!payload.sub || !payload.email) {
 			throw new UnauthorizedException('Invalid user object')
 		}
@@ -38,16 +50,7 @@ export class AuthService {
 	}
 
 	async login(user: any): Promise<{ access_token: string }> {
-		const payload = this.constructLoginPayload(user)
-		const authentications = this.configService.get<Auth[]>('auth')
-
-		const jwtAuthConfig = authentications.find(auth => auth.type === AuthType.JWT)
-
-		if (!jwtAuthConfig) {
-			this.logger.error('JWT authentication not configured')
-			throw new UnauthorizedException()
-		}
-
+		const payload = await this.constructLoginPayload(user)
 		const access_token = this.jwtService.sign(payload, {
 			secret: process.env.JWT_KEY,
 			expiresIn: process.env.JWT_EXPIRES_IN ?? '15m',
@@ -59,7 +62,7 @@ export class AuthService {
 		if (!process.env.JWT_REFRESH_KEY) {
 			throw new Error('JWT_REFRESH_KEY not found')
 		}
-		const payload = this.constructLoginPayload(user)
+		const payload = await this.constructLoginPayload(user)
 
 		return this.jwtService.sign(payload, {
 			secret: process.env.JWT_REFRESH_KEY,
