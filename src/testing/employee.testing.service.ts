@@ -21,7 +21,7 @@ export class EmployeeTestingService {
 			employeeId: employeeNumber,
 			email: `employee${employeeNumber}@test.com`,
 			notes: `Notes for employee ${employeeNumber}`,
-			phone: `555-000-1234}`,
+			phone: `555-000-1234`,
 			photo: `photo${employeeNumber}.jpg`,
 			title: `Title ${employeeNumber}`,
 			mobile: `555-111-1234`,
