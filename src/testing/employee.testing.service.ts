@@ -24,7 +24,7 @@ export class EmployeeTestingService {
 			phone: `555-000-1234}`,
 			photo: `photo${employeeNumber}.jpg`,
 			title: `Title ${employeeNumber}`,
-			mobile: `555-111-1234}`,
+			mobile: `555-111-1234`,
 			lastName: `LastName`,
 			firstName: `FirstName`,
 			hireDate: new Date(2000, 0, 1),
