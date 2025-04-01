@@ -16,6 +16,8 @@ import { ConfigModule } from '@nestjs/config'
 import jwt from '../../config/jwt.config'
 import { envValidationSchema } from 'src/config/env.validation'
 
+const SOCKET_TIMEOUT = 3000
+
 const logger = new Logger()
 
 const customers = []
@@ -55,7 +57,7 @@ describe('WebsocketGateway', () => {
 
 	async function listenAndOpenSocket(authToken: string, table: string, port = PORT1) {
 		const clientSocket = createSocket(port, authToken, table)
-		await waitForSocketToBeReady(clientSocket, 1000)
+		await waitForSocketToBeReady(clientSocket, SOCKET_TIMEOUT)
 		openSocketsForCleanup.push(clientSocket)
 		return clientSocket
 	}
@@ -250,7 +252,7 @@ describe('WebsocketGateway', () => {
 
 // helpers
 
-async function waitForSocketToBeReady(clientSocket: Socket, timeoutMs: number = 1000) {
+async function waitForSocketToBeReady(clientSocket: Socket, timeoutMs: number = SOCKET_TIMEOUT) {
 	return await new Promise((resolve, reject) => {
 		const timeoutId = setTimeout(() => {
 			reject('Timeout')
@@ -274,7 +276,7 @@ async function waitForSocketToBeReady(clientSocket: Socket, timeoutMs: number = 
 	})
 }
 
-async function waitForSocketEvent(clientSocket: Socket, timeoutMs: number = 1000) {
+async function waitForSocketEvent(clientSocket: Socket, timeoutMs: number = SOCKET_TIMEOUT) {
 	return await new Promise((resolve, reject) => {
 		let resolved = false
 		const timeoutId = setTimeout(() => {

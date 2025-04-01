@@ -1,65 +1,54 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-     {
-        "name": "start",
-        "type": "node",
-        "request": "launch",
-        "runtimeExecutable": "npm",
-        "console": "integratedTerminal",
-        "runtimeArgs": [
-          "run",
-          "start"
-        ],
-        "env": {
-            "LOG_LEVEL": "3",
-            "LOGGING": "query"
-        },
-        "cwd": "${workspaceFolder}"
-      },{
-        "name": "test",
-        "type": "node",
-        "request": "launch",
-        "runtimeExecutable": "npm",
-        "console": "integratedTerminal",
-        "runtimeArgs": [
-          "run",
-          "test",
-          "--testPathPattern=app.controller.get.test.spec"
-        ],
-        "env": {
-            "LOG_LEVEL": "2",            
-        },
-        "cwd": "${workspaceFolder}"
-      },
-      ,{
-        "name": "test:mongo",
-        "type": "node",
-        "request": "launch",
-        "runtimeExecutable": "npm",
-        "console": "integratedTerminal",
-        "runtimeArgs": [
-          "run",
-          "test:mongodb"
-        ],
-        "env": {
-            "LOG_LEVEL": "2",            
-        },
-        "cwd": "${workspaceFolder}"
-      },
-      {
-        "type": "node",
-        "request": "launch",
-        "name": "Debug Jest Tests",
-        "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
-        "args": ["--runInBand", "--watchAll=false"],
-        "console": "integratedTerminal",
-        "internalConsoleOptions": "openOnSessionStart",
-        "cwd": "${workspaceFolder}",
-        "env": {
-            "NODE_ENV": "test"
-        },
-        "skipFiles": ["<node_internals>/**"]
-      }
-    ]
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "start",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "npm",
+			"console": "integratedTerminal",
+			"runtimeArgs": ["run", "start"],
+			"env": {
+				"LOG_LEVEL": "3",
+				"LOGGING": "query"
+			},
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"name": "test",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "npm",
+			"console": "integratedTerminal",
+			"runtimeArgs": ["run", "test"],
+			"env": {
+				"LOG_LEVEL": "2"
+			},
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"name": "test:mongodb",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "npm",
+			"console": "integratedTerminal",
+			"runtimeArgs": ["run", "test:mongodb"],
+			"env": {
+				"LOG_LEVEL": "2"
+			},
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"name": "test:mssql",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "npm",
+			"console": "integratedTerminal",
+			"runtimeArgs": ["run", "test:mssql"],
+			"env": {
+				"LOG_LEVEL": "2"
+			},
+			"cwd": "${workspaceFolder}"
+		}
+	]
 }
