@@ -63,7 +63,7 @@ export class AuthController {
 			.find(cookie => cookie.trim().startsWith(REFRESH_TOKEN_COOKIE_NAME + '='))
 			?.split('=')[1]
 		if (!oldRefreshToken) {
-			throw new Error('No refresh token found')
+			return res.status(401).send('No refresh token found')
 		}
 		const loginPayload = this.authService.decodeRefreshToken(oldRefreshToken)
 		const { access_token: newAccessToken } = await this.authService.login(loginPayload)
