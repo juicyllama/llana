@@ -13,7 +13,7 @@ import {
 import { CookieOptions, Response as ExpressResponse } from 'express'
 
 import { AuthService } from './app.service.auth'
-import { ACCESS_TOKEN_COOKIE_NAME, IS_LOGGED_IN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from './auth/auth.constants'
+import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from './auth/auth.constants'
 import { LocalAuthGuard } from './auth/guards/local-auth.guard'
 import { HeaderParams } from './dtos/requests.dto'
 import { FindOneResponseObject } from './dtos/response.dto'
@@ -52,7 +52,10 @@ export class AuthController {
 		const { access_token } = await this.authService.login(req.user)
 		const refreshToken = await this.authService.createRefreshToken(req.user)
 		setAccessAndRefreshTokenCookies(res, access_token, refreshToken)
-		return res.status(200).json({ access_token })
+		return res.status(200).json({
+			access_token,
+			refresh_token_expires_in: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN) / 1000,
+		})
 	}
 
 	@Post('refresh')
@@ -73,14 +76,16 @@ export class AuthController {
 			sub: loginPayload.sub,
 			oldRefreshToken: '...' + oldRefreshToken.slice(-10),
 		})
-		return res.status(200).json({ access_token: newAccessToken })
+		return res.status(200).json({
+			access_token: newAccessToken,
+			refresh_token_expires_in: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN) / 1000,
+		})
 	}
 
 	@Post('logout')
 	async logout(@Res({ passthrough: true }) res: ExpressResponse): Promise<any> {
 		res.clearCookie(ACCESS_TOKEN_COOKIE_NAME, getAuthCookieOpts(false))
 		res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, getAuthCookieOpts(true))
-		res.clearCookie(IS_LOGGED_IN_COOKIE_NAME, getLoginCookieOpts())
 		return {
 			success: true,
 		}
@@ -199,19 +204,12 @@ function getAuthCookieOpts(isRefreshToken: boolean): CookieOptions {
 	return opts
 }
 
-function getLoginCookieOpts(): CookieOptions {
-	return {
-		maxAge: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN),
-	}
-}
-
 function setAccessAndRefreshTokenCookies(res: ExpressResponse, accessToken: string, refreshToken?: string): void {
 	// Set access token cookie
 	res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getAuthCookieOpts(false))
 	// Set refresh token cookie, if refresh token is provided
 	if (refreshToken) {
 		res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getAuthCookieOpts(true))
-		res.cookie(IS_LOGGED_IN_COOKIE_NAME, 'true', getLoginCookieOpts())
 	}
 }
 
