@@ -185,8 +185,8 @@ function getAuthCookieOpts(isRefreshToken: boolean): CookieOptions {
 	const isLocalhost = domain.startsWith('localhost')
 	const opts: Record<string, any> = {
 		httpOnly: true,
-		secure: !isLocalhost, // Consider environment check for development vs. production
-		sameSite: isLocalhost ? 'lax' : 'none', // lax for localhost compatibility
+		secure: true,
+		sameSite: 'none',
 		maxAge: isRefreshToken
 			? convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN)
 			: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN),
