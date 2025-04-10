@@ -25,6 +25,7 @@ import { Schema } from './helpers/Schema'
 import { AuthenticatedRequest } from './types/auth.types'
 import { DataSourceFindOneOptions, QueryPerform, WhereOperator } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
+import { Env } from './utils/Env'
 
 @Controller('auth')
 export class AuthController {
@@ -54,6 +55,7 @@ export class AuthController {
 		setAccessAndRefreshTokenCookies(res, access_token, refreshToken)
 		return res.status(200).json({
 			access_token,
+			expires_in: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN) / 1000,
 			refresh_token_expires_in: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN) / 1000,
 		})
 	}
@@ -78,6 +80,7 @@ export class AuthController {
 		})
 		return res.status(200).json({
 			access_token: newAccessToken,
+			expires_in: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN) / 1000,
 			refresh_token_expires_in: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN) / 1000,
 		})
 	}
@@ -184,33 +187,24 @@ export class AuthController {
 }
 
 function getAuthCookieOpts(isRefreshToken: boolean): CookieOptions {
-	if (!process.env.BASE_URL_API) {
-		throw new Error('BASE_URL_API env variable not set')
+	const domain = process.env.AUTH_COOKIES_DOMAIN || process.env.BASE_URL_API
+	if (Env.IsProd() && !domain) {
+		throw new Error('AUTH_COOKIES_DOMAIN or BASE_URL_API must be set in production')
 	}
-	const domain: string = process.env.BASE_URL_API.replace(/^https?:\/\//, '') // Remove protocol
-	const isLocalhost = domain.startsWith('localhost')
-	const opts: Record<string, any> = {
+	const opts: CookieOptions = {
 		httpOnly: true,
 		secure: true,
-		sameSite: 'none',
-		maxAge: isRefreshToken
-			? convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN)
-			: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN),
-		path: isRefreshToken ? '/auth/refresh' : '/',
-	}
-	if (!isLocalhost) {
-		opts.domain = domain
+		sameSite: 'strict',
+		maxAge: convertJwtExpiryToMs(isRefreshToken ? process.env.JWT_REFRESH_EXPIRES_IN : process.env.JWT_EXPIRES_IN),
+		...(domain ? { domain } : {}),
+		path: '/',
 	}
 	return opts
 }
 
-function setAccessAndRefreshTokenCookies(res: ExpressResponse, accessToken: string, refreshToken?: string): void {
-	// Set access token cookie
+function setAccessAndRefreshTokenCookies(res: ExpressResponse, accessToken: string, refreshToken: string): void {
 	res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getAuthCookieOpts(false))
-	// Set refresh token cookie, if refresh token is provided
-	if (refreshToken) {
-		res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getAuthCookieOpts(true))
-	}
+	res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getAuthCookieOpts(true))
 }
 
 function convertJwtExpiryToMs(expiry: string): number {
