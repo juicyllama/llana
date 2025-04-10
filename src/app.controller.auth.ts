@@ -187,10 +187,12 @@ export class AuthController {
 }
 
 function getAuthCookieOpts(isRefreshToken: boolean): CookieOptions {
-	const domain = process.env.AUTH_COOKIES_DOMAIN || process.env.BASE_URL_API
+	let domain = process.env.AUTH_COOKIES_DOMAIN || process.env.BASE_URL_API
 	if (Env.IsProd() && !domain) {
 		throw new Error('AUTH_COOKIES_DOMAIN or BASE_URL_API must be set in production')
 	}
+	domain = domain.replace(/^https?:\/\//, '') // Remove protocol
+
 	const opts: CookieOptions = {
 		httpOnly: true,
 		secure: true,
