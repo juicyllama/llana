@@ -191,14 +191,12 @@ function getAuthCookieOpts(isRefreshToken: boolean): CookieOptions {
 	if (Env.IsProd() && !domain) {
 		throw new Error('AUTH_COOKIES_DOMAIN or BASE_URL_API must be set in production')
 	}
-	domain = domain.replace(/^https?:\/\//, '') // Remove protocol
-
 	const opts: CookieOptions = {
 		httpOnly: true,
 		secure: true,
 		sameSite: 'strict',
 		maxAge: convertJwtExpiryToMs(isRefreshToken ? process.env.JWT_REFRESH_EXPIRES_IN : process.env.JWT_EXPIRES_IN),
-		...(domain ? { domain } : {}),
+		...(domain ? { domain: new URL(domain).hostname } : {}),
 		path: '/',
 	}
 	return opts
