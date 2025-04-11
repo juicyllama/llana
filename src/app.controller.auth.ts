@@ -194,7 +194,7 @@ function getAuthCookieOpts(isRefreshToken: boolean): CookieOptions {
 	let domain
 	try {
 		domain = process.env.AUTH_COOKIES_DOMAIN || new URL(process.env.BASE_URL_API).hostname
-	} catch (e) {
+	} catch {
 		throw new Error('Could not parse AUTH_COOKIES_DOMAIN or BASE_URL_API. Make sure they are valid URLs.')
 	}
 
