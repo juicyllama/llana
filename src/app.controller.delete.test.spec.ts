@@ -1,24 +1,24 @@
 import { INestApplication } from '@nestjs/common'
-import { Test } from '@nestjs/testing'
-import { ConfigModule, ConfigService, ConfigFactory } from '@nestjs/config'
+import { ConfigFactory, ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
+import { Test } from '@nestjs/testing'
 import * as request from 'supertest'
 import { CustomerTestingService } from './testing/customer.testing.service'
 
 import { AppModule } from './app.module'
+import { Logger } from './helpers/Logger'
 import { AuthTestingService } from './testing/auth.testing.service'
 import { DataSourceSchema } from './types/datasource.types'
-import { Logger } from './helpers/Logger'
 
 // Import configs
 import auth from './config/auth.config'
 import database from './config/database.config'
+import { envValidationSchema } from './config/env.validation'
 import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
-import { envValidationSchema } from './config/env.validation'
-import { RolePermission } from './types/roles.types'
 import { UserTestingService } from './testing/user.testing.service'
+import { RolePermission } from './types/roles.types'
 
 // Type the config imports
 const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
@@ -65,7 +65,11 @@ describe('App > Controller > Delete', () => {
 		}).compile()
 
 		app = moduleRef.createNestApplication()
-		await app.init()
+		await app.init();
+
+		// Expose the app object globally for debugging
+		(global as any).app = app;
+
 
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
@@ -73,13 +77,16 @@ describe('App > Controller > Delete', () => {
 
 		jwt = await authTestingService.login()
 		userId = await authTestingService.getUserId(jwt)
-		user = await userTestingService.mockUser()
+		user = await userTestingService.mockUser({ email: 'app.controller.delete.test.spec3@gmail.com' })
 
 		const result = await request(app.getHttpServer())
 			.post(`/User/`)
 			.send(user)
 			.set('Authorization', `Bearer ${jwt}`)
-			.expect(201)
+
+		if (result.status !== 201) {
+			throw new Error('Failed to create user: ' + result.text)
+		}
 
 		user = result.body
 
@@ -423,6 +430,7 @@ describe('App > Controller > Delete', () => {
 		for (let customer of customers) {
 			await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])
 		}
+		await userTestingService.deleteUser(user[userSchema.primary_key])
 		await app.close()
 	})
 })

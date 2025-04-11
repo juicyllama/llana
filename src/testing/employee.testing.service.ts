@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker'
 import { Injectable } from '@nestjs/common'
 
 import { FindOneResponseObject } from '../dtos/response.dto'
@@ -7,6 +6,7 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'Employee'
+let employeeNumber = 2000
 
 @Injectable()
 export class EmployeeTestingService {
@@ -16,29 +16,27 @@ export class EmployeeTestingService {
 	) {}
 
 	mockEmployee(): any {
+		employeeNumber++
 		return {
-			employeeId: faker.number.int({
-				min: 1000,
-				max: 9999,
-			}),
-			email: faker.internet.email(),
-			notes: null,
-			phone: faker.phone.number(),
-			photo: null,
-			title: faker.person.jobTitle().slice(0, 10),
-			mobile: null,
-			lastName: faker.person.lastName(),
-			firstName: faker.person.firstName(),
-			hireDate: faker.date.past(),
-			address: faker.location.streetAddress(),
-			city: faker.location.city().substring(0, 10),
-			region: faker.location.state(),
-			postalCode: faker.location.zipCode(),
-			country: faker.location.countryCode(),
-			extension: null,
-			birthDate: faker.date.past(),
-			photoPath: null,
-			titleOfCourtesy: faker.person.prefix(),
+			employeeId: employeeNumber,
+			email: `employee${employeeNumber}@test.com`,
+			notes: `Notes for employee ${employeeNumber}`,
+			phone: `555-000-1234`,
+			photo: `photo${employeeNumber}.jpg`,
+			title: `Title ${employeeNumber}`,
+			mobile: `555-111-1234`,
+			lastName: `LastName`,
+			firstName: `FirstName`,
+			hireDate: new Date(2000, 0, 1),
+			address: `Address ${employeeNumber}`,
+			city: `City${employeeNumber}`,
+			region: `Region${employeeNumber}`,
+			postalCode: '123456',
+			country: `Country${employeeNumber}`,
+			extension: `Ext`,
+			birthDate: new Date(1980, 0, 1),
+			photoPath: `/photos/employee${employeeNumber}.jpg`,
+			titleOfCourtesy: `Mr./Ms. ${employeeNumber}`,
 		}
 	}
 

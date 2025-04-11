@@ -24,13 +24,15 @@ export const WebsocketJwtAuthMiddleware = (
 ): SocketIOMiddleware => {
 	return async (client: AuthSocket, next) => {
 		try {
-			if (!client.handshake.headers['x-llana-table']) {
+			const table = (
+				client.handshake.auth?.['x-llana-table'] ?? client.handshake.headers?.['x-llana-table']
+			)?.toString()
+
+			if (!table) {
 				logger.debug('[WebsocketJwtAuthMiddleware] Socket Failed - No table provided')
 				logger.debug(client.handshake.headers)
 				return next(new Error('No Table Provided In Headers[x-llana-table]'))
 			}
-
-			const table = client.handshake.headers['x-llana-table'].toString()
 
 			if (!hostCheckMiddleware.validateHost(client.handshake, '[WebsocketJwtAuthMiddleware]')) {
 				logger.debug('[WebsocketJwtAuthMiddleware] Socket Host Failed - Unauthorized')
@@ -64,7 +66,7 @@ export const WebsocketJwtAuthMiddleware = (
 			})
 
 			if (!auth.valid) {
-				logger.error(`[WebsocketJwtAuthMiddleware] Authentication failed: ${auth.message}`)
+				logger.debug(`[WebsocketJwtAuthMiddleware] Authentication failed: ${auth.message}`)
 				return next(new Error(auth.message))
 			}
 
@@ -72,7 +74,7 @@ export const WebsocketJwtAuthMiddleware = (
 			logger.debug(`[WebsocketJwtAuthMiddleware] User ${auth.user_identifier} authenticated`)
 			next()
 		} catch (err) {
-			logger.error(
+			logger.debug(
 				`[WebsocketJwtAuthMiddleware] Failed to authenticate user. headers=${JSON.stringify(client.handshake.headers)}`,
 				err,
 			)

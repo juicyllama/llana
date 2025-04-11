@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
-import * as jwt from 'jwt-simple'
+import * as jsonwebtoken from 'jsonwebtoken'
 import { io, Socket } from 'socket.io-client' // Changed import
 import { DataSourceSchema, PublishType } from 'src/types/datasource.types'
 import { AppModule } from '../../app.module'
@@ -12,6 +12,11 @@ import { UserTestingService } from '../../testing/user.testing.service'
 import { RolePermission } from '../../types/roles.types'
 import { Logger } from '../../helpers/Logger'
 import { AuthTestingService } from '../../testing/auth.testing.service'
+import { ConfigModule } from '@nestjs/config'
+import jwt from '../../config/jwt.config'
+import { envValidationSchema } from 'src/config/env.validation'
+
+const SOCKET_TIMEOUT = 3000
 
 const logger = new Logger()
 
@@ -52,7 +57,7 @@ describe('WebsocketGateway', () => {
 
 	async function listenAndOpenSocket(authToken: string, table: string, port = PORT1) {
 		const clientSocket = createSocket(port, authToken, table)
-		await waitForSocketToBeReady(clientSocket, 1000)
+		await waitForSocketToBeReady(clientSocket, SOCKET_TIMEOUT)
 		openSocketsForCleanup.push(clientSocket)
 		return clientSocket
 	}
@@ -247,7 +252,7 @@ describe('WebsocketGateway', () => {
 
 // helpers
 
-async function waitForSocketToBeReady(clientSocket: Socket, timeoutMs: number = 1000) {
+async function waitForSocketToBeReady(clientSocket: Socket, timeoutMs: number = SOCKET_TIMEOUT) {
 	return await new Promise((resolve, reject) => {
 		const timeoutId = setTimeout(() => {
 			reject('Timeout')
@@ -271,7 +276,7 @@ async function waitForSocketToBeReady(clientSocket: Socket, timeoutMs: number = 
 	})
 }
 
-async function waitForSocketEvent(clientSocket: Socket, timeoutMs: number = 1000) {
+async function waitForSocketEvent(clientSocket: Socket, timeoutMs: number = SOCKET_TIMEOUT) {
 	return await new Promise((resolve, reject) => {
 		let resolved = false
 		const timeoutId = setTimeout(() => {
@@ -289,7 +294,13 @@ async function waitForSocketEvent(clientSocket: Socket, timeoutMs: number = 1000
 
 async function createApp(port: number): Promise<App> {
 	const module: TestingModule = await Test.createTestingModule({
-		imports: [AppModule],
+		imports: [
+			ConfigModule.forRoot({
+				load: [jwt],
+				validationSchema: envValidationSchema,
+			}),
+			AppModule,
+		],
 		providers: [CustomerTestingService, SalesOrderTestingService, UserTestingService, AuthTestingService],
 		exports: [CustomerTestingService, SalesOrderTestingService, UserTestingService, AuthTestingService],
 	}).compile()
@@ -308,13 +319,14 @@ async function createApp(port: number): Promise<App> {
 	const app = module.createNestApplication()
 	await app.listen(port)
 
-	const user1 = await userTestingService.createUser({})
-	const user2 = await userTestingService.createUser({})
+	// create users with port-based emails to overcome same email error because of different servers
+	const user1 = await userTestingService.createUser({ email: `${port}-user1@email.com` })
+	const user2 = await userTestingService.createUser({ email: `${port}-user2@email.com` })
 
 	users.push(user1, user2)
 	tokens.push(
-		jwt.encode({ sub: user1[usersSchema.primary_key] }, process.env.JWT_KEY),
-		jwt.encode({ sub: user2[usersSchema.primary_key] }, process.env.JWT_KEY),
+		jsonwebtoken.sign({ sub: user1[usersSchema.primary_key] }, process.env.JWT_KEY),
+		jsonwebtoken.sign({ sub: user2[usersSchema.primary_key] }, process.env.JWT_KEY),
 	)
 
 	return { app, gateway, service, module }

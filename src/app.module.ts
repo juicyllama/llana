@@ -2,6 +2,7 @@ import { CacheModule } from '@nestjs/cache-manager'
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
+import { PassportModule } from '@nestjs/passport'
 import { ScheduleModule } from '@nestjs/schedule'
 import Redis from 'ioredis'
 
@@ -14,6 +15,8 @@ import { PutController } from './app.controller.put'
 import { AuthService } from './app.service.auth'
 import { AppBootup } from './app.service.bootup'
 import { TasksService } from './app.service.tasks'
+import { LocalAuthGuard } from './auth/guards/local-auth.guard'
+import { LocalStrategy } from './auth/strategies/local.strategy'
 import auth from './config/auth.config'
 import database from './config/database.config'
 import { envValidationSchema } from './config/env.validation'
@@ -72,6 +75,7 @@ function createPubSubOnlyRedisClient() {
 			isGlobal: true,
 		}),
 		ScheduleModule.forRoot(),
+		PassportModule,
 	],
 	controllers: [AuthController, DocsController, DeleteController, GetController, PostController, PutController],
 	providers: [
@@ -96,6 +100,8 @@ function createPubSubOnlyRedisClient() {
 		Webhook,
 		WebsocketGateway,
 		WebsocketService,
+		LocalStrategy,
+		LocalAuthGuard,
 		{
 			provide: REDIS_PUB_CLIENT_TOKEN,
 			useFactory: createPubSubOnlyRedisClient,

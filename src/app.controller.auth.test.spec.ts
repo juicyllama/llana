@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing'
 import { JwtModule } from '@nestjs/jwt'
 import { ConfigModule, ConfigService, ConfigFactory } from '@nestjs/config'
 import * as request from 'supertest'
+import { castArray } from 'lodash'
 
 import { AppModule } from './app.module'
 import { TIMEOUT } from './testing/testing.const'
@@ -15,6 +16,7 @@ import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
 import { envValidationSchema } from './config/env.validation'
+import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from './auth/auth.constants'
 
 // Type the config imports
 const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
@@ -22,7 +24,7 @@ const configs: ConfigFactory[] = [auth, database, hosts, jwt, roles]
 describe('App > Controller > Auth', () => {
 	let app: INestApplication
 
-	let access_token: string
+	let access_token: string, refresh_token: string
 	let logger = new Logger()
 
 	beforeAll(async () => {
@@ -45,7 +47,11 @@ describe('App > Controller > Auth', () => {
 			],
 		}).compile()
 		app = moduleRef.createNestApplication()
-		await app.init()
+		await app.init();
+
+		// Expose the app object globally for debugging
+		(global as any).app = app;
+
 	}, TIMEOUT)
 
 	beforeEach(() => {
@@ -61,11 +67,9 @@ describe('App > Controller > Auth', () => {
 				.send({
 					password: 'test',
 				})
-				.expect(400)
+				.expect(401)
 			expect(result.body).toBeDefined()
-			expect(result.body.statusCode).toEqual(400)
-			expect(result.body.message).toEqual('Username is required')
-			expect(result.body.error).toEqual('Bad Request')
+			expect(result.body.statusCode).toEqual(401)
 		})
 
 		it('Missing password', async () => {
@@ -74,11 +78,9 @@ describe('App > Controller > Auth', () => {
 				.send({
 					username: 'test@test.com',
 				})
-				.expect(400)
+				.expect(401)
 			expect(result.body).toBeDefined()
-			expect(result.body.statusCode).toEqual(400)
-			expect(result.body.message).toEqual('Password is required')
-			expect(result.body.error).toEqual('Bad Request')
+			expect(result.body.statusCode).toEqual(401)
 		})
 
 		it('Wrong username', async () => {
@@ -119,15 +121,27 @@ describe('App > Controller > Auth', () => {
 				.expect(200)
 			expect(result.body).toBeDefined()
 			expect(result.body.access_token).toBeDefined()
-			access_token = result.body.access_token
+			access_token = getCookieValueFromHeader(result, ACCESS_TOKEN_COOKIE_NAME) // cookie token
+			refresh_token = getCookieValueFromHeader(result, REFRESH_TOKEN_COOKIE_NAME) // cookie token
+			expect(access_token).toBeDefined()
+			expect(refresh_token).toBeDefined()
 		})
 	})
 
 	describe('Access Token Works', () => {
-		it('Get Profile', async () => {
+		it('Get Profile (Bearer header)', async () => {
 			const result = await request(app.getHttpServer())
 				.get(`/auth/profile`)
 				.set('Authorization', `Bearer ${access_token}`)
+				.expect(200)
+			expect(result.body).toBeDefined()
+			expect(result.body.email).toBeDefined()
+		})
+
+		it('Get Profile (Cookie token)', async () => {
+			const result = await request(app.getHttpServer())
+				.get(`/auth/profile`)
+				.set('Cookie', `${ACCESS_TOKEN_COOKIE_NAME}=${access_token}`)
 				.expect(200)
 			expect(result.body).toBeDefined()
 			expect(result.body.email).toBeDefined()
@@ -146,7 +160,60 @@ describe('App > Controller > Auth', () => {
 		})
 	})
 
+	describe('Refresh', () => {
+		it('Sets new access token and refresh token cookies', async () => {
+			const result = await request(app.getHttpServer())
+				.post(`/auth/refresh`)
+				.set('Cookie', `${REFRESH_TOKEN_COOKIE_NAME}=${refresh_token}`)
+				.then(async res => {
+					try {
+						const accessToken = getCookieValueFromHeader(res, ACCESS_TOKEN_COOKIE_NAME) // cookie token
+						expect(res.body.access_token).toBeDefined() // bearer token
+						expect(accessToken).toBeDefined()
+					} catch (e) {
+						console.error(res.headers)
+						expect(e).toMatch('error')
+					}
+				})
+				.catch(async e => {
+					expect(e).toMatch('error')
+				})
+		})
+	})
+
+	describe('Logout', () => {
+		it('Clears access token and refresh token cookies', async () => {
+			const result = await request(app.getHttpServer())
+				.post(`/auth/logout`)
+				.set('Cookie', `${ACCESS_TOKEN_COOKIE_NAME}=${access_token}`)
+				.then(async res => {
+					try {
+						const accessToken = getCookieValueFromHeader(res, ACCESS_TOKEN_COOKIE_NAME) // cookie token
+						const refreshToken = getCookieValueFromHeader(res, REFRESH_TOKEN_COOKIE_NAME) // cookie token
+						expect(accessToken).toBeFalsy()
+						expect(refreshToken).toBeFalsy()
+						expect(res.body.success).toBeTruthy()
+					} catch (e) {
+						console.error(res.headers)
+						expect(e).toMatch('error')
+					}
+				})
+				.catch(async e => {
+					expect(e).toMatch('error')
+				})
+		})
+	})
+
 	afterAll(async () => {
 		await app.close()
 	}, TIMEOUT)
 })
+
+export function getCookieValueFromHeader(res: any, cookieName: string) {
+	if (!res.headers['set-cookie']) {
+		return undefined
+	}
+	const cookies: Array<string> = castArray(res.headers['set-cookie'])
+	const cookie = cookies.find(cookie => cookie.startsWith(cookieName + '='))
+	return cookie?.split('=')[1].split(';')[0]
+}

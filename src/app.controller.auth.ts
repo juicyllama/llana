@@ -1,6 +1,5 @@
 import {
 	BadRequestException,
-	Body,
 	Controller,
 	Get,
 	Headers,
@@ -9,20 +8,29 @@ import {
 	Query as QueryParams,
 	Req,
 	Res,
+	UseGuards,
 } from '@nestjs/common'
+import { CookieOptions, Response as ExpressResponse } from 'express'
 
 import { AuthService } from './app.service.auth'
+import { ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from './auth/auth.constants'
+import { LocalAuthGuard } from './auth/guards/local-auth.guard'
 import { HeaderParams } from './dtos/requests.dto'
 import { FindOneResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
+import { Logger } from './helpers/Logger'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Schema } from './helpers/Schema'
+import { AuthenticatedRequest } from './types/auth.types'
 import { DataSourceFindOneOptions, QueryPerform, WhereOperator } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
+import { Env } from './utils/Env'
 
 @Controller('auth')
 export class AuthController {
+	logger = new Logger('AuthController')
+
 	constructor(
 		private readonly authService: AuthService,
 		private readonly authentication: Authentication,
@@ -35,18 +43,55 @@ export class AuthController {
 	 * Exchange a username and password for an access token
 	 */
 
+	@UseGuards(LocalAuthGuard)
 	@Post('/login')
-	async login(
-		@Res() res,
-		@Body() signInDto: Record<string, any>,
-		@Headers() headers: HeaderParams,
-	): Promise<{ access_token: string; id: any }> {
+	async login(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: ExpressResponse): Promise<any> {
 		if (this.authentication.skipAuth()) {
 			throw new BadRequestException('Authentication is disabled')
 		}
 
-		const x_request_id = headers['x-request-id']
-		return res.status(200).send(await this.authService.signIn(signInDto.username, signInDto.password, x_request_id))
+		const { access_token } = await this.authService.login(req.user)
+		const refreshToken = await this.authService.createRefreshToken(req.user)
+		setAccessAndRefreshTokenCookies(res, access_token, refreshToken)
+		return res.status(200).json({
+			access_token,
+			expires_in: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN) / 1000,
+			refresh_token_expires_in: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN) / 1000,
+		})
+	}
+
+	@Post('refresh')
+	async refresh(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: ExpressResponse): Promise<any> {
+		const cookies = req.headers.cookie || ''
+		const oldRefreshToken = cookies
+			.split(';')
+			.find(cookie => cookie.trim().startsWith(REFRESH_TOKEN_COOKIE_NAME + '='))
+			?.split('=')[1]
+		if (!oldRefreshToken) {
+			return res.status(401).send('No refresh token found')
+		}
+		const loginPayload = this.authService.decodeRefreshToken(oldRefreshToken)
+		const { access_token: newAccessToken } = await this.authService.login(loginPayload)
+		const newRefreshToken = await this.authService.createRefreshToken(loginPayload)
+		setAccessAndRefreshTokenCookies(res, newAccessToken, newRefreshToken)
+		this.logger.log('Refreshed token', {
+			sub: loginPayload.sub,
+			oldRefreshToken: '...' + oldRefreshToken.slice(-10),
+		})
+		return res.status(200).json({
+			access_token: newAccessToken,
+			expires_in: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN) / 1000,
+			refresh_token_expires_in: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN) / 1000,
+		})
+	}
+
+	@Post('logout')
+	async logout(@Res({ passthrough: true }) res: ExpressResponse): Promise<any> {
+		res.clearCookie(ACCESS_TOKEN_COOKIE_NAME, getAuthCookieOpts(false))
+		res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, getAuthCookieOpts(true))
+		return {
+			success: true,
+		}
 	}
 
 	/*
@@ -138,5 +183,54 @@ export class AuthController {
 		}
 
 		return res.status(200).send(user)
+	}
+}
+
+function getAuthCookieOpts(isRefreshToken: boolean): CookieOptions {
+	if (Env.IsProd() && !process.env.AUTH_COOKIES_DOMAIN && !process.env.BASE_URL_API) {
+		throw new Error('AUTH_COOKIES_DOMAIN or BASE_URL_API must be set in production')
+	}
+
+	let domain
+	try {
+		domain = process.env.AUTH_COOKIES_DOMAIN || new URL(process.env.BASE_URL_API).hostname
+	} catch {
+		throw new Error('Could not parse AUTH_COOKIES_DOMAIN or BASE_URL_API. Make sure they are valid URLs.')
+	}
+
+	const opts: Record<string, any> = {
+		httpOnly: true,
+		secure: true,
+		sameSite: 'strict',
+		maxAge: convertJwtExpiryToMs(isRefreshToken ? process.env.JWT_REFRESH_EXPIRES_IN : process.env.JWT_EXPIRES_IN),
+		...(domain ? { domain } : {}),
+		path: '/',
+	}
+	return opts
+}
+
+function setAccessAndRefreshTokenCookies(res: ExpressResponse, accessToken: string, refreshToken: string): void {
+	res.cookie(ACCESS_TOKEN_COOKIE_NAME, accessToken, getAuthCookieOpts(false))
+	res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, getAuthCookieOpts(true))
+}
+
+function convertJwtExpiryToMs(expiry: string): number {
+	const match = expiry.match(/^(\d+)([dms])$/)
+	if (!match) {
+		throw new Error('Invalid JWT expiry format. Use formats like "14d", "2m", "3s".')
+	}
+
+	const value = parseInt(match[1], 10)
+	const unit = match[2]
+
+	switch (unit) {
+		case 'd': // days
+			return value * 86400 * 1000
+		case 'm': // minutes
+			return value * 60 * 1000
+		case 's': // seconds
+			return value * 1000
+		default:
+			throw new Error('Unsupported time unit in JWT expiry format.')
 	}
 }

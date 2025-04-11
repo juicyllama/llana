@@ -1,11 +1,19 @@
 import { Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { Auth, AuthJWT, AuthType } from 'src/types/auth.types'
 
 import { LLANA_PUBLIC_TABLES, LLANA_ROLES_TABLE } from '../app.constants'
 import { AuthService } from '../app.service.auth'
 import { FindOneResponseObject } from '../dtos/response.dto'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
-import { DataSourceCreateOneOptions, QueryPerform } from '../types/datasource.types'
+import {
+	DataSourceCreateOneOptions,
+	DataSourceSchema,
+	DataSourceWhere,
+	QueryPerform,
+	WhereOperator,
+} from '../types/datasource.types'
 import { RolePermission } from '../types/roles.types'
 
 @Injectable()
@@ -14,13 +22,14 @@ export class AuthTestingService {
 		private readonly authService: AuthService,
 		private readonly query: Query,
 		private readonly schema: Schema,
+		private readonly configService: ConfigService,
 	) {}
 
 	async login(): Promise<string> {
 		try {
-			const username = 'test@test.com'
-			const password = 'test'
-			const payload = await this.authService.signIn(username, password)
+			const email = 'test@test.com'
+			const [, sub] = await this.findUser(email)
+			const payload = await this.authService.login({ email, sub })
 			return payload.access_token
 		} catch (error) {
 			console.error('Login failed:', error)
@@ -30,6 +39,30 @@ export class AuthTestingService {
 
 	async getUserId(jwt: string): Promise<number> {
 		return await this.authService.getUserId(jwt)
+	}
+
+	// This function is used to find a user by username and return the user and the user's id
+	async findUser(username: string): Promise<[any, string]> {
+		const authentications = this.configService.get<Auth[]>('auth')
+
+		const jwtAuthConfig = authentications.find(auth => auth.type === AuthType.JWT)
+
+		let schema: DataSourceSchema
+		schema = await this.schema.getSchema({ table: jwtAuthConfig.table.name })
+
+		const where: DataSourceWhere[] = [
+			{
+				column: (jwtAuthConfig.table as AuthJWT).columns.username,
+				operator: WhereOperator.equals,
+				value: username,
+			},
+		]
+
+		const user = await this.query.perform(QueryPerform.FIND_ONE, {
+			schema,
+			where,
+		})
+		return [user, user[schema.primary_key]]
 	}
 
 	async createPublicTablesRecord(data: {

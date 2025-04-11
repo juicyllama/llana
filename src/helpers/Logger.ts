@@ -6,8 +6,8 @@ import { Environment } from '../utils/Env.types'
 
 @Injectable()
 export class Logger extends ConsoleLogger {
-	constructor() {
-		super('Llana')
+	constructor(context = 'Llana') {
+		super(context)
 	}
 
 	error(message: any, ...optionalParams: [...any, string?]): void {

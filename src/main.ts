@@ -26,7 +26,8 @@ async function bootstrap() {
 	}
 
 	app.enableCors({
-		origin: true,
+		origin: process.env.BASE_URL_APP || true,
+		credentials: true,
 	})
 	await app.listen(process.env.PORT)
 

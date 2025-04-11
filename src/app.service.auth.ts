@@ -1,109 +1,85 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
+import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 
-import { Encryption } from './helpers/Encryption'
+import { FindOneResponseObject } from './dtos/response.dto'
 import { Logger } from './helpers/Logger'
-import { Query } from './helpers/Query'
 import { Schema } from './helpers/Schema'
-import { Auth, AuthJWT, AuthType } from './types/auth.types'
-import { DataSourceSchema, DataSourceWhere, QueryPerform, WhereOperator } from './types/datasource.types'
+import { Auth, AuthType } from './types/auth.types'
+
+type LoginPayload = {
+	sub: string
+	email: string
+}
+
+type User = FindOneResponseObject & {
+	email: string
+	id: number
+}
 
 @Injectable()
 export class AuthService {
+	private authSchema: any
 	constructor(
 		private readonly configService: ConfigService,
-		private readonly encryption: Encryption,
 		private readonly jwtService: JwtService,
 		private readonly logger: Logger,
-		private readonly query: Query,
 		private readonly schema: Schema,
 	) {}
+
+	private async getUserPK() {
+		if (!this.authSchema) {
+			const authentications = this.configService.get<Auth[]>('auth')
+			const jwtAuthConfig = authentications.find(auth => auth.type === AuthType.JWT)
+			this.authSchema = await this.schema.getSchema({ table: jwtAuthConfig.table.name })
+		}
+		return this.authSchema.primary_key
+	}
 
 	async getUserId(jwt: string): Promise<any> {
 		const payload = await this.jwtService.verifyAsync(jwt)
 		return payload.sub
 	}
 
-	async signIn(username: string, pass: string, x_request_id?: string): Promise<{ access_token: string; id: any }> {
-		if (!username) {
-			throw new BadRequestException('Username is required')
+	private async constructLoginPayload(user: User | LoginPayload) {
+		const payload = { sub: user[await this.getUserPK()] || user.sub, email: user.email } // in case of User object
+		if (!payload.sub || !payload.email) {
+			throw new UnauthorizedException('Invalid user object')
 		}
+		return payload
+	}
 
-		if (!pass) {
-			throw new BadRequestException('Password is required')
+	async login(user: any): Promise<{ access_token: string }> {
+		const payload = await this.constructLoginPayload(user)
+		const access_token = this.jwtService.sign(payload, {
+			secret: process.env.JWT_KEY,
+			expiresIn: process.env.JWT_EXPIRES_IN ?? '15m',
+		})
+		return { access_token }
+	}
+
+	async createRefreshToken(user: User | LoginPayload) {
+		if (!process.env.JWT_REFRESH_KEY) {
+			throw new Error('JWT_REFRESH_KEY not found')
 		}
+		const payload = await this.constructLoginPayload(user)
 
-		const authentications = this.configService.get<Auth[]>('auth')
+		return this.jwtService.sign(payload, {
+			secret: process.env.JWT_REFRESH_KEY,
+			expiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '14d',
+		})
+	}
 
-		const jwtAuthConfig = authentications.find(auth => auth.type === AuthType.JWT)
-
-		if (!jwtAuthConfig) {
-			this.logger.error('JWT authentication not configured')
-			throw new UnauthorizedException()
+	decodeRefreshToken(token: string): LoginPayload {
+		if (!process.env.JWT_REFRESH_KEY) {
+			throw new Error('JWT_REFRESH_KEY not found')
 		}
-
-		let schema: DataSourceSchema
 		try {
-			schema = await this.schema.getSchema({ table: jwtAuthConfig.table.name, x_request_id })
-		} catch (e) {
-			this.logger.error(e)
-			throw new UnauthorizedException()
-		}
-
-		const where: DataSourceWhere[] = [
-			{
-				column: (jwtAuthConfig.table as AuthJWT).columns.username,
-				operator: WhereOperator.equals,
-				value: username,
-			},
-		]
-
-		if (this.configService.get('database.deletes.soft')) {
-			where.push({
-				column: this.configService.get('database.deletes.soft'),
-				operator: WhereOperator.null,
+			return this.jwtService.verify(token, {
+				secret: process.env.JWT_REFRESH_KEY,
 			})
-		}
-
-		const user = await this.query.perform(
-			QueryPerform.FIND_ONE,
-			{
-				schema,
-				where,
-			},
-			x_request_id,
-		)
-
-		if (!user) {
-			throw new UnauthorizedException()
-		}
-
-		try {
-			if (
-				!(await this.encryption.compare(
-					pass,
-					user[(jwtAuthConfig.table as AuthJWT).columns.password],
-					(jwtAuthConfig.table as AuthJWT).password.encryption,
-					(jwtAuthConfig.table as AuthJWT).password.salt,
-				))
-			) {
-				throw new UnauthorizedException()
-			}
-		} catch (e) {
-			this.logger.debug(e)
-			throw new UnauthorizedException()
-		}
-
-		const userIdentifier = user[(jwtAuthConfig.table as AuthJWT).identity_column ?? schema.primary_key]
-
-		this.logger.debug(`[Authentication][auth] User ${userIdentifier} authenticated successfully`)
-
-		const payload = { sub: userIdentifier, username: user[(jwtAuthConfig.table as AuthJWT).columns.username] }
-
-		return {
-			access_token: await this.jwtService.signAsync(payload),
-			id: userIdentifier,
+		} catch {
+			throw new UnauthorizedException('Invalid refresh token')
 		}
 	}
 }

@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker'
 import { Injectable } from '@nestjs/common'
 
 import { FindOneResponseObject } from '../dtos/response.dto'
@@ -7,6 +6,7 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'User'
+let userNumber = 0
 
 @Injectable()
 export class UserTestingService {
@@ -15,13 +15,15 @@ export class UserTestingService {
 		private readonly schema: Schema,
 	) {}
 
-	mockUser(): any {
+	mockUser(props = {}): any {
+		userNumber++
 		return {
-			email: faker.internet.email(),
-			password: faker.internet.password(),
+			email: `test-user${userNumber}@gmail.com`,
+			password: 'asdlkjh132093ERWF',
 			role: 'USER',
-			firstName: faker.person.firstName(),
-			lastName: faker.person.lastName(),
+			firstName: `First${userNumber}`,
+			lastName: `Last${userNumber}`,
+			...props,
 		}
 	}
 
