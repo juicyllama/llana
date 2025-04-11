@@ -10,11 +10,11 @@
 
 ## Database REST API in minutes
 
-Llana is a lightweight no-code API wrapper that exposes a REST API for any database within minutes. Stop wasting time building endpoints, just connect your database and start playing. Open source, free to use, and no vendor lock-in.
+Llana is a lightweight API wrapper that exposes a REST API for any database within minutes. Stop wasting time building endpoints, just connect your database and start playing. Open source, free to use, and no vendor lock-in.
 
 ## Documentation
 
-Visit [Llana.io](https://llana.io) for full documentation. 
+Visit [Llana.io](https://llana.io) for full documentation.
 
 
 ## Databases
@@ -35,4 +35,9 @@ We are working to support all major databases, if you would like to contribute t
 ![CASSANDRA](https://badgen.net/badge/CASSANDRA/Help%20Welcomed/red)<br>
 ![MARIADB](https://badgen.net/badge/MARIADB/Help%20Welcomed/red)<br>
 
-[See the complete breakdown of which data sources are integrated](https://llana.io/data-sources/overview) 
+[See the complete breakdown of which data sources are integrated](https://llana.io/data-sources/overview)
+
+## Integrations
+
+![n8n](https://n8n.io)
+![Nuxt](https://nuxt.com)
