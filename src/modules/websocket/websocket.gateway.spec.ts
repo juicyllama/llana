@@ -101,6 +101,22 @@ describe('WebsocketGateway', () => {
 		expect(app1.gateway).toBeDefined()
 	})
 
+	it(`can subscribe to a public table without a token`, async () => {
+		const public_table_record = await authTestingService.createPublicTablesRecord({
+			table: customerSchema.table,
+			access_level: RolePermission.READ,
+		})
+		try {
+			await expect(listenAndOpenSocket(undefined, customerSchema.table)).resolves.toBeDefined()
+		} finally {
+			await authTestingService.deletePublicTablesRecord(public_table_record)
+		}
+	})
+
+	it(`can't subscribe to a non-public table without a token`, async () => {
+		await expect(listenAndOpenSocket(undefined, customerSchema.table)).rejects.toEqual('Timeout')
+	})
+
 	it(`should throw error with an invalid token`, async () => {
 		await expect(listenAndOpenSocket('invalid_token', customerSchema.table)).rejects.toEqual('Timeout')
 	})
@@ -115,16 +131,37 @@ describe('WebsocketGateway', () => {
 			userId: users[0][usersSchema.primary_key],
 		})
 		customers.push(customer)
+		const eventPromise = waitForSocketEvent(clientSocket)
 		app1.service.publish(customerSchema, PublishType.INSERT, customer[customerSchema.primary_key])
-		const event = await waitForSocketEvent(clientSocket)
-
-		expect(event).toEqual({
+		expect(await eventPromise).toEqual({
 			type: 'INSERT',
 			[customerSchema.primary_key]: customer[customerSchema.primary_key].toString(),
 		})
 	})
 
-	it(`should not sent a message to a user that lacks sufficient permissions on the table`, async () => {
+	it(`should send a message to a logged out user and a public table`, async () => {
+		const public_table_record = await authTestingService.createPublicTablesRecord({
+			table: customerSchema.table,
+			access_level: RolePermission.READ,
+		})
+		const clientSocket = await listenAndOpenSocket(undefined, customerSchema.table)
+		try {
+			const customer = await customerTestingService.createCustomer({
+				userId: users[0][usersSchema.primary_key],
+			})
+			customers.push(customer)
+			const eventPromise = waitForSocketEvent(clientSocket)
+			app1.service.publish(customerSchema, PublishType.INSERT, customer[customerSchema.primary_key])
+			expect(await eventPromise).toBeDefined()
+		} catch (e) {
+			logger.error(e)
+			throw e
+		} finally {
+			await authTestingService.deletePublicTablesRecord(public_table_record)
+		}
+	})
+
+	it(`should not send a message to a user that lacks sufficient permissions on the table`, async () => {
 		const clientSocket = await listenAndOpenSocket(tokens[0], customerSchema.table)
 
 		const role = await authTestingService.createRole({
@@ -141,9 +178,9 @@ describe('WebsocketGateway', () => {
 				userId: users[0][usersSchema.primary_key],
 			})
 			customers.push(customer)
+			const eventPromise = waitForSocketEvent(clientSocket)
 			app1.service.publish(customerSchema, PublishType.INSERT, customer[customerSchema.primary_key])
-			const event = await waitForSocketEvent(clientSocket)
-			expect(event).toBeUndefined()
+			expect(await eventPromise).toBeUndefined()
 		} catch (e) {
 			logger.error(e)
 			throw e
@@ -162,7 +199,6 @@ describe('WebsocketGateway', () => {
 		})
 		customers.push(customer)
 		app1.service.publish(customerSchema, PublishType.INSERT, customer[customerSchema.primary_key])
-
 		const [eventUser1, eventUser2] = await Promise.all(promises)
 		user2Socket.close()
 		expect(eventUser1).toBeDefined()
@@ -192,10 +228,9 @@ describe('WebsocketGateway', () => {
 			userId: users[0][usersSchema.primary_key],
 		})
 		customers.push(customer)
+		const eventPromise = waitForSocketEvent(clientSocket)
 		app1.service.publish(customerSchema, PublishType.INSERT, customer[customerSchema.primary_key])
-
-		const event = await waitForSocketEvent(clientSocket)
-		expect(event).toEqual({
+		expect(await eventPromise).toEqual({
 			type: 'INSERT',
 			[customerSchema.primary_key]: customer[customerSchema.primary_key].toString(),
 		})
@@ -207,9 +242,9 @@ describe('WebsocketGateway', () => {
 			userId: users[0][usersSchema.primary_key],
 		})
 		customers.push(customer)
+		const eventPromise = waitForSocketEvent(clientSocket)
 		app2.service.publish(customerSchema, PublishType.INSERT, customer[customerSchema.primary_key])
-		const event = await waitForSocketEvent(clientSocket)
-		expect(event).toEqual({
+		expect(await eventPromise).toEqual({
 			type: 'INSERT',
 			[customerSchema.primary_key]: customer[customerSchema.primary_key].toString(),
 		})
@@ -320,8 +355,8 @@ async function createApp(port: number): Promise<App> {
 	await app.listen(port)
 
 	// create users with port-based emails to overcome same email error because of different servers
-	const user1 = await userTestingService.createUser({ email: `${port}-user1@email.com` })
-	const user2 = await userTestingService.createUser({ email: `${port}-user2@email.com` })
+	const user1 = await userTestingService.createUser({ email: `${port}-user-1@email.com` })
+	const user2 = await userTestingService.createUser({ email: `${port}-user-2@email.com` })
 
 	users.push(user1, user2)
 	tokens.push(
@@ -335,7 +370,7 @@ async function createApp(port: number): Promise<App> {
 function createSocket(port: number, token: string, table: string): Socket {
 	const socket = io(`http://localhost:${port}`, {
 		extraHeaders: {
-			authorization: `Bearer ${token}`,
+			...(token && { authorization: `Bearer ${token}` }),
 			'x-llana-table': table,
 		},
 	})

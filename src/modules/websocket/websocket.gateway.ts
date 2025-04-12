@@ -1,4 +1,4 @@
-import { Inject, OnApplicationShutdown, UseGuards } from '@nestjs/common'
+import { Inject, OnApplicationShutdown } from '@nestjs/common'
 import {
 	OnGatewayConnection,
 	OnGatewayDisconnect,
@@ -16,7 +16,6 @@ import { Roles } from '../../helpers/Roles'
 import { HostCheckMiddleware } from '../../middleware/HostCheck'
 import { RolePermission } from '../../types/roles.types'
 import { REDIS_SUB_CLIENT_TOKEN, WebsocketRedisEvent, WEBSOCKETS_REDIS_CHANNEL } from './websocket.constants'
-import { WebsocketJwtAuthGuard } from './websocket.jwt-auth.guard'
 import { WebsocketJwtAuthMiddleware } from './websocket.jwt-auth.middleware'
 
 /**
@@ -24,7 +23,6 @@ import { WebsocketJwtAuthMiddleware } from './websocket.jwt-auth.middleware'
  * This class is responsible for handling websocket connections and emitting events to connected clients.
  * It also subscribes to a Redis channel to for a multi-instance setup, so that events can be emitted in all instances and sent to all connected clients in all instances.
  */
-@UseGuards(WebsocketJwtAuthGuard)
 @WebSocketGateway({ cors: true })
 export class WebsocketGateway
 	implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnApplicationShutdown

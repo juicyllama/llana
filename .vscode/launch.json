@@ -27,6 +27,18 @@
 			"cwd": "${workspaceFolder}"
 		},
 		{
+			"name": "test:mysql",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "npm",
+			"console": "integratedTerminal",
+			"runtimeArgs": ["run", "test:mysql"],
+			"env": {
+				"LOG_LEVEL": "2"
+			},
+			"cwd": "${workspaceFolder}"
+		},
+		{
 			"name": "test:mongodb",
 			"type": "node",
 			"request": "launch",
