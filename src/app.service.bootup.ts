@@ -11,6 +11,7 @@ import {
 	LLANA_ROLES_TABLE,
 	LLANA_WEBHOOK_LOG_TABLE,
 	LLANA_WEBHOOK_TABLE,
+	LLANA_DATA_CACHING_TABLE,
 	NON_RELATIONAL_DBS,
 	WEBHOOK_LOG_DAYS,
 } from './app.constants'
@@ -401,6 +402,118 @@ export class AppBootup implements OnApplicationBootstrap {
 			}
 		}
 
+		// Check if _llana_data_caching table is required
+
+		if (this.configService.get<boolean>('USE_DATA_CACHING')) {
+			if (!database.tables.includes(LLANA_DATA_CACHING_TABLE)) {
+				this.logger.log(`Creating ${LLANA_DATA_CACHING_TABLE} schema as it does not exist`, APP_BOOT_CONTEXT)
+
+				/**
+				 * Create the _llana_data_caching schema
+				 */
+
+				const schema: DataSourceSchema = {
+					table: LLANA_DATA_CACHING_TABLE,
+					primary_key: 'id',
+					columns: [
+						{
+							field: 'id',
+							type: DataSourceColumnType.NUMBER,
+							nullable: false,
+							required: true,
+							primary_key: true,
+							unique_key: true,
+							foreign_key: false,
+							auto_increment: true,
+							extra: <ColumnExtraNumber>{
+								decimal: 0,
+							},
+						},
+						{
+							field: 'table',
+							type: DataSourceColumnType.STRING,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+						},
+						{
+							field: 'request',
+							type: DataSourceColumnType.STRING,
+							nullable: false,
+							required: true,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+						},
+						{
+							field: 'ttl_seconds',
+							type: DataSourceColumnType.NUMBER,
+							nullable: false,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: 3600,
+						},
+						{
+							field: 'expires_at',
+							type: DataSourceColumnType.DATE,
+							nullable: true,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: null,
+						},
+						{
+							field: 'refreshed_at',
+							type: DataSourceColumnType.DATE,
+							nullable: true,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: null,
+						},
+						{
+							field: 'data_changed_at',
+							type: DataSourceColumnType.DATE,
+							nullable: true,
+							required: false,
+							primary_key: false,
+							unique_key: false,
+							foreign_key: false,
+							default: null,
+						},
+					],
+				}
+
+				if (this.configService.get<string>('SOFT_DELETE_COLUMN')) {
+					schema.columns.push({
+						field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
+						type: DataSourceColumnType.STRING,
+						nullable: true,
+						required: false,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						default: null,
+					})
+				}
+
+				const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
+
+				if (!created) {
+					throw new Error('Failed to create _llana_webhook table')
+				}
+			}
+
+		} else {
+			this.logger.log('Skipping table caching as USE_DATA_CACHING is not set', APP_BOOT_CONTEXT)
+		}
+
 		// Check if _llana_webhook table exists
 
 		if (!this.configService.get<boolean>('DISABLE_WEBHOOKS')) {
@@ -724,6 +837,9 @@ export class AppBootup implements OnApplicationBootstrap {
 		} else {
 			this.logger.warn('Skipping webhooks as DISABLE_WEBHOOKS is set to true', APP_BOOT_CONTEXT)
 		}
+
+
+
 
 		if (this.authentication.skipAuth()) {
 			this.logger.warn(
