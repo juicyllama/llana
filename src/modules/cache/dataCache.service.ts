@@ -292,6 +292,8 @@ export class DataCacheService implements OnApplicationShutdown {
 
 			const options = await this.query.buildFindManyOptionsFromRequest({request: cache.request, schema: table_schema})
 
+			this.logger.verbose('[DataCache][Refresh] Options', options)
+
 			const result = await this.query.perform(
 				QueryPerform.FIND_MANY,
 				options

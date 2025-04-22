@@ -212,10 +212,10 @@ export class Query {
 			} else {
 				const sortItems = request['sort'].split('.')
 				
-				sort = {
+				sort = [{
 					column: sortItems[0],
-					direction: sortItems[1] === 'desc' ? 'DESC' : 'ASC',
-				}
+					operator: sortItems[1] === 'desc' ? 'DESC' : 'ASC',
+				}]
 			}
 		}
 		
