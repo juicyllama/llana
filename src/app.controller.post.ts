@@ -4,6 +4,7 @@ import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
 import { CreateManyResponseObject, FindOneResponseObject, IsUniqueResponse } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
+import { DataCacheService } from './modules/cache/dataCache.service'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
@@ -19,6 +20,7 @@ import { RolePermission } from './types/roles.types'
 export class PostController {
 	constructor(
 		private readonly authentication: Authentication,
+		private readonly dataCache: DataCacheService,
 		private readonly query: Query,
 		private readonly schema: Schema,
 		private readonly response: Response,
@@ -164,6 +166,8 @@ export class PostController {
 			)
 			successful++
 		}
+
+		await this.dataCache.ping(table_name)
 
 		if (singular) {
 			if (errors.length) {

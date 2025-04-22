@@ -5,6 +5,7 @@ import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
 import { DeleteManyResponseObject, DeleteResponseObject, FindOneResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
+import { DataCacheService } from './modules/cache/dataCache.service'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
@@ -28,6 +29,7 @@ export class DeleteController {
 	constructor(
 		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
+		private readonly dataCache: DataCacheService,
 		private readonly query: Query,
 		private readonly response: Response,
 		private readonly roles: Roles,
@@ -156,6 +158,7 @@ export class DeleteController {
 			)
 			await this.websocket.publish(schema, PublishType.DELETE, id)
 			await this.webhook.publish(schema, PublishType.DELETE, id, auth.user_identifier)
+			await this.dataCache.ping(table_name)
 			return res.status(200).send(result)
 		} catch (e) {
 			return res.status(400).send(this.response.text(e.message))
@@ -308,6 +311,8 @@ export class DeleteController {
 					})
 				}
 			}
+
+			await this.dataCache.ping(table_name)
 
 			return res.status(200).send({
 				total,

@@ -4,6 +4,7 @@ import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
 import { FindOneResponseObject, IsUniqueResponse, UpdateManyResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
+import { DataCacheService } from './modules/cache/dataCache.service'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
@@ -19,6 +20,7 @@ import { RolePermission } from './types/roles.types'
 export class PutController {
 	constructor(
 		private readonly authentication: Authentication,
+		private readonly dataCache: DataCacheService,
 		private readonly query: Query,
 		private readonly response: Response,
 		private readonly roles: Roles,
@@ -169,6 +171,8 @@ export class PutController {
 			)
 			await this.websocket.publish(schema, PublishType.UPDATE, result[schema.primary_key])
 			await this.webhooks.publish(schema, PublishType.UPDATE, result[schema.primary_key], auth.user_identifier)
+
+			await this.dataCache.ping(table_name)
 
 			if (queryFields.length) {
 				const filtered = {}
@@ -390,6 +394,8 @@ export class PutController {
 				continue
 			}
 		}
+
+		await this.dataCache.ping(table_name)
 
 		return res.status(200).send({
 			total,

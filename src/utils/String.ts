@@ -2,6 +2,8 @@
  * Replace ? symbols with the values from a any[]
  */
 
+import { CronExpression } from "@nestjs/schedule"
+
 export function replaceQ(string: string, array: any[]): string {
 	//if(!array.length) return string
 	//return string.replace(/\?/g, () => array.shift() || '')
@@ -113,4 +115,42 @@ export function commaStringToArray(string: string): string[] {
 	}
 
 	return string.split(',').map(field => field.trim())
+}
+
+/**
+ * Convert a CronExpression to seconds
+ */
+
+export function cronToSeconds(cron: CronExpression): number {
+
+	switch (cron) {
+		case CronExpression.EVERY_10_SECONDS:
+			return 10
+		case CronExpression.EVERY_30_SECONDS:
+			return 30
+		case CronExpression.EVERY_MINUTE:
+			return 60
+		case CronExpression.EVERY_5_MINUTES:
+			return 300
+		case CronExpression.EVERY_HOUR:
+			return 3600
+		case CronExpression.EVERY_2ND_HOUR:
+			return 7200
+		case CronExpression.EVERY_DAY_AT_MIDNIGHT:
+			return 86400
+		case CronExpression.EVERY_WEEK:
+			return 604800
+		case CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT:
+		case CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_NOON:
+			return 2592000
+		case CronExpression.EVERY_2ND_MONTH:
+		case CronExpression.EVERY_QUARTER:
+			return 7776000
+		case CronExpression.EVERY_6_MONTHS:
+			return 15552000
+		case CronExpression.EVERY_YEAR:
+			return 31536000
+		default:
+			throw new Error(`Unknown CronExpression: ${cron}`)
+	}
 }

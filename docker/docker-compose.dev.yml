@@ -18,6 +18,9 @@ volumes:
     llana-mssql-data:
         name: llana-mssql-data
         driver: local
+    llana-redis-cache: #To be used for caching not as a data source
+        name: llana-redis-cache
+        driver: local
 
 services:
     llana-mysql:
@@ -125,3 +128,14 @@ services:
                 echo "Script Execution is complete. Waiting for MS SQL Process to terminate 🎉"
 
                 wait $$pid
+
+    llana-redis-cache:
+        image: redis
+        restart: always
+        container_name: llana-redis-cache
+        ports:
+            - '6379:6379'
+        networks:
+            - llana-network
+        volumes:
+            - llana-redis-cache:/data
