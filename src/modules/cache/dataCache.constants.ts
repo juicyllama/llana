@@ -1,0 +1,1 @@
+export const REDIS_CACHE_TOKEN = 'REDIS_CACHE'

@@ -5,7 +5,7 @@ import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
 import { DeleteManyResponseObject, DeleteResponseObject, FindOneResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
-import { DataCache } from './helpers/DataCache'
+import { DataCacheService } from './modules/cache/dataCache.service'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
@@ -29,7 +29,7 @@ export class DeleteController {
 	constructor(
 		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
-		private readonly dataCache: DataCache,
+		private readonly dataCache: DataCacheService,
 		private readonly query: Query,
 		private readonly response: Response,
 		private readonly roles: Roles,

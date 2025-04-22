@@ -34,7 +34,6 @@ import { Env } from '../utils/Env'
 import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
-import { join } from 'path'
 
 @Injectable()
 export class Query {

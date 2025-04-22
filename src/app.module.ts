@@ -29,7 +29,6 @@ import { MSSQL } from './datasources/mssql.datasource'
 import { MySQL } from './datasources/mysql.datasource'
 import { Postgres } from './datasources/postgres.datasource'
 import { Authentication } from './helpers/Authentication'
-import { DataCache } from './helpers/DataCache'
 import { Documentation } from './helpers/Documentation'
 import { Encryption } from './helpers/Encryption'
 import { Logger } from './helpers/Logger'
@@ -45,6 +44,8 @@ import { REDIS_PUB_CLIENT_TOKEN, REDIS_SUB_CLIENT_TOKEN } from './modules/websoc
 import { WebsocketGateway } from './modules/websocket/websocket.gateway'
 import { WebsocketService } from './modules/websocket/websocket.service'
 import { Env } from './utils/Env'
+import { DataCacheService } from './modules/cache/dataCache.service'
+import { REDIS_CACHE_TOKEN } from './modules/cache/dataCache.constants'
 
 const singleServerRedisPubsub = new RedisMockWithPubSub() // in-memory pubsub for testing or single server setup
 
@@ -57,6 +58,13 @@ function createPubSubOnlyRedisClient() {
 	}
 	return new Redis(+process.env.REDIS_PORT, process.env.REDIS_HOST, {})
 }
+
+function createRedisCache() {
+	if (process.env.REDIS_PORT && process.env.REDIS_HOST) {
+		return new Redis(+process.env.REDIS_PORT, process.env.REDIS_HOST, {})
+	}
+}
+
 
 @Module({
 	imports: [
@@ -84,7 +92,7 @@ function createPubSubOnlyRedisClient() {
 		AppBootup,
 		AuthService,
 		Authentication,
-		DataCache,
+		DataCacheService,
 		Documentation,
 		Encryption,
 		HostCheckMiddleware,
@@ -112,13 +120,17 @@ function createPubSubOnlyRedisClient() {
 			provide: REDIS_SUB_CLIENT_TOKEN, // A redis client, once subscribed to events, cannot be used for publishing events unfortunately. This is why two are needed
 			useFactory: createPubSubOnlyRedisClient,
 		},
+		{
+			provide: REDIS_CACHE_TOKEN,
+			useFactory: createRedisCache,
+		},
 	],
 	exports: [
 		Airtable,
 		AppBootup,
 		AuthService,
 		Authentication,
-		DataCache,
+		DataCacheService,
 		Documentation,
 		Encryption,
 		HostCheckMiddleware,

@@ -1,27 +1,110 @@
+import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common'
+import Redis from 'ioredis'
+import { Logger } from '../../helpers/Logger'
+import { REDIS_CACHE_TOKEN } from './dataCache.constants'
+import { FindManyResponseObject } from '../../dtos/response.dto'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
-import { Inject, Injectable } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { Cache } from 'cache-manager'
-import { Query } from './Query'
-import { Logger } from './Logger'
-import { Schema } from './Schema'
-import { FindManyResponseObject } from '../dtos/response.dto'
-import { CACHE_DEFAULT_TABLE_SCHEMA_TTL } from '../app.constants'
-import { QueryPerform } from '../types/datasource.types'
+import { ConfigService } from '@nestjs/config'
+import { Query } from '../../helpers/Query'
+import { Schema } from '../../helpers/Schema'
+import { QueryPerform } from '../../types/datasource.types'
 import { CronExpression } from '@nestjs/schedule'
-import { cronToSeconds } from '../utils/String'
+import { cronToSeconds } from '../../utils/String'
+import { CACHE_DEFAULT_TABLE_SCHEMA_TTL } from 'src/app.constants'
 
 const tableCacheKey = `dataCache:_llana_data_caching:*`
 
 @Injectable()
-export class DataCache {
+export class DataCacheService implements OnApplicationShutdown {
 	constructor(
-		@Inject(CACHE_MANAGER) private cacheManager: Cache,
 		private readonly logger: Logger,
+		@Inject(REDIS_CACHE_TOKEN) private readonly redis: Redis,
+		@Inject(CACHE_MANAGER) private cacheManager: Cache,
 		private readonly configService: ConfigService,
 		private readonly query: Query,
 		private readonly schema: Schema,
 	) {}
+
+	onApplicationShutdown() {
+		if(this.useRedis()){
+			this.redis.disconnect()
+		}
+	}
+
+	public useRedis(): Boolean{
+		const redisPort = this.configService.get<string>('REDIS_PORT')
+		const redisHost = this.configService.get<string>('REDIS_HOST')
+		return !!(redisPort && redisHost)
+	}
+
+
+	/**
+	 * Read from cache
+	 * * Will use Redis if available
+	 * * otherwise will use in-memory cache
+	 */
+
+	public async read(key: string): Promise<any> {
+
+		console.log('useRedis', this.useRedis())
+	
+		this.logger.debug(`[CacheService] Reading ${key} from cache`)
+
+		if(this.useRedis()){
+			if (this.redis.status !== 'ready') {
+				throw new Error('Redis client not ready')
+			}
+
+			const value = await this.redis.get(key)
+			return value ? JSON.parse(value) : undefined
+
+		}else{
+			return await this.cacheManager.get(key)
+		}
+	}
+
+	/**
+	 * Write to cache
+	 * * Will use Redis if available
+	 * * otherwise will use in-memory cache
+	 */
+
+	public async write(key: string, value: any, ttl: number): Promise<void> {
+		
+		this.logger.debug(`[CacheService] Writing ${key} to cache`)
+	
+		if(this.useRedis()){
+			if (this.redis.status !== 'ready') {
+				throw new Error('Redis client not ready')
+			}
+
+			await this.redis.set(key, JSON.stringify(value))
+		}else{
+			await this.cacheManager.set(key, value, ttl)
+		}
+	}
+
+	/**
+	 * Delete from cache
+	 * * Will use Redis if available
+	 * * otherwise will use in-memory cache
+	 */
+
+	public async del(key: string): Promise<void> {
+		this.logger.debug(`[CacheService] Deleting ${key} from cache`)
+
+		if(this.useRedis()){
+			if (this.redis.status !== 'ready') {
+				throw new Error('Redis client not ready')
+			}
+
+			await this.redis.del(key)
+		}else{
+			await this.cacheManager.del(key)
+		}
+	}
+
 
 	/**
 	 * Checks the request to see if we have a _llana_data_caching match and if so returns it
@@ -50,7 +133,7 @@ export class DataCache {
 		
 		//get caching data from table
 		
-		let caching: FindManyResponseObject | undefined = await this.cacheManager.get(tableCacheKey)
+		let caching: FindManyResponseObject | undefined = await this.read(tableCacheKey)
 
 		if(!caching || caching.total === 0) {
 			
@@ -66,7 +149,7 @@ export class DataCache {
 					)) as FindManyResponseObject
 
 			if (caching && caching.total > 0) {
-				await this.cacheManager.set(tableCacheKey, caching, this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL)
+				await this.write(tableCacheKey, caching, this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL)
 			}
 
 		}
@@ -80,7 +163,7 @@ export class DataCache {
 			if (cache.table === table) {
 				if (cache.request === request) {
 					this.logger.debug(`${options.x_request_id ? '['+ options.x_request_id +']' : ''}[DataCache][Get] Found cache match data for ${table} with request ${request}`)
-					return await this.cacheManager.get(cacheKey)
+					return await this.read(cacheKey)
 				}
 			}
 		}
@@ -100,7 +183,7 @@ export class DataCache {
 
 		const schema = await this.schema.getSchema({table: '_llana_data_caching'})
 
-		let caching: FindManyResponseObject | undefined = await this.cacheManager.get(tableCacheKey)
+		let caching: FindManyResponseObject | undefined = await this.read(tableCacheKey)
 
 		if(!caching || caching.total === 0) {
 
@@ -113,7 +196,7 @@ export class DataCache {
 					)) as FindManyResponseObject
 
 			if (caching && caching.total > 0) {
-				await this.cacheManager.set(tableCacheKey, caching, this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL)
+				await this.write(tableCacheKey, caching, this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL)
 			}
 
 		}
@@ -135,6 +218,8 @@ export class DataCache {
 						}
 					},
 				)
+
+				await this.del(tableCacheKey)
 			}
 		}
 	}
@@ -156,7 +241,7 @@ export class DataCache {
 
 		const schema = await this.schema.getSchema({table: '_llana_data_caching'})
 
-		let caching: FindManyResponseObject | undefined = await this.cacheManager.get(tableCacheKey)
+		let caching: FindManyResponseObject | undefined = await this.read(tableCacheKey)
 
 		if(!caching || caching.total === 0) {
 
@@ -169,7 +254,7 @@ export class DataCache {
 					)) as FindManyResponseObject
 
 			if (caching && caching.total > 0) {
-				await this.cacheManager.set(tableCacheKey, caching, this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL)
+				await this.write(tableCacheKey, caching, this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL)
 			}
 
 		}
@@ -184,7 +269,7 @@ export class DataCache {
 			//check if cache key exists
 			const cacheKey = `dataCache:${cache.table}:${cache.request}`
 
-			let cachedItem = await this.cacheManager.get(cacheKey)
+			let cachedItem = await this.read(cacheKey)
 			
 			if(!cachedItem) {
 				this.logger.debug(`[DataCache][Refresh] Cache not found for ${cache.table} with request ${cache.request}`)
@@ -220,7 +305,7 @@ export class DataCache {
 				continue
 			}
 
-			await this.cacheManager.set(cacheKey, result, (cache.ttl_seconds * 1000))
+			await this.write(cacheKey, result, cache.ttl_seconds * 1000)
 			this.logger.debug(`[DataCache][Refresh] Cache refreshed for ${cache.table} with request ${cache.request}`)
 
 			//update the cache record
@@ -235,7 +320,7 @@ export class DataCache {
 					}
 				})
 
-			await this.cacheManager.del(tableCacheKey)
+			await this.del(tableCacheKey)
 		}
 	}
 

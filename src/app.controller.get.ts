@@ -5,7 +5,7 @@ import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { FindManyQueryParams, HeaderParams } from './dtos/requests.dto'
 import { FindManyResponseObject, FindOneResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
-import { DataCache } from './helpers/DataCache'
+import { DataCacheService } from './modules/cache/dataCache.service'
 import { UrlToTable } from './helpers/Database'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
@@ -27,7 +27,7 @@ export class GetController {
 	constructor(
 		private readonly authentication: Authentication,
 		private readonly configService: ConfigService,
-		private readonly dataCache: DataCache,
+		private readonly dataCache: DataCacheService,
 		private readonly pagination: Pagination,
 		private readonly query: Query,
 		private readonly response: Response,
