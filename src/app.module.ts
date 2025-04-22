@@ -29,6 +29,7 @@ import { MSSQL } from './datasources/mssql.datasource'
 import { MySQL } from './datasources/mysql.datasource'
 import { Postgres } from './datasources/postgres.datasource'
 import { Authentication } from './helpers/Authentication'
+import { DataCache } from './helpers/DataCache'
 import { Documentation } from './helpers/Documentation'
 import { Encryption } from './helpers/Encryption'
 import { Logger } from './helpers/Logger'
@@ -83,6 +84,7 @@ function createPubSubOnlyRedisClient() {
 		AppBootup,
 		AuthService,
 		Authentication,
+		DataCache,
 		Documentation,
 		Encryption,
 		HostCheckMiddleware,
@@ -116,6 +118,7 @@ function createPubSubOnlyRedisClient() {
 		AppBootup,
 		AuthService,
 		Authentication,
+		DataCache,
 		Documentation,
 		Encryption,
 		HostCheckMiddleware,

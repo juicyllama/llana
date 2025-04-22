@@ -20,6 +20,7 @@ import {
 	DataSourceFindManyOptions,
 	DataSourceFindOneOptions,
 	DataSourceListTablesOptions,
+	DataSourceRelations,
 	DataSourceSchema,
 	DataSourceSchemaRelation,
 	DataSourceType,
@@ -33,6 +34,7 @@ import { Env } from '../utils/Env'
 import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
+import { join } from 'path'
 
 @Injectable()
 export class Query {
@@ -183,6 +185,110 @@ export class Query {
 		}
 	}
 
+
+	/**
+	 * Converts a URL request to an DataSourceFindManyOptions object (used for cache requests)
+	 */
+
+	async buildFindManyOptionsFromRequest(options: {
+		request: any
+		schema: DataSourceSchema
+	}): Promise<DataSourceFindManyOptions> {
+
+		if (!options.request || !options.schema) {
+			this.logger.error('[Query][buildFindManyOptionsFromRequest] Request or Schema not provided')
+			return
+		}
+
+		const searchRequest = new URLSearchParams(options.request)
+		const request = Object.fromEntries(searchRequest.entries())
+		
+		let sort
+
+		if(request['sort']) {
+
+			const sortItems = request['sort'].split('.')
+			
+			sort = {
+				column: sortItems[0],
+				direction: sortItems[1] === 'desc' ? 'DESC' : 'ASC',
+			}
+		}
+
+		let fields
+
+		if(request['fields']) {
+			// if it's an array, join it
+			if (Array.isArray(request['fields'])) {
+				fields = request['fields']
+			}
+			// if it's a string, convert it to an array
+			else if (typeof request['fields'] === 'string') {
+				fields = request['fields'].split(',')
+			}
+		}
+
+		let relations: DataSourceRelations[] = []
+
+		if (request['relations']) {
+			let relationsArray
+
+			if (Array.isArray(request['relations'])) {
+				relationsArray = request['relations']
+			}
+			// if it's a string, convert it to an array
+			else if (typeof request['relations'] === 'string') {
+				relationsArray = request['relations'].split(',')
+			}
+
+			// convert relations to DataSourceSchemaRelation[]
+
+			for(const relation of relationsArray) {
+				const relationSchema = await this.schema.getSchema({ table: relation })
+				relations.push({
+					table: relationSchema.table,
+					join: {
+						table: relationSchema.table,
+						column: relationSchema.primary_key,
+						org_table: options.schema.table,
+						org_column: options.schema.primary_key,
+					},
+					schema: relationSchema,
+				})
+			}
+		}
+
+		let where: DataSourceWhere[] = []
+		
+		for(const key in request) {
+			if(key === 'sort' || key === 'fields' || key === 'relations' || key === 'limit' || key === 'offset') {
+				continue
+			}
+			
+			//convert format from id=1, id[gt]=1, id[lt]=1, id[gte]=1, id[lte]=1, id[not_like]=value, id[not_in]=value, id[null], id[not_null], handle[search]=value, handle[like]=value, handle[in]=value to DataSourceWhere[]
+			const operator = key.split('[')[1]?.replace(']', '') || WhereOperator.equals
+
+			where.push({
+				column: key.split('[')[0],
+				operator: operator as WhereOperator,
+				value: options.request[key],
+			})
+		}
+
+		const findManyOptions: DataSourceFindManyOptions = {
+			schema: options.schema,
+			fields: fields,
+			where,
+			relations,
+			limit: Number(request['limit']) || 20,
+			offset: Number(request['offset']) || 0,
+			sort
+		}
+
+		return findManyOptions
+	}
+
+
 	/**
 	 * Create a table
 	 *
@@ -206,6 +312,7 @@ export class Query {
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
 	}
+
 
 	/**
 	 * Insert a record
