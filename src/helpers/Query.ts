@@ -204,16 +204,21 @@ export class Query {
 		
 		let sort
 
-		if(request['sort']) {
-
-			const sortItems = request['sort'].split('.')
-			
-			sort = {
-				column: sortItems[0],
-				direction: sortItems[1] === 'desc' ? 'DESC' : 'ASC',
+		if (request['sort']) {
+			// Validate sort format: column.direction
+			if (!request['sort'].includes('.')) {
+				this.logger.warn(`Invalid sort format: ${request['sort']}. Expected format: column.direction`)
+				// Continue with no sorting
+			} else {
+				const sortItems = request['sort'].split('.')
+				
+				sort = {
+					column: sortItems[0],
+					direction: sortItems[1] === 'desc' ? 'DESC' : 'ASC',
+				}
 			}
 		}
-
+		
 		let fields
 
 		if(request['fields']) {
@@ -259,13 +264,23 @@ export class Query {
 
 		let where: DataSourceWhere[] = []
 		
-		for(const key in request) {
-			if(key === 'sort' || key === 'fields' || key === 'relations' || key === 'limit' || key === 'offset') {
+		for (const key in request) {
+			if (
+				key === 'sort' ||
+				key === 'fields' ||
+				key === 'relations' ||
+				key === 'limit' ||
+				key === 'offset'
+			) {
 				continue
 			}
-			
-			//convert format from id=1, id[gt]=1, id[lt]=1, id[gte]=1, id[lte]=1, id[not_like]=value, id[not_in]=value, id[null], id[not_null], handle[search]=value, handle[like]=value, handle[in]=value to DataSourceWhere[]
-			const operator = key.split('[')[1]?.replace(']', '') || WhereOperator.equals
+
+			//convert format from id=1, id[gt]=1, id[lt]=1, id[gte]=1, id[lte]=1,
+			// id[not_like]=value, id[not_in]=value, id[null], id[not_null],
+			// handle[search]=value, handle[like]=value, handle[in]=value to DataSourceWhere[]
+			// Using a regex to handle multiple brackets correctly
+			const matches = key.match(/\[(.*?)\]/)
+			const operator = matches ? matches[1] : WhereOperator.equals
 
 			where.push({
 				column: key.split('[')[0],

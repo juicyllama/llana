@@ -13,7 +13,7 @@ import { CronExpression } from '@nestjs/schedule'
 import { cronToSeconds } from '../../utils/String'
 import { CACHE_DEFAULT_TABLE_SCHEMA_TTL } from 'src/app.constants'
 
-const tableCacheKey = `dataCache:_llana_data_caching:*`
+const tableCacheKey = `dataCache:_llana_data_caching`
 
 @Injectable()
 export class DataCacheService implements OnApplicationShutdown {
@@ -76,7 +76,7 @@ export class DataCacheService implements OnApplicationShutdown {
 				throw new Error('Redis client not ready')
 			}
 
-			await this.redis.set(key, JSON.stringify(value))
+			await this.redis.set(key, JSON.stringify(value), 'PX', ttl)
 		}else{
 			await this.cacheManager.set(key, value, ttl)
 		}
@@ -114,7 +114,7 @@ export class DataCacheService implements OnApplicationShutdown {
 		
 		const urlParts = options.originalUrl.split('?')
 		const table = urlParts[0].split('/')[1]
-		const request = '?' + urlParts[1] || undefined
+		const request = urlParts[1] ? `?${urlParts[1]}` : undefined
 
 		if (!table) {
 			this.logger.error(`${options.x_request_id ? '['+ options.x_request_id +']' : ''}[DataCache][Get] Table not provided`)
