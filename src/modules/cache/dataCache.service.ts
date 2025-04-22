@@ -272,15 +272,16 @@ export class DataCacheService implements OnApplicationShutdown {
 				this.logger.debug(`[DataCache][Refresh] Cache not found for ${cache.table} with request ${cache.request}`)
 			}else{
 
+				//check if the data has changed since last refresh
+				if(!cache.data_changed_at || (cache.data_changed_at && cache.refreshed_at && cache.data_changed_at < cache.refreshed_at)) {
+					continue
+				}
+
 				//check if the cache is expired
 				if(cache.expires_at && cache.expires_at > cacheTime) {	
 					continue
 				}
 
-				//check if the data has changed since last refresh
-				if(cache.data_changed_at && cache.refreshed_at && cache.data_changed_at < cache.refreshed_at) {
-					continue
-				}
 			}
 
 			const table_schema = await this.schema.getSchema({table: cache.table})
