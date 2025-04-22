@@ -301,7 +301,11 @@ export class Query {
 			})
 		}
 
-		const topLevelFields = fields.filter(field => !field.includes('.'))
+		let topLevelFields = [] 
+		
+		if(fields) {
+			topLevelFields = fields.filter(field => !field.includes('.'))
+		}
 
 		const findManyOptions: DataSourceFindManyOptions = {
 			schema: options.schema,
