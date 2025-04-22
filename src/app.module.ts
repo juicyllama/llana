@@ -61,7 +61,10 @@ function createPubSubOnlyRedisClient() {
 
 function createRedisCache() {
 	if (process.env.REDIS_PORT && process.env.REDIS_HOST) {
-		return new Redis(+process.env.REDIS_PORT, process.env.REDIS_HOST, {})
+		return new Redis(+process.env.REDIS_PORT, process.env.REDIS_HOST, {
+			username: process.env.REDIS_USER ?? undefined,
+			password: process.env.REDIS_PASS ?? undefined,
+		})
 	}
 }
 

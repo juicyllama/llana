@@ -38,7 +38,6 @@ export class DataCacheService implements OnApplicationShutdown {
 		return !!(redisPort && redisHost)
 	}
 
-
 	/**
 	 * Read from cache
 	 * * Will use Redis if available
@@ -46,8 +45,6 @@ export class DataCacheService implements OnApplicationShutdown {
 	 */
 
 	public async read(key: string): Promise<any> {
-
-		console.log('useRedis', this.useRedis())
 	
 		this.logger.debug(`[CacheService] Reading ${key} from cache`)
 
