@@ -248,6 +248,17 @@ export class Query {
 			// convert relations to DataSourceSchemaRelation[]
 
 			for(const relation of relationsArray) {
+
+				const relationFields = []
+
+				if(fields){
+					for(const field of fields) {
+						if(field.startsWith(relation)) {
+							relationFields.push(field.replace(relation + '.', ''))
+						}
+					}
+				}
+
 				const relationSchema = await this.schema.getSchema({ table: relation })
 				relations.push({
 					table: relationSchema.table,
@@ -258,6 +269,7 @@ export class Query {
 						org_column: options.schema.primary_key,
 					},
 					schema: relationSchema,
+					columns: relationFields,
 				})
 			}
 		}
@@ -289,9 +301,11 @@ export class Query {
 			})
 		}
 
+		const topLevelFields = fields.filter(field => !field.includes('.'))
+
 		const findManyOptions: DataSourceFindManyOptions = {
 			schema: options.schema,
-			fields: fields,
+			fields: topLevelFields,
 			where,
 			relations,
 			limit: Number(request['limit']) || 20,
