@@ -56,7 +56,10 @@ function createPubSubOnlyRedisClient() {
 		}
 		return singleServerRedisPubsub
 	}
-	return new Redis(+process.env.REDIS_PORT, process.env.REDIS_HOST, {})
+	return new Redis(+process.env.REDIS_PORT, process.env.REDIS_HOST, {
+		username: process.env.REDIS_USER ?? undefined,
+		password: process.env.REDIS_PASS ?? undefined,
+	})
 }
 
 function createRedisCache() {
