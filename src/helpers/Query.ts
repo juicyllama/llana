@@ -718,9 +718,6 @@ export class Query {
 		}
 
 		for (const relation of options.relations) {
-
-			console.log('relation', relation)
-
 			const rel = this.getTableRelationColumn(relation.join, options.schema.table)
 			const relationTable = this.getChildTableRelation(relation.join, options.schema.table)
 
