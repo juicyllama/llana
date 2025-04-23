@@ -199,9 +199,11 @@ export class Query {
 			return
 		}
 
+		try{
+
 		const searchRequest = new URLSearchParams(options.request)
 		const request = Object.fromEntries(searchRequest.entries())
-		
+
 		let sort
 
 		if (request['sort']) {
@@ -211,14 +213,14 @@ export class Query {
 				// Continue with no sorting
 			} else {
 				const sortItems = request['sort'].split('.')
-				
+
 				sort = [{
 					column: sortItems[0],
 					operator: sortItems[1] === 'desc' ? 'DESC' : 'ASC',
 				}]
 			}
 		}
-		
+
 		let fields
 
 		if(request['fields']) {
@@ -275,7 +277,7 @@ export class Query {
 		}
 
 		let where: DataSourceWhere[] = []
-		
+
 		for (const key in request) {
 			if (
 				key === 'sort' ||
@@ -291,18 +293,19 @@ export class Query {
 			// id[not_like]=value, id[not_in]=value, id[null], id[not_null],
 			// handle[search]=value, handle[like]=value, handle[in]=value to DataSourceWhere[]
 			// Using a regex to handle multiple brackets correctly
+
 			const matches = key.match(/\[(.*?)\]/)
-			const operator = matches ? matches[1] : WhereOperator.equals
+			const operator = matches ? WhereOperator[matches[1]] : WhereOperator.equals
 
 			where.push({
 				column: key.split('[')[0],
 				operator: operator as WhereOperator,
-				value: options.request[key],
+				value: request[key],
 			})
 		}
 
-		let topLevelFields = [] 
-		
+		let topLevelFields = []
+
 		if(fields) {
 			topLevelFields = fields.filter(field => !field.includes('.'))
 		}
@@ -318,6 +321,11 @@ export class Query {
 		}
 
 		return findManyOptions
+
+		} catch (e) {
+			this.logger.error(`[Query][buildFindManyOptionsFromRequest] Error: ${e.message}`, e.stack)
+			throw new Error('Error building findMany options: ' + e.message)
+		}
 	}
 
 

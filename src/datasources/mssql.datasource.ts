@@ -90,10 +90,10 @@ export class MSSQL {
 				options.sql = replaceQ(options.sql, options.values)
 			}
 
-			this.logger.debug(`[${DATABASE_TYPE}] Query: ${options.sql} - ${options.x_request_id ?? ''}`)
+			this.logger.verbose(`[${DATABASE_TYPE}] Query: ${options.sql} - ${options.x_request_id ?? ''}`)
 
 			const result = await connection.query(options.sql)
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${options.x_request_id ?? ''}`)
+			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${options.x_request_id ?? ''}`)
 			connection.close()
 			return result
 		} catch (e) {
@@ -202,7 +202,7 @@ export class MSSQL {
 			pk_tab.name as org_table,
 			pk_col.name as org_column
 		from sys.tables tab
-			inner join sys.columns col 
+			inner join sys.columns col
 				on col.object_id = tab.object_id
 			left outer join sys.foreign_key_columns fk_cols
 				on fk_cols.parent_object_id = tab.object_id
@@ -239,7 +239,7 @@ export class MSSQL {
 			pk_tab.name as org_table,
 			pk_col.name as org_column
 		from sys.tables tab
-			inner join sys.columns col 
+			inner join sys.columns col
 				on col.object_id = tab.object_id
 			left outer join sys.foreign_key_columns fk_cols
 				on fk_cols.parent_object_id = tab.object_id

@@ -45,7 +45,7 @@ export class DataCacheService implements OnApplicationShutdown {
 	 */
 
 	public async read(key: string): Promise<any> {
-	
+
 		this.logger.debug(`[CacheService] Reading ${key} from cache`)
 
 		if(this.useRedis()){
@@ -68,9 +68,9 @@ export class DataCacheService implements OnApplicationShutdown {
 	 */
 
 	public async write(key: string, value: any, ttl: number): Promise<void> {
-		
+
 		this.logger.debug(`[CacheService] Writing ${key} to cache`)
-	
+
 		if(this.useRedis()){
 			if (this.redis.status !== 'ready') {
 				throw new Error('Redis client not ready')
@@ -111,7 +111,7 @@ export class DataCacheService implements OnApplicationShutdown {
 		if (!this.configService.get<boolean>('USE_DATA_CACHING')) {
 			return
 		}
-		
+
 		const urlParts = options.originalUrl.split('?')
 		const table = urlParts[0].split('/')[1]
 		const request = urlParts[1] ? `?${urlParts[1]}` : undefined
@@ -127,13 +127,13 @@ export class DataCacheService implements OnApplicationShutdown {
 		}
 
 		const cacheKey = `dataCache:${table}:${request}`
-		
+
 		//get caching data from table
-		
+
 		let caching: FindManyResponseObject | undefined = await this.read(tableCacheKey)
 
 		if(!caching || caching.total === 0) {
-			
+
 			const schema = await this.schema.getSchema({table: '_llana_data_caching'})
 
 			caching = (await this.query.perform(
@@ -165,7 +165,7 @@ export class DataCacheService implements OnApplicationShutdown {
 			}
 		}
 
-		return 
+		return
 	}
 
 	/**
@@ -263,13 +263,16 @@ export class DataCacheService implements OnApplicationShutdown {
 
 		for(const cache of caching.data) {
 
+			try{
+
+
 			//check if cache key exists
 			const cacheKey = `dataCache:${cache.table}:${cache.request}`
 
 			let cachedItem = await this.read(cacheKey)
-			
+
 			if(!cachedItem) {
-				this.logger.debug(`[DataCache][Refresh] Cache not found for ${cache.table} with request ${cache.request}`)
+				this.logger.debug(`[DataCache][Refresh][${cache.id}] Cache not found for ${cache.table} with request ${cache.request}`)
 			}else{
 
 				//check if the data has changed since last refresh
@@ -278,35 +281,37 @@ export class DataCacheService implements OnApplicationShutdown {
 				}
 
 				//check if the cache is expired
-				if(cache.expires_at && cache.expires_at > cacheTime) {	
+				if(cache.expires_at && cache.expires_at > cacheTime) {
 					continue
 				}
+
+				this.logger.debug(`[DataCache][Refresh][${cache.id}] Table data changed and cache expired for ${cache.table} with request ${cache.request}`, {
+					cacheTime,
+					expiresAt: cache.expires_at,
+					dataChangedAt: cache.data_changed_at,
+					refreshedAt: cache.refreshed_at
+				})
 
 			}
 
 			const table_schema = await this.schema.getSchema({table: cache.table})
 
 			if(!table_schema) {
-				this.logger.error(`[DataCache][Refresh] Schema not found for ${cache.table}`)
+				this.logger.error(`[DataCache][Refresh][${cache.id}] Schema not found for ${cache.table}`)
 				continue
 			}
 
 			const options = await this.query.buildFindManyOptionsFromRequest({request: cache.request, schema: table_schema})
 
-			this.logger.verbose('[DataCache][Refresh] Options', options)
+			this.logger.verbose(`[DataCache][Refresh][${cache.id}] Options`, options)
 
 			const result = await this.query.perform(
 				QueryPerform.FIND_MANY,
 				options
 			) as FindManyResponseObject
 
-			if(!result || result.total === 0) {
-				this.logger.warn(`[DataCache][Refresh] No data found for ${cache.table} with request ${cache.request}`)
-				continue
-			}
-
 			await this.write(cacheKey, result, cache.ttl_seconds * 1000)
-			this.logger.debug(`[DataCache][Refresh] Cache refreshed for ${cache.table} with request ${cache.request}`)
+			this.logger.debug(`[DataCache][Refresh][${cache.id}] Cache refreshed for ${cache.table} with request ${cache.request}`)
 
 			//update the cache record
 			await this.query.perform(
@@ -321,6 +326,9 @@ export class DataCacheService implements OnApplicationShutdown {
 				})
 
 			await this.del(tableCacheKey)
+			}catch (e) {
+				this.logger.error(`[DataCache][Refresh][${cache.id}] Error refreshing cache for ${cache.table} with request ${cache.request}`, e)
+			}
 		}
 	}
 

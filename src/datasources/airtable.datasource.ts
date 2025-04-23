@@ -223,7 +223,7 @@ export class Airtable {
 	 */
 
 	async createOne(options: DataSourceCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
-		this.logger.debug(
+		this.logger.verbose(
 			`[${DATABASE_TYPE}] Create Record on ${options.schema.table}: ${JSON.stringify(options.data)}`,
 			x_request_id,
 		)
@@ -273,7 +273,7 @@ export class Airtable {
 				throw new Error('Record not created')
 			}
 
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${x_request_id}`)
+			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${x_request_id}`)
 
 			return {
 				id: result.records[0].id,
@@ -297,7 +297,7 @@ export class Airtable {
 
 	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
 		try {
-			this.logger.debug(
+			this.logger.verbose(
 				`[${DATABASE_TYPE}] Find Record on ${options.schema.table}: ${JSON.stringify(options.where)}`,
 				x_request_id,
 			)
@@ -501,7 +501,7 @@ export class Airtable {
 				}
 			})
 
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)}`, x_request_id)
+			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)}`, x_request_id)
 
 			return {
 				limit: options.limit,

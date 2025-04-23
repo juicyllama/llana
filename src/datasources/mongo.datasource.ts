@@ -234,7 +234,7 @@ export class Mongo {
 
 		try {
 			const result = await mongo.collection.insertOne(options.data as any)
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${x_request_id}`)
+			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${x_request_id}`)
 			return await this.findOne(
 				{
 					schema: options.schema,
@@ -348,7 +348,7 @@ export class Mongo {
 					.skip(options.offset)
 					.toArray()
 			)
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${x_request_id}`)
+			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${x_request_id}`)
 
 			for (const r in results) {
 				if (options.fields?.length && !options.fields.includes(options.schema.primary_key)) {

@@ -75,7 +75,7 @@ export class MySQL {
 
 		try {
 			let results
-			this.logger.debug(
+			this.logger.verbose(
 				`[${DATABASE_TYPE}] ${replaceQ(options.sql, options.values)} ${options.x_request_id ?? ''}`,
 			)
 
@@ -84,7 +84,7 @@ export class MySQL {
 			} else {
 				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
+			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
 			connection.end()
 			return results
 		} catch (e) {

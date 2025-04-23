@@ -79,7 +79,7 @@ export class Postgres {
 				options.sql += ';'
 			}
 
-			this.logger.debug(
+			this.logger.verbose(
 				`[${DATABASE_TYPE}] ${options.sql} ${options.values ? 'Values: ' + JSON.stringify(options.values) : ''} - ${options.x_request_id ?? ''}`,
 			)
 
@@ -90,7 +90,7 @@ export class Postgres {
 				const res = await connection.query(options.sql, options.values)
 				results = res.rows
 			}
-			this.logger.debug(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
+			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
 			connection.end()
 			return results
 		} catch (e) {
