@@ -8,7 +8,7 @@ import { Cache } from 'cache-manager'
 import { ConfigService } from '@nestjs/config'
 import { Query } from '../../helpers/Query'
 import { Schema } from '../../helpers/Schema'
-import { QueryPerform } from '../../types/datasource.types'
+import { DataSourceFindOneOptions, QueryPerform } from '../../types/datasource.types'
 import { CronExpression } from '@nestjs/schedule'
 import { cronToSeconds } from '../../utils/String'
 import { CACHE_DEFAULT_TABLE_SCHEMA_TTL } from 'src/app.constants'
@@ -303,16 +303,31 @@ export class DataCacheService implements OnApplicationShutdown {
 
 			const options = await this.query.buildFindManyOptionsFromRequest({request: cache.request, schema: table_schema})
 
-			this.logger.verbose(`[DataCache][Refresh][${cache.id}] Options`, options)
+			this.logger.verbose(`[DataCache][Refresh][${cache.id}] Options: ${JSON.stringify({
+				...options,
+				schema: undefined, //remove the schema from the options for readability
+			})}`)
 
 			const result = await this.query.perform(
 				QueryPerform.FIND_MANY,
 				options
 			) as FindManyResponseObject
 
+			if(options.relations && options.relations.length > 0) {
+				this.logger.verbose(`[DataCache][Refresh][${cache.id}] Building relations for ${cache.table} with request ${cache.request}`)
+
+				for (const i in result.data) {
+					result.data[i] = await this.query.buildRelations(
+						options as DataSourceFindOneOptions,
+						result.data[i],
+						undefined
+					)
+				}
+			}
+
 			await this.write(cacheKey, result, cache.ttl_seconds * 1000)
 			this.logger.debug(`[DataCache][Refresh][${cache.id}] Cache refreshed for ${cache.table} with request ${cache.request}`)
-
+			
 			//update the cache record
 			await this.query.perform(
 				QueryPerform.UPDATE,

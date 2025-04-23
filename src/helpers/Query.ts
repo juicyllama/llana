@@ -268,7 +268,7 @@ export class Query {
 						table: relationSchema.table,
 						column: relationSchema.primary_key,
 						org_table: options.schema.table,
-						org_column: options.schema.primary_key,
+						org_column: options.schema.relations.find(r => r.table === relationSchema.table)?.column || options.schema.primary_key,
 					},
 					schema: relationSchema,
 					columns: relationFields,
