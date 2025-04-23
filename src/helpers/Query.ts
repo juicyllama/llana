@@ -262,14 +262,20 @@ export class Query {
 				}
 
 				const relationSchema = await this.schema.getSchema({ table: relation })
+
+				let join
+
+					if (options.schema.relations.find(col => col.table === relation)) {
+						join = options.schema.relations.find(col => col.table === relation)
+					} else if (options.schema.relations.find(col => col.org_table === relation)) {
+						join = options.schema.relations.find(col => col.org_table === relation)
+					} else{
+						this.logger.error(`Relation ${relation} not found in schema ${options.schema.table}`)
+					}
+
 				relations.push({
-					table: relationSchema.table,
-					join: {
-						table: relationSchema.table,
-						column: relationSchema.primary_key,
-						org_table: options.schema.table,
-						org_column: options.schema.relations.find(r => r.table === relationSchema.table)?.column || options.schema.primary_key,
-					},
+					table: relation,
+					join,
 					schema: relationSchema,
 					columns: relationFields,
 				})
@@ -712,6 +718,9 @@ export class Query {
 		}
 
 		for (const relation of options.relations) {
+
+			console.log('relation', relation)
+
 			const rel = this.getTableRelationColumn(relation.join, options.schema.table)
 			const relationTable = this.getChildTableRelation(relation.join, options.schema.table)
 
