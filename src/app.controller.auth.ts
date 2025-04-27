@@ -191,19 +191,12 @@ function getAuthCookieOpts(isRefreshToken: boolean): CookieOptions {
 		throw new Error('AUTH_COOKIES_DOMAIN or BASE_URL_API must be set in production')
 	}
 
-	let domain
-	try {
-		domain = process.env.AUTH_COOKIES_DOMAIN || new URL(process.env.BASE_URL_API).hostname
-	} catch {
-		throw new Error('Could not parse AUTH_COOKIES_DOMAIN or BASE_URL_API. Make sure they are valid URLs.')
-	}
-
 	const opts: Record<string, any> = {
 		httpOnly: true,
 		secure: true,
 		sameSite: 'none',
 		maxAge: convertJwtExpiryToMs(isRefreshToken ? process.env.JWT_REFRESH_EXPIRES_IN : process.env.JWT_EXPIRES_IN),
-		...(domain ? { domain } : {}),
+		...(process.env.AUTH_COOKIES_DOMAIN ? { domain: process.env.AUTH_COOKIES_DOMAIN } : {}),
 		path: '/',
 	}
 	return opts
