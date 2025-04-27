@@ -9,6 +9,7 @@ import { join } from 'path'
 import { APP_BOOT_CONTEXT } from './app.constants'
 import { AppModule } from './app.module'
 import { Logger } from './helpers/Logger'
+import { RequestPathLoggerMiddleware } from './middleware/request-path-logger.middleware';
 import { WelcomeModule } from './modules/welcome/welcome.module'
 
 async function bootstrap() {
@@ -36,6 +37,8 @@ async function bootstrap() {
 			transform: true,
 		}),
 	)
+
+	app.use(new RequestPathLoggerMiddleware().use);
 
 	let url = await app.getUrl()
 	url = url.replace('[::1]', 'localhost')
