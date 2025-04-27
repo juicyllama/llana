@@ -27,7 +27,6 @@
 		"api"
 	],
 	"scripts": {
-		"postinstall": "sh ./scripts/install.sh",
 		"prebuild": "rimraf dist",
 		"build": "nest build",
 		"format": "prettier --write \"**/*.ts\"",
