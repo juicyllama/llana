@@ -36,7 +36,6 @@ async function bootstrap() {
 			transform: true,
 		}),
 	)
-
 	let url = await app.getUrl()
 	url = url.replace('[::1]', 'localhost')
 	logger.log(`Application is running on: ${url}`, APP_BOOT_CONTEXT)

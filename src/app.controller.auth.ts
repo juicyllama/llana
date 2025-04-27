@@ -68,7 +68,7 @@ export class AuthController {
 			.find(cookie => cookie.trim().startsWith(REFRESH_TOKEN_COOKIE_NAME + '='))
 			?.split('=')[1]
 		if (!oldRefreshToken) {
-			return res.status(401).send('No refresh token found')
+			return res.status(401).send(this.response.text('No refresh token found'))
 		}
 		const loginPayload = this.authService.decodeRefreshToken(oldRefreshToken)
 		const { access_token: newAccessToken } = await this.authService.login(loginPayload)
@@ -201,7 +201,7 @@ function getAuthCookieOpts(isRefreshToken: boolean): CookieOptions {
 	const opts: Record<string, any> = {
 		httpOnly: true,
 		secure: true,
-		sameSite: 'strict',
+		sameSite: 'none',
 		maxAge: convertJwtExpiryToMs(isRefreshToken ? process.env.JWT_REFRESH_EXPIRES_IN : process.env.JWT_EXPIRES_IN),
 		...(domain ? { domain } : {}),
 		path: '/',
