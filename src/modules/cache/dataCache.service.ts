@@ -38,6 +38,25 @@ export class DataCacheService implements OnApplicationShutdown {
 		return !!(redisPort && redisHost)
 	}
 
+	public cacheType(): 'READ' | 'WRITE' | undefined {
+
+		if(!this.configService.get<string>('USE_DATA_CACHING')){
+			return undefined
+		}
+
+		if(this.configService.get<string>('USE_DATA_CACHING') === 'READ'){
+			return 'READ'
+		}
+
+		if(this.configService.get<string>('USE_DATA_CACHING') === 'WRITE'){
+			return 'WRITE'
+		}
+
+		if( this.configService.get<boolean>('USE_DATA_CACHING')){
+			return 'WRITE'
+		}
+	}
+
 	/**
 	 * Read from cache
 	 * * Will use Redis if available
@@ -108,7 +127,9 @@ export class DataCacheService implements OnApplicationShutdown {
 	 */
 
 	async get(options: { originalUrl: string; x_request_id: string  }): Promise<FindManyResponseObject | undefined> {
-		if (!this.configService.get<boolean>('USE_DATA_CACHING')) {
+		
+		if(!this.cacheType()){
+			this.logger.debug(`[DataCache][Get] Cache is not enabled`)
 			return
 		}
 
@@ -174,7 +195,8 @@ export class DataCacheService implements OnApplicationShutdown {
 
 	async ping(table: string) {
 
-		if (!this.configService.get<boolean>('USE_DATA_CACHING')) {
+		if(!this.cacheType()){
+			this.logger.debug(`[DataCache][Get] Cache is not enabled`)
 			return
 		}
 
@@ -228,7 +250,13 @@ export class DataCacheService implements OnApplicationShutdown {
 
 	async refresh(cronSchedule: CronExpression) {
 
-		if (!this.configService.get<boolean>('USE_DATA_CACHING')) {
+		if(!this.cacheType()){
+			this.logger.debug(`[DataCache][Get] Cache is not enabled`)
+			return
+		}
+
+		if(this.cacheType() === 'READ'){
+			this.logger.debug(`[DataCache][Get] Cache is set to READ, skipping write`)
 			return
 		}
 
