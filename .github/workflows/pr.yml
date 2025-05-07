@@ -25,37 +25,37 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            -   name: 'Checkout'
-                uses: actions/checkout@v4
-                with:
-                    token: ${{ secrets.GH_CI_CD_RELEASE }}
+            - name: 'Checkout'
+              uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GH_CI_CD_RELEASE }}
 
-            -   name: Install Node.js
-                uses: actions/setup-node@v4
-                with:
-                    node-version: 18.18.2
+            - name: Install Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 18.18.2
 
-            -   name: Install Docker using Docker's official script
-                run: |
-                    curl -fsSL https://get.docker.com -o get-docker.sh
-                    sudo sh get-docker.sh
-                continue-on-error: false
+            - name: Install Docker using Docker's official script
+              run: |
+                  curl -fsSL https://get.docker.com -o get-docker.sh
+                  sudo sh get-docker.sh
+              continue-on-error: false
 
-            -   name: Install Docker Compose
-                run: |
-                      sudo curl -L "https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-                      sudo chmod +x /usr/local/bin/docker-compose
-                      docker-compose --version
-                continue-on-error: false
+            - name: Install Docker Compose
+              run: |
+                  sudo curl -L "https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                  sudo chmod +x /usr/local/bin/docker-compose
+                  docker-compose --version
+              continue-on-error: false
 
-            -   name: Install dependencies
-                run: npm install
+            - name: Install dependencies
+              run: npm install
 
-            -   name: Lint
-                run: npm run lint
+            - name: Lint
+              run: npm run lint
 
-            -  name: Setup Docker
-               run:  npm run docker:dev
+            - name: Setup Docker
+              run: npm run docker:dev
 
-            -   name: Test
-                run:  npm run test
+            - name: Test
+              run: npm run test

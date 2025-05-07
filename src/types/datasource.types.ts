@@ -173,6 +173,7 @@ export interface DataSourceFindTotalRecords {
 export interface DataSourceConfig {
 	type: DataSourceType
 	host: string
+	poolSize: number
 	defaults: {
 		limit: number
 		relations: {

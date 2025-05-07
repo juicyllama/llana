@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as mysql from 'mysql2/promise'
-import { Connection } from 'mysql2/promise'
+import { Connection, Pool, PoolConnection } from 'mysql2/promise'
 
 import {
 	DeleteResponseObject,
@@ -28,25 +28,61 @@ import {
 } from '../types/datasource.types'
 import { MySQLColumnType } from '../types/datasources/mysql.types'
 import { SortCondition } from '../types/schema.types'
+import { Env } from '../utils/Env'
 import { replaceQ } from '../utils/String'
 
 const DATABASE_TYPE = DataSourceType.MYSQL
 
 @Injectable()
-export class MySQL {
+export class MySQL implements OnModuleInit, OnModuleDestroy {
+	private pool: Pool
+
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
 		private readonly pagination: Pagination,
 	) {}
 
-	/**
-	 * Check if the data source is available
-	 */
+	async onModuleInit(): Promise<void> {
+		if (Env.IsTest()) return
+
+		const connectionUri = this.configService.get<string>('database.host')
+		const poolSize = this.configService.get<number>('database.poolSize')
+
+		const config = new URL(connectionUri)
+
+		this.pool = mysql.createPool({
+			host: config.hostname,
+			port: Number(config.port || 3306),
+			user: config.username,
+			password: config.password,
+			database: config.pathname.replace('/', ''),
+			waitForConnections: true,
+			connectionLimit: poolSize,
+			connectTimeout: 10000, // 10 seconds
+			queueLimit: 0, // 0 = unlimited queued requests
+		})
+		this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool initialized. Pool size ${poolSize}`)
+	}
+
+	async onModuleDestroy(): Promise<void> {
+		if (this.pool) {
+			await this.pool.end()
+			this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool closed`)
+		}
+	}
 
 	async checkDataSource(options: { x_request_id?: string }): Promise<boolean> {
 		try {
-			await mysql.createConnection(this.configService.get('database.host'))
+			const connection = Env.IsTest()
+				? await mysql.createConnection(this.configService.get('database.host'))
+				: await this.pool.getConnection()
+
+			if (Env.IsTest()) {
+				await (connection as Connection).end()
+			} else {
+				;(connection as PoolConnection).release()
+			}
 			return true
 		} catch (e) {
 			this.logger.error(
@@ -56,21 +92,19 @@ export class MySQL {
 		}
 	}
 
-	/**
-	 * Performs a query on the database
-	 */
-
 	async query(options: { sql: string; values?: any[]; x_request_id?: string }): Promise<any> {
-		let connection: Connection
+		let connection: Connection | PoolConnection
 
 		try {
-			if (!mysql) {
-				throw new Error(`${DATABASE_TYPE} library is not initialized`)
+			if (Env.IsTest()) {
+				connection = await mysql.createConnection(this.configService.get('database.host'))
+			} else {
+				if (!this.pool) throw new Error(`${DATABASE_TYPE} pool is not initialized`)
+				connection = await this.pool.getConnection()
 			}
-			connection = await mysql.createConnection(this.configService.get('database.host'))
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}] Error creating database connection - ${e.message}`)
-			throw new Error('Error creating database connection')
+			this.logger.error(`[${DATABASE_TYPE}] Error getting connection - ${e.message}`)
+			throw new Error('Error acquiring database connection')
 		}
 
 		try {
@@ -84,8 +118,10 @@ export class MySQL {
 			} else {
 				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
-			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
-			connection.end()
+
+			this.logger.verbose(
+				`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`,
+			)
 			return results
 		} catch (e) {
 			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`)
@@ -96,8 +132,15 @@ export class MySQL {
 					message: e.message,
 				},
 			})
-			connection.end()
 			throw new Error(e)
+		} finally {
+			if (connection) {
+				if (Env.IsTest()) {
+					await (connection as Connection).end()
+				} else {
+					;(connection as PoolConnection).release()
+				}
+			}
 		}
 	}
 

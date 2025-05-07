@@ -11,6 +11,7 @@ export default registerAs(
 		<DataSourceConfig>{
 			type: getDatabaseType(process.env.DATABASE_URI),
 			host: process.env.DATABASE_URI,
+			poolSize: Number(process.env.DATABASE_POOL_SIZE || 10),
 			defaults: {
 				limit: Number(process.env.DEFAULT_LIMIT) || 20,
 				relations: {
