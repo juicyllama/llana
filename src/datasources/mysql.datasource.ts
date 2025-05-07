@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common'
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as mysql from 'mysql2/promise'
 import { Pool, PoolConnection } from 'mysql2/promise'
@@ -33,7 +33,7 @@ import { replaceQ } from '../utils/String'
 const DATABASE_TYPE = DataSourceType.MYSQL
 
 @Injectable()
-export class MySQL implements OnModuleInit {
+export class MySQL implements OnModuleInit, OnModuleDestroy {
 	private pool: Pool
 
 	constructor(
@@ -43,15 +43,30 @@ export class MySQL implements OnModuleInit {
 	) {}
 
 	async onModuleInit(): Promise<void> {
+		const connectionUri = this.configService.get<string>('database.host')
 		const poolSize = this.configService.get<number>('database.poolSize')
+
+		const config = new URL(connectionUri)
+
 		this.pool = mysql.createPool({
-			uri: this.configService.get<string>('database.host'),
+			host: config.hostname,
+			port: Number(config.port || 3306),
+			user: config.username,
+			password: config.password,
+			database: config.pathname.replace('/', ''),
 			waitForConnections: true,
 			connectionLimit: poolSize,
 			connectTimeout: 10000, // 10 seconds
 			queueLimit: 0, // 0 = unlimited queued requests
 		})
 		this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool initialized. Pool size ${poolSize}`)
+	}
+
+	async onModuleDestroy(): Promise<void> {
+		if (this.pool) {
+			await this.pool.end()
+			this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool closed`)
+		}
 	}
 
 	async checkDataSource(options: { x_request_id?: string }): Promise<boolean> {
