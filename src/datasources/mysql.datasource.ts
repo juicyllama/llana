@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as mysql from 'mysql2/promise'
-import { Connection } from 'mysql2/promise'
+import { Pool, PoolConnection } from 'mysql2/promise'
 
 import {
 	DeleteResponseObject,
@@ -33,20 +33,31 @@ import { replaceQ } from '../utils/String'
 const DATABASE_TYPE = DataSourceType.MYSQL
 
 @Injectable()
-export class MySQL {
+export class MySQL implements OnModuleInit {
+	private pool: Pool
+
 	constructor(
 		private readonly configService: ConfigService,
 		private readonly logger: Logger,
 		private readonly pagination: Pagination,
 	) {}
 
-	/**
-	 * Check if the data source is available
-	 */
+	async onModuleInit(): Promise<void> {
+		const poolSize = this.configService.get<number>('database.poolSize')
+		this.pool = mysql.createPool({
+			uri: this.configService.get<string>('database.host'),
+			waitForConnections: true,
+			connectionLimit: poolSize,
+			connectTimeout: 10000, // 10 seconds
+			queueLimit: 0, // 0 = unlimited queued requests
+		})
+		this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool initialized. Pool size ${poolSize}`)
+	}
 
 	async checkDataSource(options: { x_request_id?: string }): Promise<boolean> {
 		try {
-			await mysql.createConnection(this.configService.get('database.host'))
+			const connection = await this.pool.getConnection()
+			connection.release()
 			return true
 		} catch (e) {
 			this.logger.error(
@@ -56,21 +67,17 @@ export class MySQL {
 		}
 	}
 
-	/**
-	 * Performs a query on the database
-	 */
-
 	async query(options: { sql: string; values?: any[]; x_request_id?: string }): Promise<any> {
-		let connection: Connection
+		let connection: PoolConnection
 
 		try {
-			if (!mysql) {
-				throw new Error(`${DATABASE_TYPE} library is not initialized`)
+			if (!this.pool) {
+				throw new Error(`${DATABASE_TYPE} pool is not initialized`)
 			}
-			connection = await mysql.createConnection(this.configService.get('database.host'))
+			connection = await this.pool.getConnection()
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}] Error creating database connection - ${e.message}`)
-			throw new Error('Error creating database connection')
+			this.logger.error(`[${DATABASE_TYPE}] Error getting connection from pool - ${e.message}`)
+			throw new Error('Error acquiring database connection')
 		}
 
 		try {
@@ -84,8 +91,10 @@ export class MySQL {
 			} else {
 				;[results] = await connection.query<any[]>(options.sql, options.values)
 			}
-			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
-			connection.end()
+
+			this.logger.verbose(
+				`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`,
+			)
 			return results
 		} catch (e) {
 			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`)
@@ -96,8 +105,11 @@ export class MySQL {
 					message: e.message,
 				},
 			})
-			connection.end()
 			throw new Error(e)
+		} finally {
+			if (connection) {
+				connection.release()
+			}
 		}
 	}
 
