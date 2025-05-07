@@ -32,6 +32,8 @@ import { replaceQ } from '../utils/String'
 
 const DATABASE_TYPE = DataSourceType.MYSQL
 
+let globalPool: Pool | undefined
+
 @Injectable()
 export class MySQL implements OnModuleInit, OnModuleDestroy {
 	private pool: Pool
@@ -43,29 +45,25 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 	) {}
 
 	async onModuleInit(): Promise<void> {
-		const connectionUri = this.configService.get<string>('database.host')
-		const poolSize = this.configService.get<number>('database.poolSize')
-
-		const config = new URL(connectionUri)
-
-		this.pool = mysql.createPool({
-			host: config.hostname,
-			port: Number(config.port || 3306),
-			user: config.username,
-			password: config.password,
-			database: config.pathname.replace('/', ''),
-			waitForConnections: true,
-			connectionLimit: poolSize,
-			connectTimeout: 10000, // 10 seconds
-			queueLimit: 0, // 0 = unlimited queued requests
-		})
-		this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool initialized. Pool size ${poolSize}`)
+		if (!globalPool) {
+			globalPool = mysql.createPool({
+				uri: this.configService.get<string>('database.host'),
+				waitForConnections: true,
+				connectionLimit: this.configService.get<number>('database.poolSize') || 10,
+				connectTimeout: 5000,
+			})
+			this.logger.log(`[${DATABASE_TYPE}] Global MySQL pool created`)
+		} else {
+			this.logger.log(`[${DATABASE_TYPE}] Reusing global MySQL pool`)
+		}
+		this.pool = globalPool
 	}
 
 	async onModuleDestroy(): Promise<void> {
-		if (this.pool) {
+		if (this.pool && this.pool === globalPool) {
 			await this.pool.end()
 			this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool closed`)
+			globalPool = undefined
 		}
 	}
 
@@ -128,6 +126,13 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 		}
 	}
 
+	async close(): Promise<void> {
+		if (this.pool && this.pool === globalPool) {
+			await this.pool.end()
+			this.logger.log(`[${DATABASE_TYPE}] Pool closed`)
+			globalPool = undefined
+		}
+	}
 	/**
 	 * 	Check if a record is unique
 	 */
