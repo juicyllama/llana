@@ -44,7 +44,7 @@
 		"commit": "git pull && git add . && git commit -m \"chore: update\" && git push",
 		"test": "sh ./scripts/test.sh",
 		"test:current": "jest --bail --runInBand --detectOpenHandles --forceExit",
-		"test:mysql": "export DATABASE_URI=mysql://root:localhost@localhost:3306/llana_test && jest --bail --runInBand --detectOpenHandles --forceExit",
+		"test:mysql": "export DATABASE_URI=mysql://user:pass@localhost:3306/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"test:postgresql": "export DATABASE_URI=postgresql://user:pass@localhost:5432/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"test:mongodb": "export DATABASE_URI=mongodb://user:pass@localhost:27017/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"test:mssql": "export DATABASE_URI=mssql://sa:S7!0nGpAw0rD@localhost:1433/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
