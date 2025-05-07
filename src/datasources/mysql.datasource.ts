@@ -29,6 +29,7 @@ import {
 import { MySQLColumnType } from '../types/datasources/mysql.types'
 import { SortCondition } from '../types/schema.types'
 import { replaceQ } from '../utils/String'
+import { Env } from 'src/utils/Env'
 
 const DATABASE_TYPE = DataSourceType.MYSQL
 
@@ -60,7 +61,7 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 	}
 
 	async onModuleDestroy(): Promise<void> {
-		if (this.pool && this.pool === globalPool) {
+		if (this.pool && this.pool === globalPool && !Env.IsTest()) {
 			await this.pool.end()
 			this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool closed`)
 			globalPool = undefined
