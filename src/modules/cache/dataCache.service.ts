@@ -237,12 +237,9 @@ export class DataCacheService implements OnApplicationShutdown {
 						}
 					},
 				)
-
-				await this.del(tableCacheKey)
 			}
 		}
 	}
-
 
 	/**
 	 * Generates the cache date for results which need refreshing
@@ -266,11 +263,7 @@ export class DataCacheService implements OnApplicationShutdown {
 
 		const schema = await this.schema.getSchema({table: '_llana_data_caching'})
 
-		let caching: FindManyResponseObject | undefined = await this.read(tableCacheKey)
-
-		if(!caching || caching.total === 0) {
-
-			caching = (await this.query.perform(
+		const caching = (await this.query.perform(
 						QueryPerform.FIND_MANY,
 						{
 							schema,
@@ -278,10 +271,8 @@ export class DataCacheService implements OnApplicationShutdown {
 						},
 					)) as FindManyResponseObject
 
-			if (caching && caching.total > 0) {
-				await this.write(tableCacheKey, caching, this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL)
-			}
-
+		if (caching && caching.total > 0) {
+			await this.write(tableCacheKey, caching, this.configService.get<number>('CACHE_TABLE_SCHEMA_TTL') ?? CACHE_DEFAULT_TABLE_SCHEMA_TTL)
 		}
 
 		if (!caching || caching.total === 0) {
@@ -293,86 +284,84 @@ export class DataCacheService implements OnApplicationShutdown {
 
 			try{
 
+				//check if cache key exists
+				const cacheKey = `dataCache:${cache.table}:${cache.request}`
 
-			//check if cache key exists
-			const cacheKey = `dataCache:${cache.table}:${cache.request}`
+				let cachedItem = await this.read(cacheKey)
 
-			let cachedItem = await this.read(cacheKey)
+				if(!cachedItem) {
+					this.logger.debug(`[DataCache][Refresh][${cache.id}] Cache not found for ${cache.table} with request ${cache.request}`)
+				}else{
 
-			if(!cachedItem) {
-				this.logger.debug(`[DataCache][Refresh][${cache.id}] Cache not found for ${cache.table} with request ${cache.request}`)
-			}else{
-
-				//check if the data has changed since last refresh
-				if(!cache.data_changed_at || (cache.data_changed_at && cache.refreshed_at && cache.data_changed_at < cache.refreshed_at)) {
-					continue
-				}
-
-				//check if the cache is expired
-				if(cache.expires_at && cache.expires_at > cacheTime) {
-					continue
-				}
-
-				this.logger.debug(`[DataCache][Refresh][${cache.id}] Table data changed and cache expired for ${cache.table} with request ${cache.request}`, {
-					cacheTime,
-					expiresAt: cache.expires_at,
-					dataChangedAt: cache.data_changed_at,
-					refreshedAt: cache.refreshed_at
-				})
-
-			}
-
-			const table_schema = await this.schema.getSchema({table: cache.table})
-
-			if(!table_schema) {
-				this.logger.error(`[DataCache][Refresh][${cache.id}] Schema not found for ${cache.table}`)
-				continue
-			}
-
-			const options = await this.query.buildFindManyOptionsFromRequest({request: cache.request, schema: table_schema})
-
-			this.logger.verbose(`[DataCache][Refresh][${cache.id}] Options: ${JSON.stringify({
-				...options,
-				schema: undefined, //remove the schema from the options for readability
-			})}`)
-
-			const result = await this.query.perform(
-				QueryPerform.FIND_MANY,
-				options
-			) as FindManyResponseObject
-
-			if(options.relations && options.relations.length > 0) {
-				this.logger.verbose(`[DataCache][Refresh][${cache.id}] Building relations for ${cache.table} with request ${cache.request}`)
-
-				for (const i in result.data) {
-					result.data[i] = await this.query.buildRelations(
-						options as DataSourceFindOneOptions,
-						result.data[i],
-						undefined
-					)
-				}
-			}
-
-			await this.write(cacheKey, result, cache.ttl_seconds * 1000)
-			this.logger.debug(`[DataCache][Refresh][${cache.id}] Cache refreshed for ${cache.table} with request ${cache.request}`)
-			
-			//update the cache record
-			await this.query.perform(
-				QueryPerform.UPDATE,
-				{
-					id: cache.id,
-					schema,
-					data: {
-						refreshed_at: new Date(),
-						expires_at: new Date(new Date().getTime() + (cache.ttl_seconds * 1000)),
+					//check if the data has changed since last refresh
+					if(!cache.data_changed_at || (cache.data_changed_at && cache.refreshed_at && cache.data_changed_at < cache.refreshed_at)) {
+						continue
 					}
-				})
 
-			await this.del(tableCacheKey)
-			}catch (e) {
-				this.logger.error(`[DataCache][Refresh][${cache.id}] Error refreshing cache for ${cache.table} with request ${cache.request}`, e)
+					//check if the cache is expired
+					if(cache.expires_at && cache.expires_at > cacheTime) {
+						continue
+					}
+
+					this.logger.debug(`[DataCache][Refresh][${cache.id}] Table data changed and cache expired for ${cache.table} with request ${cache.request}`, {
+						cacheTime,
+						expiresAt: cache.expires_at,
+						dataChangedAt: cache.data_changed_at,
+						refreshedAt: cache.refreshed_at
+					})
+
+				}
+
+				const table_schema = await this.schema.getSchema({table: cache.table})
+
+				if(!table_schema) {
+					this.logger.error(`[DataCache][Refresh][${cache.id}] Schema not found for ${cache.table}`)
+					continue
+				}
+
+				const options = await this.query.buildFindManyOptionsFromRequest({request: cache.request, schema: table_schema})
+
+				this.logger.verbose(`[DataCache][Refresh][${cache.id}] Options: ${JSON.stringify({
+					...options,
+					schema: undefined, //remove the schema from the options for readability
+				})}`)
+
+				const result = await this.query.perform(
+					QueryPerform.FIND_MANY,
+					options
+				) as FindManyResponseObject
+
+				if(options.relations && options.relations.length > 0) {
+					this.logger.verbose(`[DataCache][Refresh][${cache.id}] Building relations for ${cache.table} with request ${cache.request}`)
+
+					for (const i in result.data) {
+						result.data[i] = await this.query.buildRelations(
+							options as DataSourceFindOneOptions,
+							result.data[i],
+							undefined
+						)
+					}
+				}
+
+				await this.write(cacheKey, result, cache.ttl_seconds * 1000)
+				this.logger.debug(`[DataCache][Refresh][${cache.id}] Cache refreshed for ${cache.table} with request ${cache.request}`)
+				
+				//update the cache record
+				await this.query.perform(
+					QueryPerform.UPDATE,
+					{
+						id: cache.id,
+						schema,
+						data: {
+							refreshed_at: new Date(),
+							expires_at: new Date(new Date().getTime() + (cache.ttl_seconds * 1000)),
+						}
+					})
+
+				}catch (e) {
+					this.logger.error(`[DataCache][Refresh][${cache.id}] Error refreshing cache for ${cache.table} with request ${cache.request}`, e)
+				}
 			}
-		}
 	}
 
 }
