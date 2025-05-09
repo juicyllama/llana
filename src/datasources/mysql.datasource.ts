@@ -60,7 +60,8 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 			waitForConnections: true,
 			connectionLimit: poolSize,
 			connectTimeout: 10000, // 10 seconds
-			queueLimit: 0, // 0 = unlimited queued requests
+			queueLimit: 0, // 0 = unlimited queued requests,
+			idleTimeout: 10000, // 10 seconds
 		})
 		this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool initialized. Pool size ${poolSize}`)
 	}
