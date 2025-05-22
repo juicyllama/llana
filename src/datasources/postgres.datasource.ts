@@ -235,8 +235,17 @@ export class Postgres {
 
 		options = this.pipeObjectToPostgres(options) as DataSourceCreateOneOptions
 
-		const columns = Object.keys(options.data)
-		const dataValues = Object.values(options.data)
+		// Filter out auto-incrementing primary key fields
+     const filteredData = { ...options.data }
+     for (const column of options.schema.columns) {
+       if (column.primary_key && column.default?.includes('nextval')) {
+         delete filteredData[column.field]
+       }
+     }
+
+
+		 const columns = Object.keys(filteredData)
+     const dataValues = Object.values(filteredData)
 
 		values.push(...dataValues)
 

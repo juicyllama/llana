@@ -111,7 +111,7 @@ describe('App > Controller > Get', () => {
 		jwt = await authTestingService.login()
 		userId = await authTestingService.getUserId(jwt)
 
-		user = await userTestingService.mockUser({ email: 'app.controller.get.test.spec.user@gmail.com' })
+		user = await userTestingService.mockUser()
 
 		const result = await request(app.getHttpServer())
 			.post(`/User/`)
