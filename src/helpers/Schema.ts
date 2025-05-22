@@ -29,6 +29,7 @@ import {
 	validateWhereResponse,
 } from '../types/schema.types'
 import { Logger } from './Logger'
+import { classValidatorConfig } from '../config/class-validator.config'
 
 @Injectable()
 export class Schema {
@@ -258,7 +259,7 @@ export class Schema {
 		const DynamicClass = this.schemaToClass(options.schema, nestedObject)
 		const instance: object = plainToInstance(DynamicClass, nestedObject)
 		try {
-			const errors = await validate(instance)
+			const errors = await validate(instance, classValidatorConfig)
 
 			if (errors.length > 0) {
 				this.logger.error(`[pipeResponse] ${Object.values(errors[0].constraints).join(', ')}`, x_request_id)
@@ -284,6 +285,7 @@ export class Schema {
 		schema: DataSourceSchema,
 		data: { [key: string]: any },
 	): Promise<{ valid: boolean; message?: string; instance?: object }> {
+
 		try {
 			for (const key in data) {
 				const column = schema.columns.find(col => col.field === key)
@@ -317,10 +319,11 @@ export class Schema {
 
 			const DynamicClass = this.schemaToClass(schema, data)
 			const instance: object = plainToInstance(DynamicClass, data)
-			const errors = await validate(instance)
-
+			const errors = await validate(instance, classValidatorConfig)
+	
 			if (errors.length > 0) {
-				return {
+
+			return {
 					valid: false,
 					message: errors.map(error => Object.values(error.constraints)).join(', '),
 				}
@@ -481,13 +484,20 @@ export class Schema {
 
 			const column = param
 
+			if (column.includes('.')) {
+				continue
+			}
+
+			let field: string
 			let operator: WhereOperator
 			let value: any
 
-			switch (typeof options.params[param]) {
+			switch (typeof column) {
 				case 'string':
-					operator = WhereOperator.equals
-					value = options.params[param]
+					field = column.split('[')[0]
+					const singleOperator = column.split('[')[1]?.split(']')[0]
+					operator = WhereOperator[singleOperator] ?? WhereOperator.equals
+					value = options.params[column]
 					break
 				case 'object':
 					const operators = Object.keys(options.params[param]) as WhereOperator[]
@@ -496,6 +506,7 @@ export class Schema {
 					if (!operator) {
 						operator = WhereOperator.equals
 					}
+					field = options.params[param][operator].split('[')[0]
 					value = options.params[param][operator]
 					operator = WhereOperator[operator]
 					break
@@ -507,11 +518,7 @@ export class Schema {
 					}
 			}
 
-			if (column.includes('.')) {
-				continue
-			}
-
-			if (!options.schema.columns.find(col => col.field === column)) {
+			if (!options.schema.columns.find(col => col.field === field)) {
 				return {
 					valid: false,
 					message: `Column ${column} not found in schema`,
@@ -535,13 +542,13 @@ export class Schema {
 							.split(',')
 							.map(v => v.trim())
 				for (const val of valueArray) {
-					validation = await this.validateData(options.schema, { [column]: val })
+					validation = await this.validateData(options.schema, { [field]: val })
 					if (!validation.valid) {
 						return validation
 					}
 				}
 			} else {
-				validation = await this.validateData(options.schema, { [column]: value })
+				validation = await this.validateData(options.schema, { [field]: value })
 			}
 
 			if (!validation.valid) {
@@ -549,7 +556,7 @@ export class Schema {
 			}
 
 			where.push({
-				column,
+				column: field,
 				operator,
 				value,
 			})
