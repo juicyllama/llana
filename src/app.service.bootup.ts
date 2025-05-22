@@ -143,7 +143,7 @@ export class AppBootup implements OnApplicationBootstrap {
 				throw new Error(`Failed to create ${LLANA_PUBLIC_TABLES} table`)
 			}
 
-			// Example Auth Table - For example allowing external API access to see Employee data
+			// Example Public Tables - For example allowing external API access to see Employee data
 
 			if (!this.authentication.skipAuth()) {
 				const example_auth: any[] = [
@@ -508,6 +508,30 @@ export class AppBootup implements OnApplicationBootstrap {
 				if (!created) {
 					throw new Error('Failed to create _llana_webhook table')
 				}
+
+				
+				const example_data_caching: any[] = [
+					{
+						table: 'Employee',
+						request: '?fields=firstName,lastName&limit=10',
+						ttl_seconds: 3600,
+						expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
+						refreshed_at: new Date(Date.now()).toISOString(),
+						data_changed_at: new Date(Date.now()).toISOString(),
+					},
+				]
+
+					for (const example of example_data_caching) {
+						await this.query.perform(
+							QueryPerform.CREATE,
+							{
+								schema,
+								data: example,
+							},
+							APP_BOOT_CONTEXT,
+						)
+					}
+				
 			}
 
 		} else {
