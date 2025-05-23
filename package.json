@@ -121,6 +121,12 @@
 		"typescript": "^5.8.3",
 		"webpack": "^5.99.9"
 	},
+	"overrides": {
+		"multer": "2.0.0"
+	},
+	"engines": {
+		"node": ">=22.0.0"
+	},
 	"jest": {
 		"moduleFileExtensions": [
 			"js",
