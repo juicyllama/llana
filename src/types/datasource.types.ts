@@ -24,6 +24,7 @@ export enum QueryPerform {
 	CREATE_TABLE = 'createTable',
 	CHECK_CONNECTION = 'checkConnection',
 	LIST_TABLES = 'listTables',
+	RESET_SEQUENCES = 'resetSequences',
 }
 
 export enum PublishType {

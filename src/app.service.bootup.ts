@@ -26,6 +26,7 @@ import {
 	ColumnExtraString,
 	DataSourceColumnType,
 	DataSourceSchema,
+	DataSourceType,
 	PublishType,
 	QueryPerform,
 	WhereOperator,
@@ -59,6 +60,11 @@ export class AppBootup implements OnApplicationBootstrap {
 		try {
 			await this.query.perform(QueryPerform.CHECK_CONNECTION, undefined, APP_BOOT_CONTEXT)
 			this.logger.log('Database Connection Successful', APP_BOOT_CONTEXT)
+			
+			if (this.configService.get<string>('database.type') === DataSourceType.POSTGRES) {
+				this.logger.log('Resetting PostgreSQL sequences', APP_BOOT_CONTEXT)
+				await this.query.perform(QueryPerform.RESET_SEQUENCES, undefined, APP_BOOT_CONTEXT)
+			}
 		} catch (e) {
 			this.logger.error(`Database Connection Error - ${e.message}`, APP_BOOT_CONTEXT)
 			throw new Error('Database Connection Error')

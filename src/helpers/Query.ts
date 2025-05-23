@@ -144,6 +144,9 @@ export class Query {
 				case QueryPerform.CHECK_CONNECTION:
 					return await this.checkConnection({ x_request_id })
 
+				case QueryPerform.RESET_SEQUENCES:
+					return await this.resetSequences(x_request_id)
+
 				case QueryPerform.LIST_TABLES:
 					return await this.listTables(options as DataSourceListTablesOptions, x_request_id)
 
@@ -767,6 +770,18 @@ export class Query {
 	/**
 	 * Get a relation column from a relation table
 	 */
+
+	/**
+	 * Reset database sequences (PostgreSQL only)
+	 */
+	private async resetSequences(x_request_id?: string): Promise<boolean> {
+		if (this.configService.get<string>('database.type') === DataSourceType.POSTGRES) {
+			return await this.postgres.resetSequences(x_request_id)
+		}
+		
+		this.logger.debug(`[Query] Sequence reset is only supported for PostgreSQL databases`, x_request_id)
+		return true
+	}
 
 	getTableRelationColumn(relation: DataSourceSchemaRelation, currentTable: string): string {
 		if (relation.table === currentTable) {
