@@ -41,13 +41,13 @@ import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
 import { HostCheckMiddleware } from './middleware/HostCheck'
 import { RequestPathLoggerMiddleware } from './middleware/request-path-logger.middleware'
+import { REDIS_CACHE_TOKEN } from './modules/cache/dataCache.constants'
+import { DataCacheService } from './modules/cache/dataCache.service'
 import { RedisMockWithPubSub } from './modules/websocket/redis-mock-with-pub-sub'
 import { REDIS_PUB_CLIENT_TOKEN, REDIS_SUB_CLIENT_TOKEN } from './modules/websocket/websocket.constants'
 import { WebsocketGateway } from './modules/websocket/websocket.gateway'
 import { WebsocketService } from './modules/websocket/websocket.service'
 import { Env } from './utils/Env'
-import { DataCacheService } from './modules/cache/dataCache.service'
-import { REDIS_CACHE_TOKEN } from './modules/cache/dataCache.constants'
 
 const singleServerRedisPubsub = new RedisMockWithPubSub() // in-memory pubsub for testing or single server setup
 
@@ -72,7 +72,6 @@ function createRedisCache() {
 		})
 	}
 }
-
 
 @Module({
 	imports: [
