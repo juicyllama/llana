@@ -55,7 +55,7 @@ export class AppBootup implements OnApplicationBootstrap {
 		)
 
 		this.logger.log('Resetting Cache', APP_BOOT_CONTEXT)
-		await this.cacheManager.reset()
+		await this.cacheManager.clear()
 
 		try {
 			await this.query.perform(QueryPerform.CHECK_CONNECTION, undefined, APP_BOOT_CONTEXT)
