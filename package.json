@@ -124,8 +124,12 @@
 	"overrides": {
 		"multer": "2.0.0"
 	},
+	"resolutions": {
+		"multer": "2.0.0"
+	},
 	"engines": {
-		"node": ">=22.0.0"
+		"node": ">=22.0.0",
+		"npm": ">=8.3.0"
 	},
 	"jest": {
 		"moduleFileExtensions": [
