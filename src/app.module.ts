@@ -29,6 +29,7 @@ import { MSSQL } from './datasources/mssql.datasource'
 import { MySQL } from './datasources/mysql.datasource'
 import { Postgres } from './datasources/postgres.datasource'
 import { Authentication } from './helpers/Authentication'
+import { CircuitBreaker } from './helpers/CircuitBreaker'
 import { Documentation } from './helpers/Documentation'
 import { Encryption } from './helpers/Encryption'
 import { Logger } from './helpers/Logger'
@@ -117,6 +118,7 @@ function createRedisCache() {
 		Webhook,
 		WebsocketGateway,
 		WebsocketService,
+		CircuitBreaker,
 		LocalStrategy,
 		LocalAuthGuard,
 		{

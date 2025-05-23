@@ -6,6 +6,7 @@ import { Mongo } from '../datasources/mongo.datasource'
 import { MSSQL } from '../datasources/mssql.datasource'
 import { MySQL } from '../datasources/mysql.datasource'
 import { Postgres } from '../datasources/postgres.datasource'
+import { CircuitBreaker } from './CircuitBreaker'
 import {
 	DeleteResponseObject,
 	FindManyResponseObject,
@@ -47,6 +48,7 @@ export class Query {
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
 		private readonly airtable: Airtable,
+		private readonly circuitBreaker: CircuitBreaker,
 	) {}
 
 	async perform(
@@ -95,6 +97,11 @@ export class Query {
 		}
 
 		try {
+			if (!this.circuitBreaker.isAllowed()) {
+				this.logger.error(`[Query][${action.toUpperCase()}] Circuit breaker open, rejecting request`, x_request_id)
+				throw new Error('Database circuit breaker open, please try again later')
+			}
+			
 			let result
 
 			switch (action) {
@@ -155,6 +162,7 @@ export class Query {
 					throw new Error(`Action ${action} not supported`)
 			}
 		} catch (e) {
+			this.circuitBreaker.reportFailure()
 			this.logger.error(`[Query][${action.toUpperCase()}][${table_name}] ${e.message}`, x_request_id)
 
 			let pluralAction
@@ -185,6 +193,8 @@ export class Query {
 
 			throw new Error(`Error ${pluralAction}`)
 		}
+		
+		this.circuitBreaker.reportSuccess()
 	}
 
 
