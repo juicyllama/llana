@@ -80,20 +80,17 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 	 */
 	private logPoolStatistics(): void {
 		if (!this.pool) return
-
+		
 		this.pool
 			.query('SHOW STATUS LIKE "Threads_connected"')
 			.then(([results]) => {
 				const stats = {
 					threadId: this.pool.threadId,
 					connectionsActive: results[0]?.Value || 0,
-					config: {
-						connectionLimit: this.pool.config.connectionLimit,
-						queueLimit: this.pool.config.queueLimit,
-						idleTimeout: this.pool.config.idleTimeout,
-					},
+					poolSize: this.configService.get<number>('database.poolSize') || 10,
+					poolIdleTimeout: this.configService.get<number>('database.poolIdleTimeout') || 60000
 				}
-
+				
 				this.logger.log(`[${DATABASE_TYPE}] Connection pool stats: ${JSON.stringify(stats)}`)
 			})
 			.catch(err => {
