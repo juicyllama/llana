@@ -82,6 +82,7 @@ export class PutController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
+	
 		//validate input data
 		const validate = await this.schema.validateData(schema, body)
 		if (!validate.valid) {
