@@ -12,6 +12,7 @@ export default registerAs(
 			type: getDatabaseType(process.env.DATABASE_URI),
 			host: process.env.DATABASE_URI,
 			poolSize: Number(process.env.DATABASE_POOL_SIZE || 10),
+			poolIdleTimeout: Number(process.env.DATABASE_POOL_IDLE_TIMEOUT || 60000),
 			defaults: {
 				limit: Number(process.env.DEFAULT_LIMIT) || 20,
 				relations: {

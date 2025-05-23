@@ -48,6 +48,7 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 
 		const connectionUri = this.configService.get<string>('database.host')
 		const poolSize = this.configService.get<number>('database.poolSize')
+		const poolIdleTimeout = this.configService.get<number>('database.poolIdleTimeout') || 60000
 
 		const config = new URL(connectionUri)
 
@@ -61,9 +62,43 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 			connectionLimit: poolSize,
 			connectTimeout: 10000, // 10 seconds
 			queueLimit: 0, // 0 = unlimited queued requests,
-			idleTimeout: 10000, // 10 seconds
+			idleTimeout: poolIdleTimeout, // Use configured value (default 60 seconds)
 		})
-		this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool initialized. Pool size ${poolSize}`)
+		this.logger.log(
+			`[${DATABASE_TYPE}] MySQL connection pool initialized. Pool size ${poolSize}, idle timeout ${poolIdleTimeout}ms`,
+		)
+
+		if (!Env.IsTest()) {
+			setInterval(() => {
+				this.logPoolStatistics()
+			}, 60000) // Log every minute
+		}
+	}
+
+	/**
+	 * Log connection pool statistics
+	 */
+	private logPoolStatistics(): void {
+		if (!this.pool) return
+
+		this.pool
+			.query('SHOW STATUS LIKE "Threads_connected"')
+			.then(([results]) => {
+				const stats = {
+					threadId: this.pool.threadId,
+					connectionsActive: results[0]?.Value || 0,
+					config: {
+						connectionLimit: this.pool.config.connectionLimit,
+						queueLimit: this.pool.config.queueLimit,
+						idleTimeout: this.pool.config.idleTimeout,
+					},
+				}
+
+				this.logger.log(`[${DATABASE_TYPE}] Connection pool stats: ${JSON.stringify(stats)}`)
+			})
+			.catch(err => {
+				this.logger.warn(`[${DATABASE_TYPE}] Failed to get pool statistics: ${err.message}`)
+			})
 	}
 
 	async onModuleDestroy(): Promise<void> {
@@ -102,9 +137,19 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 			} else {
 				if (!this.pool) throw new Error(`${DATABASE_TYPE} pool is not initialized`)
 				connection = await this.pool.getConnection()
+
+				try {
+					await connection.query('SELECT 1')
+				} catch {
+					this.logger.warn(
+						`[${DATABASE_TYPE}] Connection validation failed, getting new connection: ${options.x_request_id ?? ''}`,
+					)
+					;(connection as PoolConnection).release()
+					connection = await this.pool.getConnection()
+				}
 			}
 		} catch (e) {
-			this.logger.error(`[${DATABASE_TYPE}] Error getting connection - ${e.message}`)
+			this.logger.error(`[${DATABASE_TYPE}] Error getting connection - ${e.message}`, options.x_request_id)
 			throw new Error('Error acquiring database connection')
 		}
 
@@ -125,15 +170,16 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 			)
 			return results
 		} catch (e) {
-			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`)
+			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`, options.x_request_id)
 			this.logger.warn({
 				x_request_id: options.x_request_id,
 				sql: replaceQ(options.sql, options.values),
 				error: {
 					message: e.message,
+					stack: e.stack,
 				},
 			})
-			throw new Error(e)
+			throw new Error(e.message)
 		} finally {
 			if (connection) {
 				if (Env.IsTest()) {

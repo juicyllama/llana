@@ -31,6 +31,7 @@ import {
 	WhereOperator,
 } from '../types/datasource.types'
 import { Env } from '../utils/Env'
+import { CircuitBreaker } from './CircuitBreaker'
 import { Encryption } from './Encryption'
 import { Logger } from './Logger'
 import { Schema } from './Schema'
@@ -47,6 +48,7 @@ export class Query {
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
 		private readonly airtable: Airtable,
+		private readonly circuitBreaker: CircuitBreaker,
 	) {}
 
 	async perform(
@@ -95,6 +97,14 @@ export class Query {
 		}
 
 		try {
+			if (!this.circuitBreaker.isAllowed()) {
+				this.logger.error(
+					`[Query][${action.toUpperCase()}] Circuit breaker open, rejecting request`,
+					x_request_id,
+				)
+				throw new Error('Database circuit breaker open, please try again later')
+			}
+
 			let result
 
 			switch (action) {
@@ -155,6 +165,7 @@ export class Query {
 					throw new Error(`Action ${action} not supported`)
 			}
 		} catch (e) {
+			this.circuitBreaker.reportFailure()
 			this.logger.error(`[Query][${action.toUpperCase()}][${table_name}] ${e.message}`, x_request_id)
 
 			let pluralAction
@@ -185,8 +196,9 @@ export class Query {
 
 			throw new Error(`Error ${pluralAction}`)
 		}
-	}
 
+		this.circuitBreaker.reportSuccess()
+	}
 
 	/**
 	 * Converts a URL request to an DataSourceFindManyOptions object (used for cache requests)
@@ -196,147 +208,138 @@ export class Query {
 		request: any
 		schema: DataSourceSchema
 	}): Promise<DataSourceFindManyOptions> {
-
 		if (!options.request || !options.schema) {
 			this.logger.error('[Query][buildFindManyOptionsFromRequest] Request or Schema not provided')
 			return
 		}
 
-		try{
+		try {
+			const searchRequest = new URLSearchParams(options.request)
+			const request = Object.fromEntries(searchRequest.entries())
 
-		const searchRequest = new URLSearchParams(options.request)
-		const request = Object.fromEntries(searchRequest.entries())
+			let sort
 
-		let sort
+			if (request['sort']) {
+				// Validate sort format: column.direction
+				if (!request['sort'].includes('.')) {
+					this.logger.warn(`Invalid sort format: ${request['sort']}. Expected format: column.direction`)
+					// Continue with no sorting
+				} else {
+					const sortItems = request['sort'].split('.')
 
-		if (request['sort']) {
-			// Validate sort format: column.direction
-			if (!request['sort'].includes('.')) {
-				this.logger.warn(`Invalid sort format: ${request['sort']}. Expected format: column.direction`)
-				// Continue with no sorting
-			} else {
-				const sortItems = request['sort'].split('.')
-
-				sort = [{
-					column: sortItems[0],
-					operator: sortItems[1] === 'desc' ? 'DESC' : 'ASC',
-				}]
-			}
-		}
-
-		let fields
-
-		if(request['fields']) {
-			// if it's an array, join it
-			if (Array.isArray(request['fields'])) {
-				fields = request['fields']
-			}
-			// if it's a string, convert it to an array
-			else if (typeof request['fields'] === 'string') {
-				fields = request['fields'].split(',')
-			}
-		}
-
-		let relations: DataSourceRelations[] = []
-
-		if (request['relations']) {
-			let relationsArray
-
-			if (Array.isArray(request['relations'])) {
-				relationsArray = request['relations']
-			}
-			// if it's a string, convert it to an array
-			else if (typeof request['relations'] === 'string') {
-				relationsArray = request['relations'].split(',')
+					sort = [
+						{
+							column: sortItems[0],
+							operator: sortItems[1] === 'desc' ? 'DESC' : 'ASC',
+						},
+					]
+				}
 			}
 
-			// convert relations to DataSourceSchemaRelation[]
+			let fields
 
-			for(const relation of relationsArray) {
+			if (request['fields']) {
+				// if it's an array, join it
+				if (Array.isArray(request['fields'])) {
+					fields = request['fields']
+				}
+				// if it's a string, convert it to an array
+				else if (typeof request['fields'] === 'string') {
+					fields = request['fields'].split(',')
+				}
+			}
 
-				const relationFields = []
+			let relations: DataSourceRelations[] = []
 
-				if(fields){
-					for(const field of fields) {
-						if(field.startsWith(relation)) {
-							relationFields.push(field.replace(relation + '.', ''))
-						}
-					}
+			if (request['relations']) {
+				let relationsArray
+
+				if (Array.isArray(request['relations'])) {
+					relationsArray = request['relations']
+				}
+				// if it's a string, convert it to an array
+				else if (typeof request['relations'] === 'string') {
+					relationsArray = request['relations'].split(',')
 				}
 
-				const relationSchema = await this.schema.getSchema({ table: relation })
+				// convert relations to DataSourceSchemaRelation[]
 
-				let join
+				for (const relation of relationsArray) {
+					const relationFields = []
+
+					if (fields) {
+						for (const field of fields) {
+							if (field.startsWith(relation)) {
+								relationFields.push(field.replace(relation + '.', ''))
+							}
+						}
+					}
+
+					const relationSchema = await this.schema.getSchema({ table: relation })
+
+					let join
 
 					if (options.schema.relations.find(col => col.table === relation)) {
 						join = options.schema.relations.find(col => col.table === relation)
 					} else if (options.schema.relations.find(col => col.org_table === relation)) {
 						join = options.schema.relations.find(col => col.org_table === relation)
-					} else{
+					} else {
 						this.logger.error(`Relation ${relation} not found in schema ${options.schema.table}`)
 					}
 
-				relations.push({
-					table: relation,
-					join,
-					schema: relationSchema,
-					columns: relationFields,
+					relations.push({
+						table: relation,
+						join,
+						schema: relationSchema,
+						columns: relationFields,
+					})
+				}
+			}
+
+			let where: DataSourceWhere[] = []
+
+			for (const key in request) {
+				if (key === 'sort' || key === 'fields' || key === 'relations' || key === 'limit' || key === 'offset') {
+					continue
+				}
+
+				//convert format from id=1, id[gt]=1, id[lt]=1, id[gte]=1, id[lte]=1,
+				// id[not_like]=value, id[not_in]=value, id[null], id[not_null],
+				// handle[search]=value, handle[like]=value, handle[in]=value to DataSourceWhere[]
+				// Using a regex to handle multiple brackets correctly
+
+				const matches = key.match(/\[(.*?)\]/)
+				const operator = matches ? WhereOperator[matches[1]] : WhereOperator.equals
+
+				where.push({
+					column: key.split('[')[0],
+					operator: operator as WhereOperator,
+					value: request[key],
 				})
 			}
-		}
 
-		let where: DataSourceWhere[] = []
+			let topLevelFields = []
 
-		for (const key in request) {
-			if (
-				key === 'sort' ||
-				key === 'fields' ||
-				key === 'relations' ||
-				key === 'limit' ||
-				key === 'offset'
-			) {
-				continue
+			if (fields) {
+				topLevelFields = fields.filter(field => !field.includes('.'))
 			}
 
-			//convert format from id=1, id[gt]=1, id[lt]=1, id[gte]=1, id[lte]=1,
-			// id[not_like]=value, id[not_in]=value, id[null], id[not_null],
-			// handle[search]=value, handle[like]=value, handle[in]=value to DataSourceWhere[]
-			// Using a regex to handle multiple brackets correctly
+			const findManyOptions: DataSourceFindManyOptions = {
+				schema: options.schema,
+				fields: topLevelFields,
+				where,
+				relations,
+				limit: Number(request['limit']) || 20,
+				offset: Number(request['offset']) || 0,
+				sort,
+			}
 
-			const matches = key.match(/\[(.*?)\]/)
-			const operator = matches ? WhereOperator[matches[1]] : WhereOperator.equals
-
-			where.push({
-				column: key.split('[')[0],
-				operator: operator as WhereOperator,
-				value: request[key],
-			})
-		}
-
-		let topLevelFields = []
-
-		if(fields) {
-			topLevelFields = fields.filter(field => !field.includes('.'))
-		}
-
-		const findManyOptions: DataSourceFindManyOptions = {
-			schema: options.schema,
-			fields: topLevelFields,
-			where,
-			relations,
-			limit: Number(request['limit']) || 20,
-			offset: Number(request['offset']) || 0,
-			sort
-		}
-
-		return findManyOptions
-
+			return findManyOptions
 		} catch (e) {
 			this.logger.error(`[Query][buildFindManyOptionsFromRequest] Error: ${e.message}`, e.stack)
 			throw new Error('Error building findMany options: ' + e.message)
 		}
 	}
-
 
 	/**
 	 * Create a table
@@ -361,7 +364,6 @@ export class Query {
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
 		}
 	}
-
 
 	/**
 	 * Insert a record
@@ -778,7 +780,7 @@ export class Query {
 		if (this.configService.get<string>('database.type') === DataSourceType.POSTGRES) {
 			return await this.postgres.resetSequences(x_request_id)
 		}
-		
+
 		this.logger.debug(`[Query] Sequence reset is only supported for PostgreSQL databases`, x_request_id)
 		return true
 	}

@@ -175,6 +175,7 @@ export interface DataSourceConfig {
 	type: DataSourceType
 	host: string
 	poolSize: number
+	poolIdleTimeout?: number
 	defaults: {
 		limit: number
 		relations: {
