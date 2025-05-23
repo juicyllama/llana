@@ -64,22 +64,25 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 			queueLimit: 0, // 0 = unlimited queued requests,
 			idleTimeout: poolIdleTimeout, // Use configured value (default 60 seconds)
 		})
-		this.logger.log(`[${DATABASE_TYPE}] MySQL connection pool initialized. Pool size ${poolSize}, idle timeout ${poolIdleTimeout}ms`)
-		
+		this.logger.log(
+			`[${DATABASE_TYPE}] MySQL connection pool initialized. Pool size ${poolSize}, idle timeout ${poolIdleTimeout}ms`,
+		)
+
 		if (!Env.IsTest()) {
 			setInterval(() => {
 				this.logPoolStatistics()
 			}, 60000) // Log every minute
 		}
 	}
-	
+
 	/**
 	 * Log connection pool statistics
 	 */
 	private logPoolStatistics(): void {
 		if (!this.pool) return
-		
-		this.pool.query('SHOW STATUS LIKE "Threads_connected"')
+
+		this.pool
+			.query('SHOW STATUS LIKE "Threads_connected"')
 			.then(([results]) => {
 				const stats = {
 					threadId: this.pool.threadId,
@@ -88,9 +91,9 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 						connectionLimit: this.pool.config.connectionLimit,
 						queueLimit: this.pool.config.queueLimit,
 						idleTimeout: this.pool.config.idleTimeout,
-					}
+					},
 				}
-				
+
 				this.logger.log(`[${DATABASE_TYPE}] Connection pool stats: ${JSON.stringify(stats)}`)
 			})
 			.catch(err => {
@@ -134,12 +137,12 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 			} else {
 				if (!this.pool) throw new Error(`${DATABASE_TYPE} pool is not initialized`)
 				connection = await this.pool.getConnection()
-				
+
 				try {
 					await connection.query('SELECT 1')
-				} catch (pingError) {
+				} catch (error) {
 					this.logger.warn(`[${DATABASE_TYPE}] Connection validation failed, getting new connection: ${options.x_request_id ?? ''}`)
-					(connection as PoolConnection).release()
+					;(connection as PoolConnection).release()
 					connection = await this.pool.getConnection()
 				}
 			}
