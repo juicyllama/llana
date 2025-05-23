@@ -726,4 +726,72 @@ export class Postgres {
 	async truncate(table: string): Promise<void> {
 		return await this.performQuery({ sql: 'TRUNCATE TABLE ' + table })
 	}
+
+	/**
+	 * Reset PostgreSQL sequences to match the maximum values in their respective tables
+	 */
+	async resetSequences(x_request_id?: string): Promise<boolean> {
+		try {
+			this.logger.log(`[${DATABASE_TYPE}] Resetting PostgreSQL sequences`, x_request_id)
+			
+			// Get all tables in the database
+			const tablesResult = await this.performQuery({
+				sql: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';",
+				x_request_id
+			})
+			
+			const tables = tablesResult.map((row: any) => row.table_name)
+			this.logger.debug(`[${DATABASE_TYPE}] Tables found: ${tables.join(', ')}`, x_request_id)
+			
+			for (const table of tables) {
+				try {
+					const pkResult = await this.performQuery({
+						sql: `
+							SELECT a.attname as column_name
+							FROM pg_index i
+							JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+							WHERE i.indrelid = '"${table}"'::regclass
+							AND i.indisprimary
+						`,
+						x_request_id
+					})
+					
+					if (pkResult.length > 0) {
+						const pkColumn = pkResult[0].column_name
+						this.logger.debug(`[${DATABASE_TYPE}] Table "${table}" has primary key: "${pkColumn}"`, x_request_id)
+						
+						const sequenceResult = await this.performQuery({
+							sql: `SELECT pg_get_serial_sequence('"${table}"', '${pkColumn}') as sequence_name`,
+							x_request_id
+						})
+						
+						const sequenceName = sequenceResult[0]?.sequence_name
+						
+						if (sequenceName) {
+							const maxResult = await this.performQuery({
+								sql: `SELECT COALESCE(MAX("${pkColumn}"), 0) as max_value FROM "${table}"`,
+								x_request_id
+							})
+							
+							const maxValue = maxResult[0].max_value || 0
+							
+							const resetResult = await this.performQuery({
+								sql: `SELECT setval('${sequenceName}', ${maxValue})`,
+								x_request_id
+							})
+							
+							this.logger.debug(`[${DATABASE_TYPE}] Reset sequence "${sequenceName}" to ${resetResult[0].setval}`, x_request_id)
+						}
+					}
+				} catch (tableError) {
+					this.logger.error(`[${DATABASE_TYPE}] Error processing table "${table}": ${tableError.message}`, x_request_id)
+				}
+			}
+			
+			return true
+		} catch (error) {
+			this.logger.error(`[${DATABASE_TYPE}] Error resetting sequences: ${error.message}`, x_request_id)
+			return false
+		}
+	}
 }
