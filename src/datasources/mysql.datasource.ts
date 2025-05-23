@@ -140,8 +140,10 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 
 				try {
 					await connection.query('SELECT 1')
-				} catch (error) {
-					this.logger.warn(`[${DATABASE_TYPE}] Connection validation failed, getting new connection: ${options.x_request_id ?? ''}`)
+				} catch (_) {
+					this.logger.warn(
+						`[${DATABASE_TYPE}] Connection validation failed, getting new connection: ${options.x_request_id ?? ''}`,
+					)
 					;(connection as PoolConnection).release()
 					connection = await this.pool.getConnection()
 				}
