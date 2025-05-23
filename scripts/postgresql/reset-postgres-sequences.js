@@ -45,7 +45,7 @@ async function resetPostgresSequences() {
             SELECT pg_get_serial_sequence('"${table}"', '${pkColumn}') as sequence_name
           `);
 
-          const sequenceName = sequenceResult.rows[0].sequence_name;
+          const sequenceName = sequenceResult.rows[0]?.sequence_name;
           
           if (sequenceName) {
             // Get max value from the table
