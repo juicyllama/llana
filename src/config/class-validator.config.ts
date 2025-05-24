@@ -1,3 +1,3 @@
 export const classValidatorConfig = {
-    forbidUnknownValues: false
+	forbidUnknownValues: false,
 }

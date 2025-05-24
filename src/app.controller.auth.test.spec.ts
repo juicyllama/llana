@@ -47,11 +47,10 @@ describe('App > Controller > Auth', () => {
 			],
 		}).compile()
 		app = moduleRef.createNestApplication()
-		await app.init();
+		await app.init()
 
 		// Expose the app object globally for debugging
-		(global as any).app = app;
-
+		;(global as any).app = app
 	}, TIMEOUT)
 
 	beforeEach(() => {

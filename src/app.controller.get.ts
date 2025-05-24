@@ -5,13 +5,13 @@ import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { FindManyQueryParams, HeaderParams } from './dtos/requests.dto'
 import { FindManyResponseObject, FindOneResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
-import { DataCacheService } from './modules/cache/dataCache.service'
 import { UrlToTable } from './helpers/Database'
 import { Pagination } from './helpers/Pagination'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
+import { DataCacheService } from './modules/cache/dataCache.service'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import {
 	DataSourceFindManyOptions,
@@ -541,16 +541,14 @@ export class GetController {
 
 		// Check if we're using the data cache and if so, if we can use it
 		if (this.configService.get<boolean>('USE_DATA_CACHING')) {
-			
 			const cachedResult = await this.dataCache.get({
 				originalUrl: req.originalUrl,
 				x_request_id,
 			})
 
-			if(cachedResult) {
+			if (cachedResult) {
 				return res.status(200).send(cachedResult)
 			}
-
 		}
 
 		try {
