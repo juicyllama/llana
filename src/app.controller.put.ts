@@ -207,7 +207,7 @@ export class PutController {
 	async updateMany(
 		@Req() req,
 		@Res() res,
-		@Body() body: Partial<any>[],
+		@Body() body: any,
 		@Headers() headers: HeaderParams,
 	): Promise<UpdateManyResponseObject> {
 		const x_request_id = headers['x-request-id']
@@ -451,7 +451,7 @@ export class PutController {
 	async updateManyPatch(
 		@Req() req,
 		@Res() res,
-		@Body() body: Partial<any>[],
+		@Body() body: any,
 		@Headers() headers: HeaderParams,
 	): Promise<UpdateManyResponseObject> {
 		return await this.updateMany(req, res, body, headers)
