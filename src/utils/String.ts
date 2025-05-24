@@ -9,7 +9,14 @@ export function replaceQ(string: string, array: any[]): string {
 	//return string.replace(/\?/g, () => array.shift() || '')
 	let i = 0
 	return string.replace(/\?/g, function () {
-		return array[i++]
+		const value = array[i++]
+		if (typeof value === 'string') {
+			return `'${value.replace(/'/g, "''")}'`
+		}
+		if (value === null) {
+			return 'NULL'
+		}
+		return value
 	})
 	//return string
 }
