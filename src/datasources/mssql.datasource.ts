@@ -554,7 +554,7 @@ export class MSSQL {
 						x_request_id,
 					})
 
-					if (result[0].total === 0) {
+					if (result.recordset[0].total === 0) {
 						this.logger.debug(
 							`[${DATABASE_TYPE}] First creation of duplicate test case, allowing: ${options.data.email}`,
 							x_request_id,
@@ -580,7 +580,7 @@ export class MSSQL {
 					x_request_id,
 				})
 
-				if (result[0].total > 0) {
+				if (result.recordset[0].total > 0) {
 					return {
 						valid: false,
 						message: DatabaseErrorType.DUPLICATE_RECORD,
@@ -612,7 +612,7 @@ export class MSSQL {
 						x_request_id,
 					})
 
-					if (result[0].total > 0) {
+					if (result.recordset[0].total > 0) {
 						return {
 							valid: false,
 							message: DatabaseErrorType.DUPLICATE_RECORD,
