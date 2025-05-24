@@ -174,7 +174,7 @@ export class PostController {
 			if (errors.length) {
 				return res.status(400).send({
 					message: errors[0].message,
-					error: errors[0].error
+					error: errors[0].error,
 				})
 			}
 

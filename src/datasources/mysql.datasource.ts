@@ -195,12 +195,20 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 
 	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		try {
+			let excludeId = ''
+			let excludeValues = []
+
+			if (options.id) {
+				excludeId = ` AND ${options.schema.primary_key} != ?`
+				excludeValues.push(options.id)
+			}
+
 			for (const column of options.schema.columns) {
-				if (column.unique_key) {
-					const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE ${column.field} = ?`
+				if (column.unique_key && options.data[column.field] !== undefined) {
+					const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE ${column.field} = ?${excludeId}`
 					const result = await this.query({
 						sql: command,
-						values: [options.data[column.field]],
+						values: [options.data[column.field], ...excludeValues],
 						x_request_id,
 					})
 
@@ -213,6 +221,7 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 					}
 				}
 			}
+
 			return { valid: true }
 		} catch (e) {
 			return this.mapMySQLError(e)
@@ -222,8 +231,9 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 	/**
 	 * Map MySQL error codes to standardized error types
 	 */
-	private mapMySQLError(error: any): IsUniqueResponse {
-		const errorCode = error.errno || error.code
+	private mapMySQLError(e: any): IsUniqueResponse {
+		const errorCode = e.errno || e.code
+
 		switch (errorCode) {
 			case 1062: // ER_DUP_ENTRY
 				return {
@@ -243,17 +253,17 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 					message: DatabaseErrorType.NOT_NULL_VIOLATION,
 					error: `Cannot insert null value into required field`,
 				}
-			case 3819: // ER_CHECK_CONSTRAINT_VIOLATED
+			case 1264: // ER_WARN_DATA_OUT_OF_RANGE
 				return {
 					valid: false,
 					message: DatabaseErrorType.CHECK_CONSTRAINT_VIOLATION,
-					error: `Check constraint violation`,
+					error: `Data value out of range`,
 				}
 			default:
 				return {
 					valid: false,
 					message: DatabaseErrorType.UNKNOWN_ERROR,
-					error: `Database error occurred: ${error.message}`,
+					error: `Database error occurred: ${e.message}`,
 				}
 		}
 	}

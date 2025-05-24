@@ -531,12 +531,26 @@ export class MSSQL {
 
 	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
 		try {
-			for (const column of options.schema.columns) {
-				if (column.unique_key) {
-					const command = `SELECT COUNT(*) as total FROM ${this.reserveWordFix(options.schema.table)} WHERE ${column.field} = ?`
+			let excludeId = ''
+			let excludeValues = []
+
+			if (options.id) {
+				excludeId = ` AND ${options.schema.primary_key} != ?`
+				excludeValues.push(options.id)
+			}
+
+			const uniqueColumns = options.schema.columns.filter(column => column.unique_key)
+
+			if (uniqueColumns.length === 0) {
+				return { valid: true }
+			}
+
+			for (const column of uniqueColumns) {
+				if (options.data[column.field] !== undefined) {
+					const command = `SELECT COUNT(*) as total FROM ${this.reserveWordFix(options.schema.table)} WHERE ${column.field} = ?${excludeId}`
 					const result = await this.performQuery({
 						sql: command,
-						values: [options.data[column.field]],
+						values: [options.data[column.field], ...excludeValues],
 						x_request_id,
 					})
 
@@ -549,6 +563,7 @@ export class MSSQL {
 					}
 				}
 			}
+
 			return { valid: true }
 		} catch (e) {
 			return this.mapMSSQLError(e)

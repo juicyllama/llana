@@ -113,7 +113,7 @@ export class PutController {
 		if (!uniqueValidation.valid) {
 			return res.status(400).send({
 				message: uniqueValidation.message,
-				error: uniqueValidation.error
+				error: uniqueValidation.error,
 			})
 		}
 

@@ -572,10 +572,20 @@ export class Mongo {
 			const mongo = await this.createConnection(options.schema.table)
 
 			try {
-				for (const column of options.schema.columns) {
-					if (column.unique_key) {
-						const filter = {}
+				const uniqueColumns = options.schema.columns.filter(column => column.unique_key)
+
+				if (uniqueColumns.length === 0) {
+					return { valid: true }
+				}
+
+				for (const column of uniqueColumns) {
+					if (options.data[column.field] !== undefined) {
+						const filter: any = {}
 						filter[column.field] = options.data[column.field]
+
+						if (options.id) {
+							filter['_id'] = { $ne: new ObjectId(options.id) }
+						}
 
 						const count = await mongo.collection.countDocuments(filter)
 

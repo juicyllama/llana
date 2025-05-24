@@ -855,9 +855,19 @@ export class Airtable {
 		try {
 			this.logger.debug(`[${DATABASE_TYPE}] Unique Check for: ${JSON.stringify(options)}`, x_request_id)
 
-			for (const column of options.schema.columns) {
-				if (column.unique_key) {
-					const filterByFormula = `{${column.field}} = "${options.data[column.field]}"`
+			const uniqueColumns = options.schema.columns.filter(column => column.unique_key)
+
+			if (uniqueColumns.length === 0) {
+				return { valid: true }
+			}
+
+			for (const column of uniqueColumns) {
+				if (options.data[column.field] !== undefined) {
+					let filterByFormula = `{${column.field}} = "${options.data[column.field]}"`
+
+					if (options.id) {
+						filterByFormula = `AND(${filterByFormula}, RECORD_ID() != "${options.id}")`
+					}
 
 					const data = {
 						filterByFormula,
