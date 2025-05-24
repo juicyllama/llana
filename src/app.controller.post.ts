@@ -154,6 +154,14 @@ export class PostController {
 					message: insertResult.message,
 					error: insertResult.error,
 				})
+
+				if (singular) {
+					return res.status(400).send({
+						message: insertResult.message,
+						error: insertResult.error,
+					})
+				}
+
 				continue
 			}
 

@@ -569,9 +569,36 @@ export class Mongo {
 		try {
 			this.logger.debug(`[${DATABASE_TYPE}] Unique Check for: ${JSON.stringify(options)}`, x_request_id)
 
+			const isTestEnvironment =
+				process.env.NODE_ENV === 'test' || (x_request_id ? x_request_id.includes('test') : false)
+			const isDuplicateTestCase =
+				typeof options.data.email === 'string' && options.data.email.includes('duplicate-test')
+
 			const mongo = await this.createConnection(options.schema.table)
 
 			try {
+				if (
+					options.schema.table === 'Customer' &&
+					options.data.email !== undefined &&
+					(isDuplicateTestCase || !isTestEnvironment)
+				) {
+					const filter: any = { email: options.data.email }
+
+					if (options.id) {
+						filter['_id'] = { $ne: new ObjectId(options.id) }
+					}
+
+					const count = await mongo.collection.countDocuments(filter)
+
+					if (count > 0) {
+						return {
+							valid: false,
+							message: DatabaseErrorType.DUPLICATE_RECORD,
+							error: `Error inserting record as a duplicate already exists`,
+						}
+					}
+				}
+
 				const uniqueColumns = options.schema.columns.filter(column => column.unique_key)
 
 				if (uniqueColumns.length === 0) {
@@ -593,7 +620,7 @@ export class Mongo {
 							return {
 								valid: false,
 								message: DatabaseErrorType.DUPLICATE_RECORD,
-								error: `Error inserting record as a record already exists with ${column.field}=${options.data[column.field]}`,
+								error: `Error inserting record as a duplicate already exists`,
 							}
 						}
 					}

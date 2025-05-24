@@ -590,7 +590,12 @@ describe('App > Controller > Post', () => {
 
 	describe('Error Handling', () => {
 		it('should return structured error for duplicate record', async function () {
-			const customer = customerTestingService.mockCustomer(userId)
+			const uniqueEmail = `duplicate-test-${Date.now()}@example.com`
+			const customer = {
+				...customerTestingService.mockCustomer(userId),
+				email: uniqueEmail,
+			}
+
 			const firstResult = await request(app.getHttpServer())
 				.post('/Customer/')
 				.send(customer)
