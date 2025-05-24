@@ -29,7 +29,6 @@ import {
 } from '../types/datasource.types'
 import { MSSQLColumnType } from '../types/datasources/mssql.types'
 import { SortCondition } from '../types/schema.types'
-import { replaceQ } from '../utils/String'
 
 const DATABASE_TYPE = DataSourceType.MSSQL
 const RESERVED_WORDS = ['USER', 'TABLE']
@@ -87,13 +86,33 @@ export class MSSQL {
 		const connection = await this.createConnection()
 
 		try {
-			if (options.values || options.values?.length) {
-				options.sql = replaceQ(options.sql, options.values)
+			let preparedSql = options.sql
+			const params = []
+
+			if (options.values && options.values.length) {
+				let paramIndex = 1
+				preparedSql = options.sql.replace(/\?/g, () => `@p${paramIndex++}`)
+
+				for (let i = 0; i < options.values.length; i++) {
+					const paramName = `p${i + 1}`
+					params.push({
+						name: paramName,
+						value: options.values[i],
+					})
+				}
 			}
 
-			this.logger.verbose(`[${DATABASE_TYPE}] Query: ${options.sql} - ${options.x_request_id ?? ''}`)
+			this.logger.verbose(
+				`[${DATABASE_TYPE}] Query: ${preparedSql} - Params: ${JSON.stringify(params)} - ${options.x_request_id ?? ''}`,
+			)
 
-			const result = await connection.query(options.sql)
+			const request = connection.request()
+
+			for (const param of params) {
+				request.input(param.name, param.value)
+			}
+
+			const result = await request.query(preparedSql)
 			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(result)} - ${options.x_request_id ?? ''}`)
 			connection.close()
 			return result
@@ -101,13 +120,15 @@ export class MSSQL {
 			this.logger.warn(`[${DATABASE_TYPE}] Error executing query`)
 			this.logger.warn({
 				x_request_id: options.x_request_id,
-				sql: replaceQ(options.sql, options.values),
+				sql: options.sql,
+				values: options.values,
 				error: {
 					message: e.message,
+					stack: e.stack,
 				},
 			})
 			connection.close()
-			throw new Error(e)
+			throw new Error(e.message)
 		}
 	}
 
