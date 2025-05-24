@@ -11,6 +11,7 @@ import {
 } from '../dtos/response.dto'
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
+import { DatabaseErrorType } from '../types/datasource.types'
 import {
 	DataSourceColumnType,
 	DataSourceCreateOneOptions,
@@ -80,7 +81,7 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 	 */
 	private logPoolStatistics(): void {
 		if (!this.pool) return
-		
+
 		this.pool
 			.query('SHOW STATUS LIKE "Threads_connected"')
 			.then(([results]) => {
@@ -88,9 +89,9 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 					threadId: this.pool.threadId,
 					connectionsActive: results[0]?.Value || 0,
 					poolSize: this.configService.get<number>('database.poolSize') || 10,
-					poolIdleTimeout: this.configService.get<number>('database.poolIdleTimeout') || 60000
+					poolIdleTimeout: this.configService.get<number>('database.poolIdleTimeout') || 60000,
 				}
-				
+
 				this.logger.log(`[${DATABASE_TYPE}] Connection pool stats: ${JSON.stringify(stats)}`)
 			})
 			.catch(err => {
@@ -193,26 +194,67 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 	 */
 
 	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
-		for (const column of options.schema.columns) {
-			if (column.unique_key) {
-				const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE ${column.field} = ?`
-				const result = await this.query({
-					sql: command,
-					values: [options.data[column.field]],
-					x_request_id,
-				})
+		try {
+			for (const column of options.schema.columns) {
+				if (column.unique_key) {
+					const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE ${column.field} = ?`
+					const result = await this.query({
+						sql: command,
+						values: [options.data[column.field]],
+						x_request_id,
+					})
 
-				if (result[0].total > 0) {
-					return {
-						valid: false,
-						message: `Record with ${column.field} ${options.data[column.field]} already exists`,
+					if (result[0].total > 0) {
+						return {
+							valid: false,
+							message: DatabaseErrorType.DUPLICATE_RECORD,
+							error: `Error inserting record as a record already exists with ${column.field}=${options.data[column.field]}`,
+						}
 					}
 				}
 			}
+			return { valid: true }
+		} catch (e) {
+			return this.mapMySQLError(e)
 		}
+	}
 
-		return {
-			valid: true,
+	/**
+	 * Map MySQL error codes to standardized error types
+	 */
+	private mapMySQLError(error: any): IsUniqueResponse {
+		const errorCode = error.errno || error.code
+		switch (errorCode) {
+			case 1062: // ER_DUP_ENTRY
+				return {
+					valid: false,
+					message: DatabaseErrorType.DUPLICATE_RECORD,
+					error: `Error inserting record as a duplicate already exists`,
+				}
+			case 1452: // ER_NO_REFERENCED_ROW_2
+				return {
+					valid: false,
+					message: DatabaseErrorType.FOREIGN_KEY_VIOLATION,
+					error: `Foreign key constraint violation`,
+				}
+			case 1048: // ER_BAD_NULL_ERROR
+				return {
+					valid: false,
+					message: DatabaseErrorType.NOT_NULL_VIOLATION,
+					error: `Cannot insert null value into required field`,
+				}
+			case 3819: // ER_CHECK_CONSTRAINT_VIOLATED
+				return {
+					valid: false,
+					message: DatabaseErrorType.CHECK_CONSTRAINT_VIOLATION,
+					error: `Check constraint violation`,
+				}
+			default:
+				return {
+					valid: false,
+					message: DatabaseErrorType.UNKNOWN_ERROR,
+					error: `Database error occurred: ${error.message}`,
+				}
 		}
 	}
 

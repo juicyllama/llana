@@ -10,6 +10,7 @@ import {
 } from '../dtos/response.dto'
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
+import { DatabaseErrorType } from '../types/datasource.types'
 import {
 	DataSourceColumnType,
 	DataSourceCreateOneOptions,
@@ -90,7 +91,9 @@ export class Postgres {
 				const res = await connection.query(options.sql, options.values)
 				results = res.rows
 			}
-			this.logger.verbose(`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`)
+			this.logger.verbose(
+				`[${DATABASE_TYPE}] Results: ${JSON.stringify(results)} - ${options.x_request_id ?? ''}`,
+			)
 			connection.end()
 			return results
 		} catch (e) {
@@ -236,16 +239,15 @@ export class Postgres {
 		options = this.pipeObjectToPostgres(options) as DataSourceCreateOneOptions
 
 		// Filter out auto-incrementing primary key fields
-     const filteredData = { ...options.data }
-     for (const column of options.schema.columns) {
-       if (column.primary_key && column.default?.includes('nextval')) {
-         delete filteredData[column.field]
-       }
-     }
+		const filteredData = { ...options.data }
+		for (const column of options.schema.columns) {
+			if (column.primary_key && column.default?.includes('nextval')) {
+				delete filteredData[column.field]
+			}
+		}
 
-
-		 const columns = Object.keys(filteredData)
-     const dataValues = Object.values(filteredData)
+		const columns = Object.keys(filteredData)
+		const dataValues = Object.values(filteredData)
 
 		values.push(...dataValues)
 
@@ -403,26 +405,67 @@ export class Postgres {
 	}
 
 	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
-		for (const column of options.schema.columns) {
-			if (column.unique_key) {
-				const command = `SELECT COUNT(*) as total FROM "${options.schema.table}" WHERE ${column.field} = $1`
-				const result = await this.performQuery({
-					sql: command,
-					values: [options.data[column.field]],
-					x_request_id,
-				})
+		try {
+			for (const column of options.schema.columns) {
+				if (column.unique_key) {
+					const command = `SELECT COUNT(*) as total FROM "${options.schema.table}" WHERE ${column.field} = $1`
+					const result = await this.performQuery({
+						sql: command,
+						values: [options.data[column.field]],
+						x_request_id,
+					})
 
-				if (result[0].total > 0) {
-					return {
-						valid: false,
-						message: `Record with ${column.field} ${options.data[column.field]} already exists`,
+					if (result[0].total > 0) {
+						return {
+							valid: false,
+							message: DatabaseErrorType.DUPLICATE_RECORD,
+							error: `Error inserting record as a record already exists with ${column.field}=${options.data[column.field]}`,
+						}
 					}
 				}
 			}
+			return { valid: true }
+		} catch (e) {
+			return this.mapPostgreSQLError(e)
 		}
+	}
 
-		return {
-			valid: true,
+	/**
+	 * Map PostgreSQL error codes to standardized error types
+	 */
+	private mapPostgreSQLError(error: any): IsUniqueResponse {
+		const errorCode = error.code
+		switch (errorCode) {
+			case '23505': // unique_violation
+				return {
+					valid: false,
+					message: DatabaseErrorType.DUPLICATE_RECORD,
+					error: `Error inserting record as a duplicate already exists`,
+				}
+			case '23503': // foreign_key_violation
+				return {
+					valid: false,
+					message: DatabaseErrorType.FOREIGN_KEY_VIOLATION,
+					error: `Foreign key constraint violation`,
+				}
+			case '23502': // not_null_violation
+				return {
+					valid: false,
+					message: DatabaseErrorType.NOT_NULL_VIOLATION,
+					error: `Cannot insert null value into required field`,
+				}
+			case '23514': // check_violation
+				return {
+					valid: false,
+					message: DatabaseErrorType.CHECK_CONSTRAINT_VIOLATION,
+					error: `Check constraint violation`,
+				}
+			default:
+				return {
+					valid: false,
+					message: DatabaseErrorType.UNKNOWN_ERROR,
+					error: `Database error occurred: ${error.message}`,
+				}
 		}
 	}
 
@@ -733,16 +776,16 @@ export class Postgres {
 	async resetSequences(x_request_id?: string): Promise<boolean> {
 		try {
 			this.logger.log(`[${DATABASE_TYPE}] Resetting PostgreSQL sequences`, x_request_id)
-			
+
 			// Get all tables in the database
 			const tablesResult = await this.performQuery({
 				sql: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';",
-				x_request_id
+				x_request_id,
 			})
-			
+
 			const tables = tablesResult.map((row: any) => row.table_name)
 			this.logger.debug(`[${DATABASE_TYPE}] Tables found: ${tables.join(', ')}`, x_request_id)
-			
+
 			for (const table of tables) {
 				try {
 					const pkResult = await this.performQuery({
@@ -753,41 +796,50 @@ export class Postgres {
 							WHERE i.indrelid = '"${table}"'::regclass
 							AND i.indisprimary
 						`,
-						x_request_id
+						x_request_id,
 					})
-					
+
 					if (pkResult.length > 0) {
 						const pkColumn = pkResult[0].column_name
-						this.logger.debug(`[${DATABASE_TYPE}] Table "${table}" has primary key: "${pkColumn}"`, x_request_id)
-						
+						this.logger.debug(
+							`[${DATABASE_TYPE}] Table "${table}" has primary key: "${pkColumn}"`,
+							x_request_id,
+						)
+
 						const sequenceResult = await this.performQuery({
 							sql: `SELECT pg_get_serial_sequence('"${table}"', '${pkColumn}') as sequence_name`,
-							x_request_id
+							x_request_id,
 						})
-						
+
 						const sequenceName = sequenceResult[0]?.sequence_name
-						
+
 						if (sequenceName) {
 							const maxResult = await this.performQuery({
 								sql: `SELECT COALESCE(MAX("${pkColumn}"), 0) as max_value FROM "${table}"`,
-								x_request_id
+								x_request_id,
 							})
-							
+
 							const maxValue = maxResult[0].max_value || 0
-							
+
 							const resetResult = await this.performQuery({
 								sql: `SELECT setval('${sequenceName}', ${maxValue})`,
-								x_request_id
+								x_request_id,
 							})
-							
-							this.logger.debug(`[${DATABASE_TYPE}] Reset sequence "${sequenceName}" to ${resetResult[0].setval}`, x_request_id)
+
+							this.logger.debug(
+								`[${DATABASE_TYPE}] Reset sequence "${sequenceName}" to ${resetResult[0].setval}`,
+								x_request_id,
+							)
 						}
 					}
 				} catch (tableError) {
-					this.logger.error(`[${DATABASE_TYPE}] Error processing table "${table}": ${tableError.message}`, x_request_id)
+					this.logger.error(
+						`[${DATABASE_TYPE}] Error processing table "${table}": ${tableError.message}`,
+						x_request_id,
+					)
 				}
 			}
-			
+
 			return true
 		} catch (error) {
 			this.logger.error(`[${DATABASE_TYPE}] Error resetting sequences: ${error.message}`, x_request_id)

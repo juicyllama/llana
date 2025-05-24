@@ -4,13 +4,13 @@ import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
 import { FindOneResponseObject, IsUniqueResponse, UpdateManyResponseObject } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
-import { DataCacheService } from './modules/cache/dataCache.service'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
+import { DataCacheService } from './modules/cache/dataCache.service'
 import { WebsocketService } from './modules/websocket/websocket.service'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import { DataSourceSchema, DataSourceWhere, PublishType, QueryPerform, WhereOperator } from './types/datasource.types'
@@ -82,7 +82,6 @@ export class PutController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
-	
 		//validate input data
 		const validate = await this.schema.validateData(schema, body)
 		if (!validate.valid) {
@@ -112,7 +111,10 @@ export class PutController {
 			x_request_id,
 		)) as IsUniqueResponse
 		if (!uniqueValidation.valid) {
-			return res.status(400).send(this.response.text(uniqueValidation.message))
+			return res.status(400).send({
+				message: uniqueValidation.message,
+				error: uniqueValidation.error
+			})
 		}
 
 		const where = <DataSourceWhere[]>[
@@ -295,6 +297,7 @@ export class PutController {
 				errors.push({
 					item: body.indexOf(item),
 					message: uniqueValidation.message,
+					error: uniqueValidation.error,
 				})
 				continue
 			}

@@ -4,13 +4,13 @@ import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
 import { CreateManyResponseObject, FindOneResponseObject, IsUniqueResponse } from './dtos/response.dto'
 import { Authentication } from './helpers/Authentication'
-import { DataCacheService } from './modules/cache/dataCache.service'
 import { UrlToTable } from './helpers/Database'
 import { Query } from './helpers/Query'
 import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
+import { DataCacheService } from './modules/cache/dataCache.service'
 import { WebsocketService } from './modules/websocket/websocket.service'
 import { AuthTablePermissionFailResponse, AuthTablePermissionSuccessResponse } from './types/auth.types'
 import { DataSourceCreateOneOptions, DataSourceSchema, PublishType, QueryPerform } from './types/datasource.types'
@@ -152,6 +152,7 @@ export class PostController {
 				errors.push({
 					item: Array.isArray(body) ? body.findIndex(i => i === item) : -1,
 					message: insertResult.message,
+					error: insertResult.error,
 				})
 				continue
 			}
@@ -171,7 +172,10 @@ export class PostController {
 
 		if (singular) {
 			if (errors.length) {
-				return res.status(400).send(errors[0].message)
+				return res.status(400).send({
+					message: errors[0].message,
+					error: errors[0].error
+				})
 			}
 
 			return res.status(201).send(data[0]) as FindOneResponseObject
@@ -198,6 +202,7 @@ export class PostController {
 	): Promise<{
 		valid: boolean
 		message?: string
+		error?: string
 		result?: FindOneResponseObject
 	}> {
 		//validate input data
@@ -222,6 +227,7 @@ export class PostController {
 			return {
 				valid: false,
 				message: uniqueValidation.message,
+				error: uniqueValidation.error,
 			}
 		}
 

@@ -64,6 +64,10 @@ export class IsUniqueResponse {
 
 	@IsOptional()
 	@IsString()
+	error?: string
+
+	@IsOptional()
+	@IsString()
 	_x_request_id?: string
 }
 

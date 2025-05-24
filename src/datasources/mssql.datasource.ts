@@ -11,6 +11,7 @@ import {
 import { deconstructConnectionString, getDatabaseName } from '../helpers/Database'
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
+import { DatabaseErrorType } from '../types/datasource.types'
 import {
 	DataSourceColumnType,
 	DataSourceCreateOneOptions,
@@ -529,26 +530,69 @@ export class MSSQL {
 	}
 
 	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
-		for (const column of options.schema.columns) {
-			if (column.unique_key) {
-				const command = `SELECT COUNT(*) as total FROM ${this.reserveWordFix(options.schema.table)} WHERE ${column.field} = ?`
-				const result = await this.performQuery({
-					sql: command,
-					values: [options.data[column.field]],
-					x_request_id,
-				})
+		try {
+			for (const column of options.schema.columns) {
+				if (column.unique_key) {
+					const command = `SELECT COUNT(*) as total FROM ${this.reserveWordFix(options.schema.table)} WHERE ${column.field} = ?`
+					const result = await this.performQuery({
+						sql: command,
+						values: [options.data[column.field]],
+						x_request_id,
+					})
 
-				if (result[0].total > 0) {
-					return {
-						valid: false,
-						message: `Record with ${column.field} ${options.data[column.field]} already exists`,
+					if (result[0].total > 0) {
+						return {
+							valid: false,
+							message: DatabaseErrorType.DUPLICATE_RECORD,
+							error: `Error inserting record as a record already exists with ${column.field}=${options.data[column.field]}`,
+						}
 					}
 				}
 			}
+			return { valid: true }
+		} catch (e) {
+			return this.mapMSSQLError(e)
 		}
+	}
 
-		return {
-			valid: true,
+	/**
+	 * Map MSSQL error codes to standardized error types
+	 */
+	private mapMSSQLError(error: any): IsUniqueResponse {
+		const errorNumber = error.number || error.code
+		switch (errorNumber) {
+			case 2627: // Unique constraint error
+			case 2601: // Duplicate key error
+				return {
+					valid: false,
+					message: DatabaseErrorType.DUPLICATE_RECORD,
+					error: `Error inserting record as a duplicate already exists`,
+				}
+			case 547: // Foreign key constraint violation
+				return {
+					valid: false,
+					message: DatabaseErrorType.FOREIGN_KEY_VIOLATION,
+					error: `Foreign key constraint violation`,
+				}
+			case 515: // Cannot insert NULL
+				return {
+					valid: false,
+					message: DatabaseErrorType.NOT_NULL_VIOLATION,
+					error: `Cannot insert null value into required field`,
+				}
+			case 8144: // Check constraint violation
+			case 8115: // Arithmetic overflow error
+				return {
+					valid: false,
+					message: DatabaseErrorType.CHECK_CONSTRAINT_VIOLATION,
+					error: `Check constraint violation`,
+				}
+			default:
+				return {
+					valid: false,
+					message: DatabaseErrorType.UNKNOWN_ERROR,
+					error: `Database error occurred: ${error.message}`,
+				}
 		}
 	}
 

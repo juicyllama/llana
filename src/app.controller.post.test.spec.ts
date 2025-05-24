@@ -66,11 +66,10 @@ describe('App > Controller > Post', () => {
 		}).compile()
 
 		app = moduleRef.createNestApplication()
-		await app.init();
+		await app.init()
 
 		// Expose the app object globally for debugging
-		(global as any).app = app;
-
+		;(global as any).app = app
 
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)
@@ -586,6 +585,29 @@ describe('App > Controller > Post', () => {
 			} finally {
 				await authTestingService.deleteRole(role)
 			}
+		})
+	})
+
+	describe('Error Handling', () => {
+		it('should return structured error for duplicate record', async function () {
+			const customer = customerTestingService.mockCustomer(userId)
+			const firstResult = await request(app.getHttpServer())
+				.post('/Customer/')
+				.send(customer)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(201)
+			customers.push(firstResult.body)
+
+			const result = await request(app.getHttpServer())
+				.post('/Customer/')
+				.send(customer)
+				.set('Authorization', `Bearer ${jwt}`)
+				.expect(400)
+
+			expect(result.body).toBeDefined()
+			expect(result.body.message).toBe('DUPLICATE_RECORD')
+			expect(result.body.error).toBeDefined()
+			expect(result.body.error).toContain('duplicate already exists')
 		})
 	})
 

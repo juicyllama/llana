@@ -11,6 +11,7 @@ import {
 } from '../dtos/response.dto'
 import { Logger } from '../helpers/Logger'
 import { Pagination } from '../helpers/Pagination'
+import { DatabaseErrorType } from '../types/datasource.types'
 import {
 	DataSourceColumnType,
 	DataSourceCreateOneOptions,
@@ -565,10 +566,61 @@ export class Mongo {
 	}
 
 	async uniqueCheck(options: DataSourceUniqueCheckOptions, x_request_id: string): Promise<IsUniqueResponse> {
-		this.logger.debug(`[${DATABASE_TYPE}] Unique Check not applicable: ${JSON.stringify(options)}`, x_request_id)
+		try {
+			this.logger.debug(`[${DATABASE_TYPE}] Unique Check for: ${JSON.stringify(options)}`, x_request_id)
 
-		return {
-			valid: true,
+			const mongo = await this.createConnection(options.schema.table)
+
+			try {
+				for (const column of options.schema.columns) {
+					if (column.unique_key) {
+						const filter = {}
+						filter[column.field] = options.data[column.field]
+
+						const count = await mongo.collection.countDocuments(filter)
+
+						if (count > 0) {
+							return {
+								valid: false,
+								message: DatabaseErrorType.DUPLICATE_RECORD,
+								error: `Error inserting record as a record already exists with ${column.field}=${options.data[column.field]}`,
+							}
+						}
+					}
+				}
+				return { valid: true }
+			} finally {
+				mongo.connection.close()
+			}
+		} catch (e) {
+			return this.mapMongoDBError(e)
+		}
+	}
+
+	/**
+	 * Map MongoDB error codes to standardized error types
+	 */
+	private mapMongoDBError(error: any): IsUniqueResponse {
+		const errorCode = error.code
+		switch (errorCode) {
+			case 11000: // Duplicate key error
+				return {
+					valid: false,
+					message: DatabaseErrorType.DUPLICATE_RECORD,
+					error: `Error inserting record as a duplicate already exists`,
+				}
+			case 121: // Document validation failure
+				return {
+					valid: false,
+					message: DatabaseErrorType.CHECK_CONSTRAINT_VIOLATION,
+					error: `Document validation failed`,
+				}
+			default:
+				return {
+					valid: false,
+					message: DatabaseErrorType.UNKNOWN_ERROR,
+					error: `Database error occurred: ${error.message}`,
+				}
 		}
 	}
 
