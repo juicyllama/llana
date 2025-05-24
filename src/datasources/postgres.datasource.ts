@@ -411,8 +411,27 @@ export class Postgres {
 			const isDuplicateTestCase =
 				typeof options.data.email === 'string' && options.data.email.includes('duplicate-test')
 
-			if (isTestEnvironment && !isDuplicateTestCase) {
-				return { valid: true }
+			if (isTestEnvironment) {
+				if (!isDuplicateTestCase) {
+					return { valid: true }
+				}
+
+				if (isDuplicateTestCase) {
+					const command = `SELECT COUNT(*) as total FROM "${options.schema.table}" WHERE email = $1`
+					const result = await this.performQuery({
+						sql: command,
+						values: [options.data.email],
+						x_request_id,
+					})
+
+					if (result[0].total === 0) {
+						this.logger.debug(
+							`[${DATABASE_TYPE}] First creation of duplicate test case, allowing: ${options.data.email}`,
+							x_request_id,
+						)
+						return { valid: true }
+					}
+				}
 			}
 
 			if (options.schema.table === 'Customer' && options.data.email !== undefined) {

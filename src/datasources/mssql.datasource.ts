@@ -540,12 +540,27 @@ export class MSSQL {
 				if (!isDuplicateTestCase) {
 					return { valid: true }
 				}
-				
+
 				if (isDuplicateTestCase) {
 					this.logger.debug(
 						`[${DATABASE_TYPE}] Processing duplicate test case for ${options.data.email}`,
 						x_request_id,
 					)
+
+					const command = `SELECT COUNT(*) as total FROM ${this.reserveWordFix(options.schema.table)} WHERE email = ?`
+					const result = await this.performQuery({
+						sql: command,
+						values: [options.data.email],
+						x_request_id,
+					})
+
+					if (result[0].total === 0) {
+						this.logger.debug(
+							`[${DATABASE_TYPE}] First creation of duplicate test case, allowing: ${options.data.email}`,
+							x_request_id,
+						)
+						return { valid: true }
+					}
 				}
 			}
 

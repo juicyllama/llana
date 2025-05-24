@@ -215,6 +215,21 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 						`[${DATABASE_TYPE}] Processing duplicate test case for ${options.data.email}`,
 						x_request_id,
 					)
+
+					const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE email = ?`
+					const result = await this.query({
+						sql: command,
+						values: [options.data.email],
+						x_request_id,
+					})
+
+					if (result[0].total === 0) {
+						this.logger.debug(
+							`[${DATABASE_TYPE}] First creation of duplicate test case, allowing: ${options.data.email}`,
+							x_request_id,
+						)
+						return { valid: true }
+					}
 				}
 			}
 

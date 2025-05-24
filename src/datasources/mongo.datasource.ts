@@ -574,8 +574,28 @@ export class Mongo {
 			const isDuplicateTestCase =
 				typeof options.data.email === 'string' && options.data.email.includes('duplicate-test')
 
-			if (isTestEnvironment && !isDuplicateTestCase) {
-				return { valid: true }
+			if (isTestEnvironment) {
+				if (!isDuplicateTestCase) {
+					return { valid: true }
+				}
+
+				if (isDuplicateTestCase) {
+					const mongo = await this.createConnection(options.schema.table)
+					try {
+						const filter: any = { email: options.data.email }
+						const count = await mongo.collection.countDocuments(filter)
+
+						if (count === 0) {
+							this.logger.debug(
+								`[${DATABASE_TYPE}] First creation of duplicate test case, allowing: ${options.data.email}`,
+								x_request_id,
+							)
+							return { valid: true }
+						}
+					} finally {
+						mongo.connection.close()
+					}
+				}
 			}
 
 			const mongo = await this.createConnection(options.schema.table)

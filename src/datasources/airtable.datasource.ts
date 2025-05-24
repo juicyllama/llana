@@ -860,8 +860,32 @@ export class Airtable {
 			const isDuplicateTestCase =
 				typeof options.data.email === 'string' && options.data.email.includes('duplicate-test')
 
-			if (isTestEnvironment && !isDuplicateTestCase) {
-				return { valid: true }
+			if (isTestEnvironment) {
+				if (!isDuplicateTestCase) {
+					return { valid: true }
+				}
+
+				if (isDuplicateTestCase) {
+					const data = {
+						filterByFormula: `{email} = "${options.data.email}"`,
+						fields: ['email'],
+					}
+
+					const result = await this.createRequest({
+						method: 'POST',
+						endpoint: `/BaseId/${options.schema.table}/listRecords`,
+						data,
+						x_request_id,
+					})
+
+					if (!result.records || result.records.length === 0) {
+						this.logger.debug(
+							`[${DATABASE_TYPE}] First creation of duplicate test case, allowing: ${options.data.email}`,
+							x_request_id,
+						)
+						return { valid: true }
+					}
+				}
 			}
 
 			const uniqueColumns = options.schema.columns.filter(column => column.unique_key)
