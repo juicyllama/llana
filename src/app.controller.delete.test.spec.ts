@@ -65,11 +65,10 @@ describe('App > Controller > Delete', () => {
 		}).compile()
 
 		app = moduleRef.createNestApplication()
-		await app.init();
+		await app.init()
 
 		// Expose the app object globally for debugging
-		(global as any).app = app;
-
+		;(global as any).app = app
 
 		authTestingService = app.get<AuthTestingService>(AuthTestingService)
 		customerTestingService = app.get<CustomerTestingService>(CustomerTestingService)

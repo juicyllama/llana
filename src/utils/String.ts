@@ -2,7 +2,7 @@
  * Replace ? symbols with the values from a any[]
  */
 
-import { CronExpression } from "@nestjs/schedule"
+import { CronExpression } from '@nestjs/schedule'
 
 export function replaceQ(string: string, array: any[]): string {
 	//if(!array.length) return string
@@ -122,7 +122,6 @@ export function commaStringToArray(string: string): string[] {
  */
 
 export function cronToSeconds(cron: CronExpression): number {
-
 	switch (cron) {
 		case CronExpression.EVERY_10_SECONDS:
 			return 10

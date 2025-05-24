@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Cron, CronExpression } from '@nestjs/schedule'
 
-import { DataCacheService } from './modules/cache/dataCache.service'
 import { Webhook } from './helpers/Webhook'
+import { DataCacheService } from './modules/cache/dataCache.service'
 
 let webhookSchedule: string = CronExpression.EVERY_30_SECONDS
 let cacheSchedule: string = CronExpression.EVERY_MINUTE
@@ -15,8 +15,12 @@ export class TasksService {
 		private readonly webhook: Webhook,
 		private readonly dataCache: DataCacheService,
 	) {
-		webhookSchedule = (CronExpression[this.configService.get('CRON_EXPRESSION_WEBHOOKS_SEND')] ?? CronExpression.EVERY_30_SECONDS as CronExpression)
-		cacheSchedule = (CronExpression[this.configService.get('CRON_EXPRESSION_CACHE_CHECK')] ?? CronExpression.EVERY_MINUTE as CronExpression)
+		webhookSchedule =
+			CronExpression[this.configService.get('CRON_EXPRESSION_WEBHOOKS_SEND')] ??
+			(CronExpression.EVERY_30_SECONDS as CronExpression)
+		cacheSchedule =
+			CronExpression[this.configService.get('CRON_EXPRESSION_CACHE_CHECK')] ??
+			(CronExpression.EVERY_MINUTE as CronExpression)
 	}
 
 	@Cron(webhookSchedule)

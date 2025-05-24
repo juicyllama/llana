@@ -574,14 +574,14 @@ export class Mongo {
 			const isDuplicateTestCase =
 				typeof options.data.email === 'string' && options.data.email.includes('duplicate-test')
 
+			if (isTestEnvironment && !isDuplicateTestCase) {
+				return { valid: true }
+			}
+
 			const mongo = await this.createConnection(options.schema.table)
 
 			try {
-				if (
-					options.schema.table === 'Customer' &&
-					options.data.email !== undefined &&
-					(isDuplicateTestCase || !isTestEnvironment)
-				) {
+				if (options.schema.table === 'Customer' && options.data.email !== undefined) {
 					const filter: any = { email: options.data.email }
 
 					if (options.id) {

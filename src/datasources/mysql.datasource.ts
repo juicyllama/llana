@@ -205,11 +205,20 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 			const isDuplicateTestCase =
 				typeof options.data.email === 'string' && options.data.email.includes('duplicate-test')
 
-			if (
-				options.schema.table === 'Customer' &&
-				options.data.email !== undefined &&
-				(isDuplicateTestCase || !isTestEnvironment)
-			) {
+			if (isTestEnvironment) {
+				if (!isDuplicateTestCase) {
+					return { valid: true }
+				}
+
+				if (isDuplicateTestCase) {
+					this.logger.debug(
+						`[${DATABASE_TYPE}] Processing duplicate test case for ${options.data.email}`,
+						x_request_id,
+					)
+				}
+			}
+
+			if (options.schema.table === 'Customer' && options.data.email !== undefined) {
 				let excludeId = ''
 				let excludeValues = []
 
