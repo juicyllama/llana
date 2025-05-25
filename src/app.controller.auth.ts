@@ -26,6 +26,7 @@ import { AuthenticatedRequest } from './types/auth.types'
 import { DataSourceFindOneOptions, QueryPerform, WhereOperator } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
 import { Env } from './utils/Env'
+import { safeClone } from './utils/CircularJSON'
 
 @Controller('auth')
 export class AuthController {
@@ -53,11 +54,12 @@ export class AuthController {
 		const { access_token } = await this.authService.login(req.user)
 		const refreshToken = await this.authService.createRefreshToken(req.user)
 		setAccessAndRefreshTokenCookies(res, access_token, refreshToken)
-		return res.status(200).json({
+		const responseData = {
 			access_token,
 			expires_in: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN) / 1000,
 			refresh_token_expires_in: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN) / 1000,
-		})
+		}
+		return res.status(200).json(responseData)
 	}
 
 	@Post('refresh')
@@ -78,20 +80,21 @@ export class AuthController {
 			sub: loginPayload.sub,
 			oldRefreshToken: '...' + oldRefreshToken.slice(-10),
 		})
-		return res.status(200).json({
+		const responseData = {
 			access_token: newAccessToken,
 			expires_in: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN) / 1000,
 			refresh_token_expires_in: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN) / 1000,
-		})
+		}
+		return res.status(200).json(responseData)
 	}
 
 	@Post('logout')
 	async logout(@Res({ passthrough: true }) res: ExpressResponse): Promise<any> {
 		res.clearCookie(ACCESS_TOKEN_COOKIE_NAME, getAuthCookieOpts(false))
 		res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, getAuthCookieOpts(true))
-		return {
+		return res.status(200).json({
 			success: true,
-		}
+		})
 	}
 
 	/*
@@ -182,7 +185,7 @@ export class AuthController {
 			)
 		}
 
-		return res.status(200).json(user)
+		return res.status(200).json(safeClone(user))
 	}
 }
 
