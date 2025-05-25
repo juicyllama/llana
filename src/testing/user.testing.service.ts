@@ -6,7 +6,7 @@ import { Schema } from '../helpers/Schema'
 import { QueryPerform } from '../types/datasource.types'
 
 const table = 'User'
-let userNumber = 0
+let userNumber = new Date().getTime() // Simple way to generate a unique number based on current time
 
 @Injectable()
 export class UserTestingService {
@@ -16,7 +16,9 @@ export class UserTestingService {
 	) {}
 
 	mockUser(props = {}): any {
+
 		userNumber++
+
 		return {
 			email: `test-user${userNumber}@gmail.com`,
 			password: 'asdlkjh132093ERWF',
@@ -31,7 +33,7 @@ export class UserTestingService {
 		return await this.schema.getSchema({ table })
 	}
 
-	async createUser(user: any): Promise<any> {
+	async createUser(user?: any): Promise<any> {
 		const userSchema = await this.schema.getSchema({ table })
 
 		const USER = this.mockUser()

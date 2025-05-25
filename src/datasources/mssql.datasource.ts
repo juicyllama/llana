@@ -340,7 +340,7 @@ export class MSSQL {
 			if (schema_col?.extra?.convert) {
 				valuesString += `CAST('?' AS ${schema_col.extra.convert}), `
 			} else {
-				valuesString += `'?', `
+				valuesString += `?, `
 			}
 		}
 
@@ -376,6 +376,7 @@ export class MSSQL {
 	 */
 
 	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
+
 		let [command, values] = this.find(options)
 
 		const results = (await this.performQuery({ sql: command, values, x_request_id })).recordset
@@ -479,13 +480,13 @@ export class MSSQL {
 			if (schema_col?.extra?.convert) {
 				command += `${key} = CAST('?' AS ${schema_col.extra.convert}), `
 			} else {
-				command += `${key} = '?', `
+				command += `${key} = ?, `
 			}
 		}
 
 		command = command.slice(0, -2)
 
-		command += `WHERE ${options.schema.primary_key} = ?`
+		command += ` WHERE ${options.schema.primary_key} = ?`
 
 		if (values.length) {
 			for (const v in values) {
@@ -795,10 +796,12 @@ export class MSSQL {
 									.toString()
 									.split(',')
 									.map(v => v.trim())
-						const placeholders = valueArray.map(() => `'?'`).join(',')
+						const placeholders = valueArray.map(() => `?`).join(',')
 						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders})`
 					} else {
-						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? `'?'` : ''}`
+
+						// For other operators, we use the column directly
+						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? `?` : ''}`
 					}
 				})
 				.join(' AND ')} `
