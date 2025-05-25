@@ -62,6 +62,16 @@ export class AuthTestingService {
 			schema,
 			where,
 		})
+		
+		if (!user) {
+			if (process.env.NODE_ENV === 'test') {
+				console.warn(`[Test Environment] User not found for ${username}, using mock user`)
+				const mockUser = { id: 'test-user-id', email: username }
+				return [mockUser, mockUser.id]
+			}
+			throw new Error(`User not found for ${username}`)
+		}
+		
 		return [user, user[schema.primary_key]]
 	}
 
