@@ -722,11 +722,13 @@ export class Query {
 			return result
 		}
 
+		const resultCopy = { ...result }
+
 		for (const relation of options.relations) {
 			const rel = this.getTableRelationColumn(relation.join, options.schema.table)
 			const relationTable = this.getChildTableRelation(relation.join, options.schema.table)
 
-			if (!result[rel]) {
+			if (!resultCopy[rel]) {
 				throw new Error(
 					`Cannot build relation. Field ${rel} not found in the result set. Please ensure you are selecting the column in your query`,
 				)
@@ -736,7 +738,7 @@ export class Query {
 				{
 					column: relationTable.column,
 					operator: WhereOperator.equals,
-					value: result[rel],
+					value: resultCopy[rel],
 				},
 			]
 
@@ -762,11 +764,20 @@ export class Query {
 			const relationResults = await this.findMany(relationOptions, x_request_id)
 
 			if (relationResults) {
-				result[relation.table] = relationResults.total > 0 ? relationResults.data : []
+				resultCopy[relation.table] =
+					relationResults.total > 0
+						? relationResults.data.map(item => {
+								const cleanItem = { ...item }
+								if (cleanItem[options.schema.table]) {
+									delete cleanItem[options.schema.table]
+								}
+								return cleanItem
+							})
+						: []
 			}
 		}
 
-		return result
+		return resultCopy
 	}
 
 	/**

@@ -182,7 +182,7 @@ export class AuthController {
 			)
 		}
 
-		return res.status(200).send(user)
+		return res.status(200).json(user)
 	}
 }
 
