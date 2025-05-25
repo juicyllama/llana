@@ -6,7 +6,7 @@ import { Logger } from '../helpers/Logger'
 export class RequestPathLoggerMiddleware implements NestMiddleware {
 	use(req: Request, res: Response, next: NextFunction) {
 		const logger = new Logger()
-		logger.debug(`[RequestPathLoggerMiddleware] Request Path: ${req.originalUrl}`)
+		logger.debug(`[RequestPathLoggerMiddleware] Request Path: ${decodeURI(req.originalUrl)}`)
 		next()
 	}
 }
