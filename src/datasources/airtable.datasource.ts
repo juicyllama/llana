@@ -896,7 +896,8 @@ export class Airtable {
 
 			for (const column of uniqueColumns) {
 				if (options.data[column.field] !== undefined) {
-					let filterByFormula = `{${column.field}} = "${options.data[column.field]}"`
+ const safeValue = String(options.data[column.field]).replace(/"/g, '""')  // Airtable escaping
+ let filterByFormula = `{${column.field}} = "${safeValue}"`
 
 					if (options.id) {
 						filterByFormula = `AND(${filterByFormula}, RECORD_ID() != "${options.id}")`

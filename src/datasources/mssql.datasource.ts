@@ -338,7 +338,7 @@ export class MSSQL {
 			const schema_col = options.schema.columns.find(col => col.field === columns[c])
 
 			if (schema_col?.extra?.convert) {
-				valuesString += `CAST('?' AS ${schema_col.extra.convert}), `
+ valuesString += `CAST(? AS ${schema_col.extra.convert}), `
 			} else {
 				valuesString += `?, `
 			}
@@ -478,7 +478,7 @@ export class MSSQL {
 			const schema_col = options.schema.columns.find(col => col.field === key)
 
 			if (schema_col?.extra?.convert) {
-				command += `${key} = CAST('?' AS ${schema_col.extra.convert}), `
+ command += `${key} = CAST(? AS ${schema_col.extra.convert}), `
 			} else {
 				command += `${key} = ?, `
 			}
@@ -788,7 +788,7 @@ export class MSSQL {
 			command += `${options.where
 				.map(w => {
 					if (w.operator === WhereOperator.search) {
-						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} LIKE '?'`
+						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} LIKE ?`
 					} else if (w.operator === WhereOperator.in || w.operator === WhereOperator.not_in) {
 						const valueArray = Array.isArray(w.value)
 							? w.value
