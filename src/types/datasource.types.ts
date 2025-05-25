@@ -201,6 +201,15 @@ export interface DataSourceListTablesOptions {
 	include_known_db_orchestration?: boolean // like atlas_schema_revisions
 }
 
+export enum DatabaseErrorType {
+	DUPLICATE_RECORD = 'DUPLICATE_RECORD',
+	UNIQUE_KEY_VIOLATION = 'UNIQUE_KEY_VIOLATION',
+	FOREIGN_KEY_VIOLATION = 'FOREIGN_KEY_VIOLATION',
+	NOT_NULL_VIOLATION = 'NOT_NULL_VIOLATION',
+	CHECK_CONSTRAINT_VIOLATION = 'CHECK_CONSTRAINT_VIOLATION',
+	UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+}
+
 export interface DataSourceInterface {
 	createTable(schema: DataSourceSchema): Promise<void>
 	findOne(options: DataSourceFindOneOptions): Promise<any>

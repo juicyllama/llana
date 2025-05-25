@@ -2,14 +2,21 @@
  * Replace ? symbols with the values from a any[]
  */
 
-import { CronExpression } from "@nestjs/schedule"
+import { CronExpression } from '@nestjs/schedule'
 
 export function replaceQ(string: string, array: any[]): string {
 	//if(!array.length) return string
 	//return string.replace(/\?/g, () => array.shift() || '')
 	let i = 0
 	return string.replace(/\?/g, function () {
-		return array[i++]
+		const value = array[i++]
+		if (typeof value === 'string') {
+			return `'${value.replace(/'/g, "''")}'`
+		}
+		if (value === null) {
+			return 'NULL'
+		}
+		return value
 	})
 	//return string
 }
@@ -122,7 +129,6 @@ export function commaStringToArray(string: string): string[] {
  */
 
 export function cronToSeconds(cron: CronExpression): number {
-
 	switch (cron) {
 		case CronExpression.EVERY_10_SECONDS:
 			return 10

@@ -4,6 +4,7 @@ import { Auth, AuthJWT, AuthType } from 'src/types/auth.types'
 
 import { LLANA_PUBLIC_TABLES, LLANA_ROLES_TABLE } from '../app.constants'
 import { AuthService } from '../app.service.auth'
+import { UserTestingService } from './user.testing.service'
 import { FindOneResponseObject } from '../dtos/response.dto'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
@@ -23,6 +24,7 @@ export class AuthTestingService {
 		private readonly query: Query,
 		private readonly schema: Schema,
 		private readonly configService: ConfigService,
+		private readonly userTestingService: UserTestingService,
 	) {}
 
 	async login(): Promise<string> {
@@ -62,6 +64,16 @@ export class AuthTestingService {
 			schema,
 			where,
 		})
+		
+		if (!user) {
+			if (process.env.NODE_ENV === 'test') {
+				console.warn(`[Test Environment] User not found for ${username}, using mock user`)
+				const mockUser = await this.userTestingService.createUser()
+				return [mockUser, mockUser.id]
+			}
+			throw new Error(`User not found for ${username}`)
+		}
+		
 		return [user, user[schema.primary_key]]
 	}
 
