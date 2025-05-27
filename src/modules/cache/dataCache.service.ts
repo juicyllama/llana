@@ -64,8 +64,6 @@ export class DataCacheService implements OnApplicationShutdown {
 	 */
 
 	public async read(key: string): Promise<any> {
-		this.logger.debug(`[CacheService] Reading ${key} from cache`)
-
 		if (this.useRedis()) {
 			if (this.redis.status !== 'ready') {
 				throw new Error('Redis client not ready')
@@ -85,8 +83,7 @@ export class DataCacheService implements OnApplicationShutdown {
 	 */
 
 	public async write(key: string, value: any, ttl: number): Promise<void> {
-		this.logger.debug(`[CacheService] Writing ${key} to cache`)
-
+	
 		if (this.useRedis()) {
 			if (this.redis.status !== 'ready') {
 				throw new Error('Redis client not ready')
@@ -105,8 +102,6 @@ export class DataCacheService implements OnApplicationShutdown {
 	 */
 
 	public async del(key: string): Promise<void> {
-		this.logger.debug(`[CacheService] Deleting ${key} from cache`)
-
 		if (this.useRedis()) {
 			if (this.redis.status !== 'ready') {
 				throw new Error('Redis client not ready')
@@ -124,13 +119,15 @@ export class DataCacheService implements OnApplicationShutdown {
 
 	async get(options: { originalUrl: string; x_request_id: string }): Promise<FindManyResponseObject | undefined> {
 		if (!this.cacheType()) {
-			this.logger.debug(`[DataCache][Get] Cache is not enabled`)
+			this.logger.debug(`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[DataCache][Get] Cache is not enabled`)
 			return
 		}
 
 		const urlParts = options.originalUrl.split('?')
 		const table = urlParts[0].split('/')[1]
 		const request = urlParts[1] ? `?${urlParts[1]}` : undefined
+
+		this.logger.debug(`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[DataCache][Get] Table: ${table}, Request: ${request}`)
 
 		if (!table) {
 			this.logger.error(
@@ -184,12 +181,16 @@ export class DataCacheService implements OnApplicationShutdown {
 			if (cache.table === table) {
 				if (cache.request === request) {
 					this.logger.debug(
-						`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[DataCache][Get] Found cache match data for ${table} with request ${request}`,
+						`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[DataCache][Get] Cache hit for ${table} with request ${request}`,
 					)
 					return await this.read(cacheKey)
 				}
 			}
 		}
+
+		this.logger.debug(
+						`${options.x_request_id ? '[' + options.x_request_id + ']' : ''}[DataCache][Get] NO cache hit found for ${table} with request ${request}`,
+		)
 
 		return
 	}
