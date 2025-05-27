@@ -8,6 +8,8 @@ export class RequestPathLoggerMiddleware implements NestMiddleware {
 	use(req: Request, res: Response, next: NextFunction) {
 		const logger = new Logger()
 
+
+
 		// Alphabetize query parameters for GET requests with query parameters
 		if(req.method === 'GET' && Object.keys(req.query).length) {
 
@@ -17,15 +19,15 @@ export class RequestPathLoggerMiddleware implements NestMiddleware {
 				.flatMap(key => {
 					const value = req.query[key]
 					if (Array.isArray(value)) {
-						return value.map(v => `${key}=${encodeURIComponent(v as string)}`)
+						return value.map(v => `${key}=${(v as string)}`)
 					}
-					return [`${key}=${encodeURIComponent(value as string)}`]
+					return [`${key}=${(value as string)}`]
 				})
 			
 			// Replace query parameters in the URL with sorted query parameters
 			if (queryParams.length > 0) {
 				const sortedQueryString = queryParams.join('&')
-				req.originalUrl = req.originalUrl.split('?')[0] + '?' + sortedQueryString
+				req.originalUrl = decodeURI(req.originalUrl.split('?')[0] + '?' + sortedQueryString)
 			}
 
 			logger.debug(`[RequestPathLoggerMiddleware] ${req.method}: ${req.originalUrl}`, {
