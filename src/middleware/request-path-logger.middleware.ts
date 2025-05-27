@@ -14,7 +14,13 @@ export class RequestPathLoggerMiddleware implements NestMiddleware {
 			//get the request query parameters and put them in alphabetical order
 			const queryParams = Object.keys(req.query)
 				.sort()
-				.map(key => `${key}=${req.query[key]}`)
+				.flatMap(key => {
+					const value = req.query[key]
+					if (Array.isArray(value)) {
+						return value.map(v => `${key}=${encodeURIComponent(v as string)}`)
+					}
+					return [`${key}=${encodeURIComponent(value as string)}`]
+				})
 			
 			// Replace query parameters in the URL with sorted query parameters
 			if (queryParams.length > 0) {
@@ -22,15 +28,16 @@ export class RequestPathLoggerMiddleware implements NestMiddleware {
 				req.originalUrl = req.originalUrl.split('?')[0] + '?' + sortedQueryString
 			}
 
-			logger.debug(`[RequestPathLoggerMiddleware] Request Path: ${req.originalUrl}`, {
-				method: req.method,
-				query: req.method === 'GET' ? {
+			logger.debug(`[RequestPathLoggerMiddleware] ${req.method}: ${req.originalUrl}`, {
+				query: {
 					original: req.query,
 					sorted: queryParams,
-				} : undefined,
-				body: req.method !== 'GET' ? req.body : undefined,
+				},
+				body: req.body,
 				final_url: req.originalUrl,
 			})
+		}else{
+			logger.debug(`[RequestPathLoggerMiddleware] ${req.method}: ${req.originalUrl}`)
 		}
 
 		next()
