@@ -614,7 +614,7 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 		let command = `UPDATE ${table_name} SET `
 
 		command += `${Object.keys(options.data)
-			.map(key => `${key} = ?`)
+			.map(key => `\`${key}\` = ?`)
 			.join(', ')} `
 
 		command += `WHERE ${options.schema.primary_key} = ?`
