@@ -149,6 +149,19 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
+			if (this.configService.get<string>('SOFT_DELETE_COLUMN')) {
+					schema.columns.push({
+						field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
+						type: DataSourceColumnType.STRING,
+						nullable: true,
+						required: false,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						default: null,
+					})
+			}
+
 			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
 			if (!created) {
@@ -283,6 +296,19 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
+			if (this.configService.get<string>('SOFT_DELETE_COLUMN')) {
+					schema.columns.push({
+						field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
+						type: DataSourceColumnType.STRING,
+						nullable: true,
+						required: false,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						default: null,
+					})
+				}
+
 			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
 			if (!created) {
@@ -407,6 +433,19 @@ export class AppBootup implements OnApplicationBootstrap {
 				],
 			}
 
+			if (this.configService.get<string>('SOFT_DELETE_COLUMN')) {
+					schema.columns.push({
+						field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
+						type: DataSourceColumnType.STRING,
+						nullable: true,
+						required: false,
+						primary_key: false,
+						unique_key: false,
+						foreign_key: false,
+						default: null,
+					})
+				}
+
 			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
 			if (!created) {
@@ -518,7 +557,7 @@ export class AppBootup implements OnApplicationBootstrap {
 				const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
 				if (!created) {
-					throw new Error('Failed to create _llana_webhook table')
+					throw new Error(`Failed to create ${LLANA_DATA_CACHING_TABLE} table`)
 				}
 
 				const example_data_caching: any[] = [
