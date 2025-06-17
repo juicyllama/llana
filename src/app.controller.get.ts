@@ -21,6 +21,7 @@ import {
 	WhereOperator,
 } from './types/datasource.types'
 import { RolePermission } from './types/roles.types'
+import { Logger } from './helpers/Logger'
 
 @Controller()
 export class GetController {
@@ -33,6 +34,7 @@ export class GetController {
 		private readonly response: Response,
 		private readonly roles: Roles,
 		private readonly schema: Schema,
+		private readonly logger: Logger
 	) {}
 
 	@Get('/tables')
@@ -151,6 +153,8 @@ export class GetController {
 			table_name = LLANA_WEBHOOK_TABLE
 		}
 
+		this.logger.verbose(`[GET #ID] Request received for table ${table_name} with id #${id} and query fields: ${JSON.stringify(queryFields)}`)
+
 		let primary_key
 
 		const options: DataSourceFindOneOptions = {
@@ -169,13 +173,7 @@ export class GetController {
 			x_request_id,
 		})
 
-		if (public_auth.valid && public_auth.allowed_fields?.length) {
-			if (!queryFields?.length) {
-				queryFields = public_auth.allowed_fields
-			} else {
-				queryFields = queryFields.filter(field => public_auth.allowed_fields.includes(field))
-			}
-		}
+		this.logger.verbose('[GET #ID] Public Auth Check Passed')
 
 		// If not public, perform auth
 
@@ -190,6 +188,25 @@ export class GetController {
 		if (!public_auth.valid && !auth.valid) {
 			return res.status(401).send(this.response.text(auth.message))
 		}
+
+		// As no authentication is required, we can proceed with queryFields restrictions from the public auth (if exist)
+		if(!auth.valid && public_auth.valid && public_auth.allowed_fields?.length) {
+			if (!queryFields?.length) {
+				queryFields = public_auth.allowed_fields
+			} else {
+				queryFields = queryFields.filter(field => public_auth.allowed_fields.includes(field))
+			}
+		}
+
+		this.logger.verbose('[GET #ID] Auth Check Passed')
+
+		try {
+			options.schema = await this.schema.getSchema({ table: table_name, x_request_id, fields: queryFields })
+		} catch (e) {
+			return res.status(404).send(this.response.text(e.message))
+		}
+
+		this.logger.verbose('[GET #ID] Schema Retrieved Successfully', options.schema)
 
 		//perform role check
 		if (auth.user_identifier) {
@@ -208,17 +225,29 @@ export class GetController {
 				permission = permission as AuthTablePermissionSuccessResponse
 
 				if (permission.restriction.column.includes('.')) {
-					options.relations.concat(
-						await this.schema.convertDeepWhere({
+
+					if(options.relations?.length) {
+						options.relations.concat(
+							await this.schema.convertDeepWhere({
+								where: permission.restriction,
+								schema: options.schema,
+								x_request_id,
+							}),
+						)
+					}else{
+						options.relations = await this.schema.convertDeepWhere({
 							where: permission.restriction,
 							schema: options.schema,
 							x_request_id,
-						}),
-					)
+						})
+					}
+
 				} else {
 					options.where.push(permission.restriction)
 				}
 			}
+
+			this.logger.verbose('[GET #ID] Role Check Passed')
 
 			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
 				if (!queryFields?.length) {
@@ -230,12 +259,6 @@ export class GetController {
 					)
 				}
 			}
-		}
-
-		try {
-			options.schema = await this.schema.getSchema({ table: table_name, x_request_id, fields: queryFields })
-		} catch (e) {
-			return res.status(404).send(this.response.text(e.message))
 		}
 
 		//validate :id field
@@ -256,7 +279,9 @@ export class GetController {
 				fields: queryFields,
 				x_request_id,
 			})
+
 			if (!valid) {
+				this.logger.error('[GET #ID] Fields Validation Failed:', message)
 				return res.status(400).send(this.response.text(message))
 			}
 
@@ -271,6 +296,8 @@ export class GetController {
 					postQueryRelations.push(relation)
 				}
 			}
+
+			this.logger.verbose('[GET #ID] Fields Validation Passed:', fields, relations)
 		}
 
 		if (queryRelations?.length) {
@@ -324,6 +351,9 @@ export class GetController {
 				}
 			}
 		}
+		
+		this.logger.verbose('[GET #ID] Relations Validation Passed')
+
 
 		options.where.push({
 			column: primary_key,
@@ -356,6 +386,7 @@ export class GetController {
 
 			return res.status(200).send(result)
 		} catch (e) {
+			this.logger.error('[GET #ID] Error while fetching data:', e.message)
 			return res.status(400).send(this.response.text(e.message))
 		}
 	}
@@ -380,6 +411,8 @@ export class GetController {
 			table_name = LLANA_WEBHOOK_TABLE
 		}
 
+		this.logger.verbose(`[GET MANY] Request received for table ${table_name} with query params: ${JSON.stringify(queryParams)}`)
+
 		const options: DataSourceFindManyOptions = {
 			schema: null,
 			fields: [],
@@ -397,14 +430,6 @@ export class GetController {
 			x_request_id,
 		})
 
-		if (public_auth.valid && public_auth.allowed_fields?.length) {
-			if (!queryFields?.length) {
-				queryFields = public_auth.allowed_fields
-			} else {
-				queryFields = queryFields.filter(field => public_auth.allowed_fields.includes(field))
-			}
-		}
-
 		// If not public, perform auth
 
 		const auth = await this.authentication.auth({
@@ -419,6 +444,14 @@ export class GetController {
 			return res.status(401).send(this.response.text(auth.message))
 		}
 
+		try {
+			options.schema = await this.schema.getSchema({ table: table_name, x_request_id, fields: queryFields })
+		} catch (e) {
+			return res.status(404).send(this.response.text(e.message))
+		}
+
+		this.logger.verbose('[GET MANY] Public Auth Check Passed')
+
 		//perform role check
 		if (auth.user_identifier) {
 			let permission = await this.roles.tablePermission({
@@ -432,17 +465,34 @@ export class GetController {
 				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
 			}
 
+			// As no authentication is required, we can proceed with queryFields restrictions from the public auth (if exist)
+			if(!auth.valid && public_auth.valid && public_auth.allowed_fields?.length) {
+				if (!queryFields?.length) {
+					queryFields = public_auth.allowed_fields
+				} else {
+					queryFields = queryFields.filter(field => public_auth.allowed_fields.includes(field))
+				}
+			}
+
 			permission = permission as AuthTablePermissionSuccessResponse
 
 			if (permission.valid && permission.restriction) {
 				if (permission.restriction.column.includes('.')) {
-					options.relations = options.relations.concat(
-						await this.schema.convertDeepWhere({
+					if(options.relations?.length) {
+						options.relations.concat(
+							await this.schema.convertDeepWhere({
+								where: permission.restriction,
+								schema: options.schema,
+								x_request_id,
+							}),
+						)
+					}else{
+						options.relations = await this.schema.convertDeepWhere({
 							where: permission.restriction,
 							schema: options.schema,
 							x_request_id,
-						}),
-					)
+						})
+					}
 				} else {
 					options.where.push(permission.restriction)
 				}
@@ -460,11 +510,7 @@ export class GetController {
 			}
 		}
 
-		try {
-			options.schema = await this.schema.getSchema({ table: table_name, x_request_id, fields: queryFields })
-		} catch (e) {
-			return res.status(404).send(this.response.text(e.message))
-		}
+		this.logger.verbose('[GET MANY] Role Check Passed')
 
 		const { limit, offset } = this.pagination.get(queryParams)
 		options.limit = limit
@@ -476,6 +522,7 @@ export class GetController {
 				fields: queryFields,
 				x_request_id,
 			})
+
 			if (!valid) {
 				return res.status(400).send(this.response.text(message))
 			}
@@ -493,6 +540,8 @@ export class GetController {
 			}
 		}
 
+		this.logger.verbose('[GET MANY] Fields Validation Passed')
+
 		if (queryRelations?.length) {
 			const { valid, message, relations } = await this.schema.validateRelations({
 				schema: options.schema,
@@ -500,6 +549,7 @@ export class GetController {
 				existing_relations: options.relations,
 				x_request_id,
 			})
+
 			if (!valid) {
 				return res.status(400).send(this.response.text(message))
 			}
@@ -512,11 +562,15 @@ export class GetController {
 				}
 			}
 		}
+		
+		this.logger.verbose('[GET MANY] Relations Validation Passed')
 
 		const validateWhere = await this.schema.validateWhereParams({ schema: options.schema, params: queryParams })
 		if (!validateWhere.valid) {
 			return res.status(400).send(this.response.text(validateWhere.message))
 		}
+
+		this.logger.verbose('[GET MANY] Where Validation Passed')
 
 		if (validateWhere.where.length) {
 			options.where = options.where.concat(validateWhere.where)
@@ -531,6 +585,8 @@ export class GetController {
 
 			options.sort = validateSort.sort
 		}
+
+		this.logger.verbose('[GET MANY] Sort Validation Passed')
 
 		if (this.configService.get('database.deletes.soft')) {
 			options.where.push({
@@ -608,6 +664,7 @@ export class GetController {
 
 			return res.status(200).send(result)
 		} catch (e) {
+			this.logger.error('[GET MANY] Error while fetching data:', e.message)
 			return res.status(400).send(this.response.text(e.message))
 		}
 	}

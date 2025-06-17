@@ -69,7 +69,7 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 			`[${DATABASE_TYPE}] MySQL connection pool initialized. Pool size ${poolSize}, idle timeout ${poolIdleTimeout}ms`,
 		)
 
-		if (!Env.IsTest()) {
+		if (Env.IsProd()) {
 			setInterval(() => {
 				this.logPoolStatistics()
 			}, 60000) // Log every minute
@@ -875,6 +875,20 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 		}
 
 		command += ` FROM ${table_name} `
+
+		if (options.relations?.length) {
+			for (const relation of options.relations) {
+				command += ` LEFT JOIN \`${relation.join.table}\` ON \`${relation.join.table}\`.\`${relation.join.column}\` = \`${relation.join.org_table}\`.\`${relation.join.org_column}\` `
+			}
+		}
+
+		if(options.relations?.length) {
+			for (const relation of options.relations) {
+				if(relation.where) {
+					options.where.push(relation.where)
+				}
+			}
+		}
 
 		if (options.where?.length) {
 			command += `WHERE `

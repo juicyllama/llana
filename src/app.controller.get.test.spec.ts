@@ -636,6 +636,7 @@ describe('App > Controller > Get', () => {
 	})
 
 	describe('Allowed Fields Results', () => {
+
 		it('As standard, all fields returned', async function () {
 			const result = await request(app.getHttpServer())
 				.get(`/Customer/${customer[customerSchema.primary_key]}`)
@@ -715,7 +716,6 @@ describe('App > Controller > Get', () => {
 					.get(`/Customer/${customer[customerSchema.primary_key]}`)
 					.set('Authorization', `Bearer ${jwt}`)
 					.expect(200)
-
 				expect(result.body).toBeDefined()
 				expect(result.body[customerSchema.primary_key]).toBeUndefined()
 				expect(result.body.companyName).toBeDefined()
@@ -900,7 +900,7 @@ describe('App > Controller > Get', () => {
 
 	afterAll(async () => {
 		for (const order of orders) {
-			// console.debug('delete order #' + order[salesOrderSchema.primary_key])
+			logger.verbose(`delete order #${order[salesOrderSchema.primary_key]}`)
 			await salesOrderTestingService.deleteOrder(order[salesOrderSchema.primary_key])
 		}
 		await customerTestingService.deleteCustomer(customer[customerSchema.primary_key])

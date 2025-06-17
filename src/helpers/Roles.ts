@@ -163,14 +163,57 @@ export class Roles {
 						CACHE_DEFAULT_IDENTITY_DATA_TTL,
 					)
 					return permission_result
-				} else if (
+				} else if (options.data && permission.identity_column.includes('.')) { 
+
+					try {
+						const table = permission.identity_column.split('.')[0]
+						const relation_schema = schema.relations?.find((r) => r.table === table)
+						const base_identity_column = relation_schema.table === options.table ? relation_schema.column : relation_schema.org_column
+
+						if (!base_identity_column) {
+							throw new Error(
+								`Identity Column not found for ${permission.identity_column} in ${options.table} schema`
+							)
+						}
+
+						if(!options.data[base_identity_column]) {
+							throw new Error(
+								`Identity Column ${base_identity_column} not found in data for ${options.table}`
+							)
+						}
+
+						if (options.data[base_identity_column] !== options.identifier) {
+							throw new Error(
+								`Identity Mismatch - You can only add ${options.table} records with your own ${base_identity_column} (${options.identifier}) but you are trying to add ${options.data[base_identity_column]}`
+							)
+						}
+					
+					}catch (e) {
+						permission_result = <AuthTablePermissionFailResponse>{
+							valid: false,
+							message: e.message,
+						}
+
+						await this.cacheManager.set(
+							`roles:${options.identifier}:${options.table}:${options.access}`,
+							permission_result,
+								CACHE_DEFAULT_IDENTITY_DATA_TTL,
+						)
+						return permission_result
+					}
+					
+
+				}
+				else if (
 					options.data &&
 					options.data[permission.identity_column ?? schema.primary_key] !== options.identifier
 				) {
+
 					permission_result = <AuthTablePermissionFailResponse>{
 						valid: false,
 						message: `Identity Mismatch - You can only add ${options.table} records with your own ${permission.identity_column ?? schema.primary_key} (${options.identifier}) but you are trying to add ${options.data[permission.identity_column ?? schema.primary_key]}`,
 					}
+					
 					await this.cacheManager.set(
 						`roles:${options.identifier}:${options.table}:${options.access}`,
 						permission_result,

@@ -154,7 +154,7 @@ export class PutController {
 
 		// If not public, perform auth
 		if (auth.user_identifier) {
-			const permission = await this.roles.tablePermission({
+			let permission = await this.roles.tablePermission({
 				identifier: auth.user_identifier,
 				table: table_name,
 				access: RolePermission.WRITE,
@@ -164,6 +164,25 @@ export class PutController {
 
 			if (!public_auth.valid && !permission.valid) {
 				return res.status(401).send(this.response.text((permission as AuthTablePermissionFailResponse).message))
+			}
+
+			permission = permission as AuthTablePermissionSuccessResponse
+
+			let permission_relations = []
+			const permission_where = [...where]
+
+			if (permission.valid && permission.restriction) {
+				if (permission.restriction.column.includes('.')) {
+						permission_relations = await this.schema.convertDeepWhere({
+							where: permission.restriction,
+							schema: schema,
+							x_request_id,
+						})
+					
+				} else {
+					permission_where.push(permission.restriction)
+				}
+
 			}
 
 			if (permission.valid && (permission as AuthTablePermissionSuccessResponse).allowed_fields?.length) {
@@ -176,6 +195,20 @@ export class PutController {
 					)
 				}
 			}
+
+			if (permission.valid && permission.restriction) {
+				await this.query.perform(
+					QueryPerform.FIND_ONE,
+					{
+						schema,
+						where: permission_where,
+						relations: permission_relations,
+					},
+					x_request_id,
+				)
+			}
+
+
 		}
 
 		try {

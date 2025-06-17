@@ -50,7 +50,7 @@ export class Schema {
 
 	async getSchema(options: { table: string; x_request_id?: string; fields?: string[] }): Promise<DataSourceSchema> {
 		if (!options.table) {
-			throw new Error('Table name not provided')
+			throw new Error('Table name not provided, did you forget to add the trailing slash?')
 		}
 
 		//check cache for schema
@@ -154,7 +154,7 @@ export class Schema {
 					}
 				}
 
-				throw new Error(`Error processing schema for ${options.table}`)
+				throw new Error(`Error processing schema for ${options.table}, does it exist?`)
 			}
 		}
 
@@ -423,7 +423,7 @@ export class Schema {
 				relations,
 			}
 		} catch (e) {
-			this.logger.debug(`[validateFields] ${e.message}`, options.x_request_id)
+			this.logger.error(`[validateFields] ${e.message}`, options.x_request_id)
 			return {
 				valid: false,
 				message: `Error parsing fields ${options.fields}`,
@@ -672,9 +672,9 @@ export class Schema {
 		let items = options.where.column.split('.')
 
 		for (let i = 0; i < items.length - 1; i++) {
-			if (!options.schema.relations.find(col => col.table === items[i])) {
+			if (!options.schema?.relations?.find(col => col.table === items[i])) {
 				this.logger.error(
-					`Relation ${items[i]} not found in schema for ${options.schema.table}`,
+					`Relation ${items[i]} not found in schema for ${options.schema?.table}`,
 					options.x_request_id,
 				)
 				this.logger.error(options)
@@ -688,7 +688,10 @@ export class Schema {
 				join: {
 					...options.schema.relations.find(col => col.table === items[i]),
 				},
-				where: i === items.length - 2 ? options.where : undefined,
+				where: i === items.length - 2 ? {
+					...options.where,
+					column: items[items.length - 2]+'.'+items[items.length - 1],
+				} : undefined,
 				schema: relation_schema,
 			}
 
