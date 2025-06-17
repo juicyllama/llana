@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post, Req, Res } from '@nestjs/common'
+import { Body, Controller, Headers, Post, Req, Res, Header } from '@nestjs/common'
 
 import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
@@ -33,6 +33,7 @@ export class PostController {
 	 * Create new record
 	 */
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Post('*/')
 	async create(
 		@Req() req,

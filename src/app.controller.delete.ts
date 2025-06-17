@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Headers, Param, Query as QueryParams, Req, Res } from '@nestjs/common'
+import { Body, Controller, Delete, Headers, Param, Query as QueryParams, Req, Res, Header } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { LLANA_WEBHOOK_TABLE } from './app.constants'
@@ -38,6 +38,7 @@ export class DeleteController {
 		private readonly webhook: Webhook,
 	) {}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Delete('*/:id')
 	async deleteById(
 		@Req() req,
@@ -165,6 +166,7 @@ export class DeleteController {
 		}
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Delete('*/')
 	async deleteMany(
 		@Req() req,

@@ -9,6 +9,7 @@ import {
 	Req,
 	Res,
 	UseGuards,
+	Header,
 } from '@nestjs/common'
 import { CookieOptions, Response as ExpressResponse } from 'express'
 
@@ -44,6 +45,7 @@ export class AuthController {
 	 */
 
 	@UseGuards(LocalAuthGuard)
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Post('/login')
 	async login(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: ExpressResponse): Promise<any> {
 		if (this.authentication.skipAuth()) {
@@ -60,6 +62,7 @@ export class AuthController {
 		})
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Post('refresh')
 	async refresh(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: ExpressResponse): Promise<any> {
 		const cookies = req.headers.cookie || ''
@@ -85,6 +88,7 @@ export class AuthController {
 		})
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Post('logout')
 	async logout(@Res({ passthrough: true }) res: ExpressResponse): Promise<any> {
 		res.clearCookie(ACCESS_TOKEN_COOKIE_NAME, getAuthCookieOpts(false))
@@ -98,6 +102,7 @@ export class AuthController {
 	 * Return the current user's profile, useful for testing the access token
 	 */
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Get('/profile')
 	async profile(
 		@Req() req,

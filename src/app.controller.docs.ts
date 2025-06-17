@@ -1,4 +1,4 @@
-import { Controller, Get, Res } from '@nestjs/common'
+import { Controller, Get, Res, Header } from '@nestjs/common'
 import * as fs from 'fs'
 
 import { version } from '../package.json'
@@ -10,6 +10,7 @@ import { RedocModule } from './utils/redoc/redoc'
 export class DocsController {
 	constructor(private readonly documentation: Documentation) {}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Get('/')
 	async index(@Res() res) {
 		if (this.documentation.skipDocs()) {
@@ -24,6 +25,7 @@ export class DocsController {
 		}
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Get('/openapi.json')
 	openapi(@Res() res): string {
 		if (this.documentation.skipDocs()) {
@@ -33,6 +35,7 @@ export class DocsController {
 		}
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Get('/favicon.ico')
 	fav(@Res() res): string {
 		return res.sendFile('favicon.ico', { root: 'public' })

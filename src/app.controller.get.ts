@@ -1,4 +1,4 @@
-import { Controller, Get, Headers, Param, ParseArrayPipe, Query as QueryParams, Req, Res } from '@nestjs/common'
+import { Controller, Get, Headers, Param, ParseArrayPipe, Query as QueryParams, Req, Res, Header } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { LLANA_WEBHOOK_TABLE } from './app.constants'
@@ -35,6 +35,7 @@ export class GetController {
 		private readonly schema: Schema,
 	) {}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Get('/tables')
 	async listTables(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DataSourceSchema> {
 		const x_request_id = headers['x-request-id']
@@ -56,6 +57,7 @@ export class GetController {
 		return res.status(200).send(await this.query.perform(QueryPerform.LIST_TABLES, undefined, x_request_id))
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Get('*/schema')
 	async getSchema(@Req() req, @Res() res, @Headers() headers: HeaderParams): Promise<DataSourceSchema> {
 		const x_request_id = headers['x-request-id']
@@ -133,6 +135,7 @@ export class GetController {
 		return res.status(200).send(schema)
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Get('*/:id')
 	async getById(
 		@Req() req,
@@ -360,6 +363,7 @@ export class GetController {
 		}
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Get('*/')
 	async list(
 		@Req() req,

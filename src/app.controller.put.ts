@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Param, Patch, Put, Req, Res } from '@nestjs/common'
+import { Body, Controller, Headers, Param, Patch, Put, Req, Res, Header } from '@nestjs/common'
 
 import { LLANA_WEBHOOK_TABLE } from './app.constants'
 import { HeaderParams } from './dtos/requests.dto'
@@ -29,6 +29,7 @@ export class PutController {
 		private readonly webhooks: Webhook,
 	) {}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Put('*/:id')
 	async updateById(
 		@Req() req,
@@ -203,6 +204,7 @@ export class PutController {
 		}
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Put('*/')
 	async updateMany(
 		@Req() req,
@@ -436,6 +438,7 @@ export class PutController {
 		} as UpdateManyResponseObject)
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Patch('*/:id')
 	async updateByIdPatch(
 		@Req() req,
@@ -447,6 +450,7 @@ export class PutController {
 		return await this.updateById(req, res, body, headers, id)
 	}
 
+	@Header('X-Robots-Tag', 'noindex, nofollow')
 	@Patch('*/')
 	async updateManyPatch(
 		@Req() req,
