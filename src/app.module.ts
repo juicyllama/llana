@@ -162,7 +162,8 @@ function createRedisCache() {
 })
 export class AppModule implements NestModule {
 	configure(consumer: MiddlewareConsumer) {
-		consumer.apply(HostCheckMiddleware, RequestPathLoggerMiddleware).forRoutes('*')
-		consumer.apply(RobotsMiddleware, RequestPathLoggerMiddleware).forRoutes('*')
+		consumer
+			.apply(HostCheckMiddleware, RequestPathLoggerMiddleware, RobotsMiddleware)
+			.forRoutes('*')
 	}
 }
