@@ -39,6 +39,7 @@ import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
+import { RobotsMiddleware } from './middleware/Robots'
 import { HostCheckMiddleware } from './middleware/HostCheck'
 import { RequestPathLoggerMiddleware } from './middleware/request-path-logger.middleware'
 import { REDIS_CACHE_TOKEN } from './modules/cache/dataCache.constants'
@@ -111,6 +112,7 @@ function createRedisCache() {
 		Postgres,
 		Query,
 		Response,
+		RobotsMiddleware,
 		Roles,
 		Schema,
 		TasksService,
@@ -150,6 +152,7 @@ function createRedisCache() {
 		Postgres,
 		Query,
 		Response,
+		RobotsMiddleware,
 		Roles,
 		Schema,
 		Webhook,
@@ -160,5 +163,6 @@ function createRedisCache() {
 export class AppModule implements NestModule {
 	configure(consumer: MiddlewareConsumer) {
 		consumer.apply(HostCheckMiddleware, RequestPathLoggerMiddleware).forRoutes('*')
+		consumer.apply(RobotsMiddleware, RequestPathLoggerMiddleware).forRoutes('*')
 	}
 }
