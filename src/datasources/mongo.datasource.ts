@@ -14,6 +14,7 @@ import { Pagination } from '../helpers/Pagination'
 import { DatabaseErrorType } from '../types/datasource.types'
 import {
 	DataSourceColumnType,
+	DataSourceCompositeUniqueConstraint,
 	DataSourceCreateOneOptions,
 	DataSourceDeleteOneOptions,
 	DataSourceFindManyOptions,
@@ -208,6 +209,7 @@ export class Mongo {
 				columns,
 				primary_key: columns.find(column => column.primary_key)?.field,
 				relations,
+				composite_unique_constraints: [], // MongoDB composite uniqueness handled through compound indexes
 			}
 
 			return schema
