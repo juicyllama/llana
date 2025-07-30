@@ -70,6 +70,8 @@ export function getDatabaseType(uri: string): DataSourceType {
 		return DataSourceType.MSSQL
 	} else if (uri.includes('airtable')) {
 		return DataSourceType.AIRTABLE
+	} else if (uri.includes('cassandra')) {
+		return DataSourceType.CASSANDRA
 	} else {
 		throw new Error('Database type not supported')
 	}

@@ -9,6 +9,7 @@ import { isDate, isObject } from 'lodash'
 import { CACHE_DEFAULT_TABLE_SCHEMA_TTL, NON_FIELD_PARAMS } from '../app.constants'
 import { classValidatorConfig } from '../config/class-validator.config'
 import { Airtable } from '../datasources/airtable.datasource'
+import { Cassandra } from '../datasources/cassandra.datasource'
 import { Mongo } from '../datasources/mongo.datasource'
 import { MSSQL } from '../datasources/mssql.datasource'
 import { MySQL } from '../datasources/mysql.datasource'
@@ -42,6 +43,7 @@ export class Schema {
 		private readonly mysql: MySQL,
 		private readonly mssql: MSSQL,
 		private readonly airtable: Airtable,
+		private readonly cassandra: Cassandra,
 	) {}
 
 	/**
@@ -87,6 +89,12 @@ export class Schema {
 						break
 					case DataSourceType.AIRTABLE:
 						result = await this.airtable.getSchema({
+							table: options.table,
+							x_request_id: options.x_request_id,
+						})
+						break
+					case DataSourceType.CASSANDRA:
+						result = await this.cassandra.getSchema({
 							table: options.table,
 							x_request_id: options.x_request_id,
 						})
