@@ -48,6 +48,7 @@
 		"test:postgresql": "export DATABASE_URI=postgresql://user:pass@localhost:5432/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"test:mongodb": "export DATABASE_URI=mongodb://user:pass@localhost:27017/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"test:mssql": "export DATABASE_URI=mssql://sa:S7!0nGpAw0rD@localhost:1433/llana && jest --bail --runInBand --detectOpenHandles --forceExit",
+		"test:cassandra": "export DATABASE_URI=cassandra://localhost:9042/llana?datacenter=datacenter1 && jest --bail --runInBand --detectOpenHandles --forceExit",
 		"seed:airtable": "ts-node ./demo/databases/airtable.ts"
 	},
 	"dependencies": {
@@ -61,12 +62,14 @@
 		"@nestjs/platform-socket.io": "^11.1.1",
 		"@nestjs/schedule": "^6.0.0",
 		"@nestjs/websockets": "^11.1.1",
+		"@types/cassandra-driver": "^4.1.1",
 		"@types/mssql": "^9.1.7",
 		"@types/pg": "^8.15.2",
 		"argon2": "^0.43.0",
 		"axios": "^1.9.0",
 		"bcrypt": "^6.0.0",
 		"cache-manager": "^6.4.3",
+		"cassandra-driver": "^4.8.0",
 		"class-transformer": "^0.5.1",
 		"class-validator": "^0.14.2",
 		"escape-html": "^1.0.3",

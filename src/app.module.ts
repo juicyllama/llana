@@ -24,6 +24,7 @@ import hosts from './config/hosts.config'
 import jwt from './config/jwt.config'
 import roles from './config/roles.config'
 import { Airtable } from './datasources/airtable.datasource'
+import { Cassandra } from './datasources/cassandra.datasource'
 import { Mongo } from './datasources/mongo.datasource'
 import { MSSQL } from './datasources/mssql.datasource'
 import { MySQL } from './datasources/mysql.datasource'
@@ -100,6 +101,7 @@ function createRedisCache() {
 		AppBootup,
 		AuthService,
 		Authentication,
+		Cassandra,
 		DataCacheService,
 		Documentation,
 		Encryption,
@@ -140,6 +142,7 @@ function createRedisCache() {
 		AppBootup,
 		AuthService,
 		Authentication,
+		Cassandra,
 		DataCacheService,
 		Documentation,
 		Encryption,
