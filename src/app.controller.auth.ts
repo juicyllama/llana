@@ -53,11 +53,11 @@ export class AuthController {
 		const { access_token } = await this.authService.login(req.user)
 		const refreshToken = await this.authService.createRefreshToken(req.user)
 		setAccessAndRefreshTokenCookies(res, access_token, refreshToken)
-		return res.status(200).json({
+		return {
 			access_token,
 			expires_in: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN) / 1000,
 			refresh_token_expires_in: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN) / 1000,
-		})
+		}
 	}
 
 	@Post('refresh')
@@ -68,7 +68,8 @@ export class AuthController {
 			.find(cookie => cookie.trim().startsWith(REFRESH_TOKEN_COOKIE_NAME + '='))
 			?.split('=')[1]
 		if (!oldRefreshToken) {
-			return res.status(401).send(this.response.text('No refresh token found'))
+			res.status(401)
+			return this.response.text('No refresh token found')
 		}
 		const loginPayload = this.authService.decodeRefreshToken(oldRefreshToken)
 		const { access_token: newAccessToken } = await this.authService.login(loginPayload)
@@ -78,11 +79,11 @@ export class AuthController {
 			sub: loginPayload.sub,
 			oldRefreshToken: '...' + oldRefreshToken.slice(-10),
 		})
-		return res.status(200).json({
+		return {
 			access_token: newAccessToken,
 			expires_in: convertJwtExpiryToMs(process.env.JWT_EXPIRES_IN) / 1000,
 			refresh_token_expires_in: convertJwtExpiryToMs(process.env.JWT_REFRESH_EXPIRES_IN) / 1000,
-		})
+		}
 	}
 
 	@Post('logout')
