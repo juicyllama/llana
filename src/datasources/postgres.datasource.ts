@@ -13,6 +13,7 @@ import { Pagination } from '../helpers/Pagination'
 import { DatabaseErrorType } from '../types/datasource.types'
 import {
 	DataSourceColumnType,
+	DataSourceCompositeUniqueConstraint,
 	DataSourceCreateOneOptions,
 	DataSourceDeleteOneOptions,
 	DataSourceFindManyOptions,
@@ -220,11 +221,35 @@ export class Postgres {
 
 		relations.push(...relations_back)
 
+		// Query for composite unique constraints
+		const composite_unique_query = `
+			SELECT
+				tc.constraint_name AS "constraint_name",
+				array_agg(kcu.column_name ORDER BY kcu.ordinal_position) AS "columns"
+			FROM information_schema.table_constraints AS tc
+			JOIN information_schema.key_column_usage AS kcu
+				ON tc.constraint_name = kcu.constraint_name
+			WHERE tc.table_name = '${options.table}'
+				AND tc.constraint_type = 'UNIQUE'
+			GROUP BY tc.constraint_name
+			HAVING COUNT(kcu.column_name) > 1;`
+
+		const composite_unique_result = await this.performQuery({
+			sql: composite_unique_query,
+			x_request_id: options.x_request_id,
+		})
+
+		const composite_unique_constraints = composite_unique_result.map((row: any) => ({
+			name: row.constraint_name,
+			columns: row.columns,
+		}))
+
 		return {
 			table: options.table,
 			columns,
 			primary_key: columns.find(column => column.primary_key)?.field,
 			relations,
+			composite_unique_constraints,
 		}
 	}
 
@@ -469,10 +494,6 @@ export class Postgres {
 
 			const uniqueColumns = options.schema.columns.filter(column => column.unique_key)
 
-			if (uniqueColumns.length === 0) {
-				return { valid: true }
-			}
-
 			for (const column of uniqueColumns) {
 				if (options.data[column.field] !== undefined) {
 					const command = `SELECT COUNT(*) as total FROM "${options.schema.table}" WHERE "${column.field}" = $1${excludeId}`
@@ -487,6 +508,44 @@ export class Postgres {
 							valid: false,
 							message: DatabaseErrorType.DUPLICATE_RECORD,
 							error: `Error inserting record as a duplicate already exists`,
+						}
+					}
+				}
+			}
+
+			// Check composite unique constraints
+			if (options.schema.composite_unique_constraints && options.schema.composite_unique_constraints.length > 0) {
+				for (const constraint of options.schema.composite_unique_constraints) {
+					// Check if all columns in the constraint have values in the data
+					const constraintColumns = constraint.columns.filter(col => options.data[col] !== undefined)
+
+					if (constraintColumns.length === constraint.columns.length) {
+						// Build WHERE clause for composite constraint
+						const whereConditions = constraintColumns.map((col, index) => `"${col}" = $${index + 1}`)
+						const whereClause = whereConditions.join(' AND ')
+
+						let finalExcludeId = ''
+						let finalExcludeValues = [...constraintColumns.map(col => options.data[col])]
+
+						if (options.id) {
+							finalExcludeId = ` AND "${options.schema.primary_key}" != $${constraintColumns.length + 1}`
+							finalExcludeValues.push(options.id)
+						}
+
+						const command = `SELECT COUNT(*) as total FROM "${options.schema.table}" WHERE ${whereClause}${finalExcludeId}`
+						const result = await this.performQuery({
+							sql: command,
+							values: finalExcludeValues,
+							x_request_id,
+						})
+
+						if (result[0].total > 0) {
+							const columnNames = constraint.columns.join(', ')
+							return {
+								valid: false,
+								message: DatabaseErrorType.DUPLICATE_RECORD,
+								error: `Record with ${columnNames} ${constraintColumns.map(col => options.data[col]).join(', ')} already exists`,
+							}
 						}
 					}
 				}
