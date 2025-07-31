@@ -99,6 +99,15 @@ describe('Cassandra Datasource', () => {
 			})
 		})
 
+		it('should handle hosts with individual ports', () => {
+			const uri = 'cassandra://host1:9043,host2:9044,host3/llana?datacenter=datacenter1'
+			const config = (cassandra as any).parseConnectionString(uri)
+
+			expect(config.contactPoints).toEqual(['host1:9043', 'host2:9044', 'host3:9043'])
+			expect(config.localDataCenter).toBe('datacenter1')
+			expect(config.keyspace).toBe('llana')
+		})
+
 		it('should use default values when not specified', () => {
 			const uri = 'cassandra://localhost/llana'
 			const config = (cassandra as any).parseConnectionString(uri)
@@ -229,13 +238,13 @@ describe('Cassandra Datasource', () => {
 			return cassandra.createTable(mockSchema, 'test').then(() => {
 				const tableCql = capturedCqls[0] // First CQL should be table creation
 				expect(tableCql).toContain('CREATE TABLE IF NOT EXISTS TestTable')
-				expect(tableCql).toContain('id UUID')
+				expect(tableCql).toContain('id INT')
 				expect(tableCql).toContain('name TEXT')
 				expect(tableCql).toContain('email TEXT')
 				expect(tableCql).toContain('PRIMARY KEY (id)')
 
-				// Check that index was created for email
-				expect(capturedCqls.length).toBeGreaterThan(1)
+				// Check that secondary index was created for email (unique_key: true)
+				expect(capturedCqls.length).toBe(2)
 				expect(capturedCqls[1]).toContain('CREATE INDEX IF NOT EXISTS TestTable_email_idx ON TestTable (email)')
 			})
 		})
@@ -304,7 +313,7 @@ describe('Cassandra Datasource', () => {
 
 			return cassandra.createTable(mockSchema, 'test').then(() => {
 				const tableCql = capturedCqls[0]
-				expect(tableCql).toContain('id UUID')
+				expect(tableCql).toContain('id INT')
 				expect(tableCql).toContain('name TEXT')
 				expect(tableCql).toContain('active BOOLEAN')
 				expect(tableCql).toContain('created_at TIMESTAMP')
@@ -376,14 +385,25 @@ describe('Cassandra Datasource', () => {
 			expect(result).toBe('TEXT')
 		})
 
-		it('should map NUMBER with primary_key to UUID', () => {
+		it('should map NUMBER with primary_key to INT by default', () => {
 			const column = { type: DataSourceColumnType.NUMBER, primary_key: true, auto_increment: false }
 			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
-			expect(result).toBe('UUID')
+			expect(result).toBe('INT')
 		})
 
-		it('should map NUMBER with auto_increment to UUID', () => {
+		it('should map NUMBER with auto_increment to INT by default', () => {
 			const column = { type: DataSourceColumnType.NUMBER, primary_key: false, auto_increment: true }
+			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
+			expect(result).toBe('INT')
+		})
+
+		it('should map NUMBER with explicit UUID type to UUID', () => {
+			const column = {
+				type: DataSourceColumnType.NUMBER,
+				primary_key: true,
+				auto_increment: false,
+				extra: { cassandra_type: 'uuid' }
+			}
 			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
 			expect(result).toBe('UUID')
 		})
@@ -611,7 +631,7 @@ describe('Cassandra Datasource', () => {
 			}
 
 			const testData = {
-				id: 'test-uuid',
+				id: require('crypto').randomUUID(),
 				email: 'test@example.com',
 				firstName: 'Test',
 				lastName: 'User',

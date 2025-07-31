@@ -1,3 +1,4 @@
+-- Note: For production use, consider NetworkTopologyStrategy with appropriate replication
 -- Create keyspace
 CREATE KEYSPACE IF NOT EXISTS llana
 WITH REPLICATION = {

@@ -393,7 +393,7 @@ export class Query {
 				result = await this.airtable.createOne(options, x_request_id)
 				break
 			case DataSourceType.CASSANDRA:
-				result = await this.cassandra.createOne(options)
+				result = await this.cassandra.createOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -432,7 +432,7 @@ export class Query {
 				result = await this.airtable.findOne(options, x_request_id)
 				break
 			case DataSourceType.CASSANDRA:
-				result = await this.cassandra.findOne(options)
+				result = await this.cassandra.findOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -475,7 +475,7 @@ export class Query {
 				result = await this.airtable.findMany(options, x_request_id)
 				break
 			case DataSourceType.CASSANDRA:
-				result = await this.cassandra.findMany(options)
+				result = await this.cassandra.findMany(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -514,7 +514,7 @@ export class Query {
 				result = await this.airtable.updateOne(options, x_request_id)
 				break
 			case DataSourceType.CASSANDRA:
-				result = await this.cassandra.updateOne(options)
+				result = await this.cassandra.updateOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -553,7 +553,7 @@ export class Query {
 				result = await this.airtable.deleteOne(options, x_request_id)
 				break
 			case DataSourceType.CASSANDRA:
-				result = await this.cassandra.deleteOne(options)
+				result = await this.cassandra.deleteOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -593,7 +593,7 @@ export class Query {
 				result = await this.airtable.uniqueCheck(options, x_request_id)
 				break
 			case DataSourceType.CASSANDRA:
-				result = await this.cassandra.isUnique(options)
+				result = await this.cassandra.isUnique(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -629,9 +629,8 @@ export class Query {
 			case DataSourceType.AIRTABLE:
 				return await this.airtable.truncate(table_name)
 			case DataSourceType.CASSANDRA:
-				// Note: Cassandra truncate is not implemented yet
-				this.logger.warn(`[Query] Cassandra truncate not implemented yet`)
-				return
+				this.logger.error(`[Query] Cassandra truncate not implemented yet`, x_request_id)
+				throw new Error('Truncate operation is not yet implemented for Cassandra')
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,

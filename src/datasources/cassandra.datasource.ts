@@ -76,20 +76,36 @@ export class Cassandra implements OnModuleInit, OnModuleDestroy {
 
 	private parseConnectionString(uri: string): CassandraConnectionConfig {
 		// Expected format: cassandra://username:password@host1,host2:port/keyspace?datacenter=dc1
-		const url = new URL(uri)
-		
-		const contactPoints = url.hostname.split(',').map(host => host.trim())
-		const port = url.port ? parseInt(url.port) : 9042
+		// For multiple hosts with individual ports, we need to parse manually
+		const url = new URL(uri.replace(/,.*?(?=\/|$)/, '')) // Parse with first host only for URL parsing
+
+		// Extract the full host part from the original URI
+		const hostMatch = uri.match(/\/\/(?:[^@]*@)?([^\/\?]+)/)
+		const hostPart = hostMatch ? hostMatch[1] : url.hostname
+
+		const defaultPort = url.port ? parseInt(url.port, 10) : 9042
+		const hostList = hostPart.split(',').map(host => host.trim())
+		const contactPoints: string[] = []
+
+		// Handle hosts that may have their own ports
+		for (const host of hostList) {
+			if (host.includes(':')) {
+				contactPoints.push(host)
+			} else {
+				contactPoints.push(`${host}:${defaultPort}`)
+			}
+		}
+
 		const keyspace = url.pathname.replace('/', '') || undefined
 		const localDataCenter = url.searchParams.get('datacenter') || 'datacenter1'
 
 		return {
-			contactPoints: contactPoints.map(host => `${host}:${port}`),
+			contactPoints,
 			localDataCenter,
 			keyspace,
 			username: url.username || undefined,
 			password: url.password || undefined,
-			port,
+			port: defaultPort,
 		}
 	}
 
@@ -300,7 +316,7 @@ export class Cassandra implements OnModuleInit, OnModuleDestroy {
 				}
 
 				// For non-primary key columns that need to be queryable, we'll create secondary indexes
-				if (!column.primary_key && (column.unique_key || column.field === 'email')) {
+				if (!column.primary_key && column.unique_key) {
 					secondaryIndexes.push(column.field)
 				}
 
@@ -360,9 +376,14 @@ export class Cassandra implements OnModuleInit, OnModuleDestroy {
 			case DataSourceColumnType.STRING:
 				return 'TEXT'
 			case DataSourceColumnType.NUMBER:
-				// For primary keys or auto-increment, use UUID
+				// For primary keys or auto-increment, check if UUID is explicitly required
 				if (column.primary_key || column.auto_increment) {
-					return 'UUID'
+					// Check if the column explicitly requires UUID
+					if (column.extra?.cassandra_type === 'uuid') {
+						return 'UUID'
+					}
+					// Otherwise use appropriate integer type
+					return column.extra?.size === 'big' ? 'BIGINT' : 'INT'
 				}
 				// For decimal numbers
 				if (column.extra && 'decimal' in column.extra && column.extra.decimal > 0) {
@@ -428,6 +449,11 @@ export class Cassandra implements OnModuleInit, OnModuleDestroy {
 							}
 							break
 						case WhereOperator.like:
+							// WARNING: Cassandra requires SASI/SAI indexes for LIKE; ensure they exist
+							this.logger.warn(
+								`[${DATABASE_TYPE}] LIKE query used on "${whereClause.column}" – verify SASI/SAI index`,
+								x_request_id,
+							)
 							whereConditions.push(`${whereClause.column} LIKE ?`)
 							params.push(`%${whereClause.value}%`)
 							break
@@ -513,6 +539,16 @@ export class Cassandra implements OnModuleInit, OnModuleDestroy {
 	async createOne(options: DataSourceCreateOneOptions, x_request_id?: string): Promise<FindOneResponseObject> {
 		try {
 			const tableName = options.schema.table
+			const primaryKeyColumn = options.schema.primary_key
+
+			// Generate UUID for primary key if not provided and column type is UUID
+			if (!options.data[primaryKeyColumn]) {
+				const pkColumnSchema = options.schema.columns.find(col => col.field === primaryKeyColumn)
+				if (pkColumnSchema && this.mapDataSourceTypeToCassandraType(pkColumnSchema) === 'UUID') {
+					options.data[primaryKeyColumn] = types.Uuid.random()
+				}
+			}
+
 			const fields = Object.keys(options.data)
 			const placeholders = fields.map(() => '?').join(', ')
 			const values = Object.values(options.data)
@@ -638,6 +674,11 @@ export class Cassandra implements OnModuleInit, OnModuleDestroy {
 		try {
 			// Warning: COUNT queries are expensive in Cassandra and should be avoided in production
 			this.logger.warn(`[${DATABASE_TYPE}] COUNT query executed - this is expensive in Cassandra`)
+
+			// Option to disable COUNT queries for performance
+			if (this.configService.get<boolean>('database.cassandra.disableCount')) {
+				return -1 // Return -1 to indicate count is not available
+			}
 
 			const tableName = options.schema.table
 			let cql = `SELECT COUNT(*) FROM ${tableName}`
