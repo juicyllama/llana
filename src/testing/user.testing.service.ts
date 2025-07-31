@@ -16,7 +16,6 @@ export class UserTestingService {
 	) {}
 
 	mockUser(props = {}): any {
-
 		userNumber++
 
 		return {

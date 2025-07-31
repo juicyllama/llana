@@ -208,6 +208,7 @@ export class Mongo {
 				columns,
 				primary_key: columns.find(column => column.primary_key)?.field,
 				relations,
+				composite_unique_constraints: [], // MongoDB composite uniqueness handled through compound indexes
 			}
 
 			return schema

@@ -210,6 +210,7 @@ export class Airtable {
 				columns,
 				primary_key: columns.find(column => column.primary_key)?.field,
 				relations,
+				composite_unique_constraints: [], // Airtable doesn't support composite unique constraints
 			}
 
 			return schema
@@ -896,8 +897,8 @@ export class Airtable {
 
 			for (const column of uniqueColumns) {
 				if (options.data[column.field] !== undefined) {
- const safeValue = String(options.data[column.field]).replace(/"/g, '""')  // Airtable escaping
- let filterByFormula = `{${column.field}} = "${safeValue}"`
+					const safeValue = String(options.data[column.field]).replace(/"/g, '""') // Airtable escaping
+					let filterByFormula = `{${column.field}} = "${safeValue}"`
 
 					if (options.id) {
 						filterByFormula = `AND(${filterByFormula}, RECORD_ID() != "${options.id}")`

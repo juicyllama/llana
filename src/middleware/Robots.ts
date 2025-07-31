@@ -5,6 +5,6 @@ import { NextFunction, Request, Response } from 'express'
 export class RobotsMiddleware implements NestMiddleware {
 	use(req: Request, res: Response, next: NextFunction) {
 		res.setHeader('X-Robots-Tag', 'noindex, nofollow')
-  		return next()
+		return next()
 	}
 }

@@ -88,6 +88,7 @@ export interface DataSourceSchema {
 	primary_key: string
 	columns: DataSourceSchemaColumn[]
 	relations?: DataSourceSchemaRelation[]
+	composite_unique_constraints?: DataSourceCompositeUniqueConstraint[]
 	_x_request_id?: string
 }
 
@@ -124,6 +125,11 @@ export interface DataSourceSchemaRelation {
 	column: string
 	org_table: string
 	org_column: string
+}
+
+export interface DataSourceCompositeUniqueConstraint {
+	name: string
+	columns: string[]
 }
 
 export interface DataSourceCreateOneOptions {

@@ -14,6 +14,7 @@ import { Pagination } from '../helpers/Pagination'
 import { DatabaseErrorType } from '../types/datasource.types'
 import {
 	DataSourceColumnType,
+	DataSourceCompositeUniqueConstraint,
 	DataSourceCreateOneOptions,
 	DataSourceDeleteOneOptions,
 	DataSourceFindManyOptions,
@@ -303,6 +304,53 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 				}
 			}
 
+			// Check composite unique constraints
+			if (options.schema.composite_unique_constraints && options.schema.composite_unique_constraints.length > 0) {
+				for (const constraint of options.schema.composite_unique_constraints) {
+					// Check if all columns in the constraint have values in the data
+					const constraintColumns = constraint.columns.filter(col => options.data[col] !== undefined)
+
+					if (constraintColumns.length === constraint.columns.length) {
+						// Build WHERE clause for composite constraint
+						const whereConditions = constraintColumns.map(col => `${col} = ?`)
+						const whereClause = whereConditions.join(' AND ')
+
+						let finalExcludeId = ''
+						let finalExcludeValues = [...constraintColumns.map(col => options.data[col])]
+
+						if (options.id) {
+							finalExcludeId = ` AND ${options.schema.primary_key} != ?`
+							finalExcludeValues.push(options.id)
+						}
+
+						const command = `SELECT COUNT(*) as total FROM ${options.schema.table} WHERE ${whereClause}${finalExcludeId}`
+						const result = await this.query({
+							sql: command,
+							values: finalExcludeValues,
+							x_request_id,
+						})
+
+						this.logger.debug(
+							`[${DATABASE_TYPE}] Composite uniqueness check for ${constraint.name}: ${JSON.stringify(result)}`,
+							x_request_id,
+						)
+
+						if (result[0].total > 0) {
+							const columnNames = constraint.columns.join(', ')
+							this.logger.debug(
+								`[${DATABASE_TYPE}] Composite duplicate detected for constraint ${constraint.name}`,
+								x_request_id,
+							)
+							return {
+								valid: false,
+								message: DatabaseErrorType.DUPLICATE_RECORD,
+								error: `Record with ${columnNames} ${constraintColumns.map(col => options.data[col]).join(', ')} already exists`,
+							}
+						}
+					}
+				}
+			}
+
 			this.logger.debug(`[${DATABASE_TYPE}] No duplicates found for ${options.schema.table}`, x_request_id)
 			return { valid: true }
 		} catch (e) {
@@ -399,11 +447,39 @@ export class MySQL implements OnModuleInit, OnModuleDestroy {
 
 		relations.push(...relations_back)
 
+		// Query for composite unique constraints
+		const composite_unique_query = `
+			SELECT
+				tc.CONSTRAINT_NAME as constraint_name,
+				GROUP_CONCAT(kcu.COLUMN_NAME ORDER BY kcu.ORDINAL_POSITION) as columns
+			FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+			JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+				ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+				AND tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA
+			WHERE tc.TABLE_NAME = '${options.table}'
+				AND tc.CONSTRAINT_TYPE = 'UNIQUE'
+				AND tc.TABLE_SCHEMA = DATABASE()
+			GROUP BY tc.CONSTRAINT_NAME
+			HAVING COUNT(kcu.COLUMN_NAME) > 1;`
+
+		const composite_unique_result = await this.query({
+			sql: composite_unique_query,
+			x_request_id: options.x_request_id,
+		})
+
+		const composite_unique_constraints: DataSourceCompositeUniqueConstraint[] = composite_unique_result.map(
+			(row: any) => ({
+				name: row.constraint_name,
+				columns: row.columns.split(','),
+			}),
+		)
+
 		return {
 			table: options.table,
 			columns,
 			primary_key: columns.find(column => column.primary_key)?.field,
 			relations,
+			composite_unique_constraints,
 		}
 	}
 

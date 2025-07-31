@@ -14,6 +14,7 @@ import { Pagination } from '../helpers/Pagination'
 import { DatabaseErrorType } from '../types/datasource.types'
 import {
 	DataSourceColumnType,
+	DataSourceCompositeUniqueConstraint,
 	DataSourceCreateOneOptions,
 	DataSourceDeleteOneOptions,
 	DataSourceFindManyOptions,
@@ -293,11 +294,39 @@ export class MSSQL {
 			relations.push(relation)
 		}
 
+		// Query for composite unique constraints
+		const composite_unique_query = `
+			SELECT
+				tc.CONSTRAINT_NAME as constraint_name,
+				STRING_AGG(ccu.COLUMN_NAME, ',') WITHIN GROUP (ORDER BY ccu.ORDINAL_POSITION) as columns
+			FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+			JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE ccu
+				ON tc.CONSTRAINT_NAME = ccu.CONSTRAINT_NAME
+			WHERE tc.TABLE_NAME = '${options.table}'
+				AND tc.CONSTRAINT_TYPE = 'UNIQUE'
+			GROUP BY tc.CONSTRAINT_NAME
+			HAVING COUNT(ccu.COLUMN_NAME) > 1;`
+
+		const composite_unique_result = (
+			await this.performQuery({
+				sql: composite_unique_query,
+				x_request_id: options.x_request_id,
+			})
+		).recordset
+
+		const composite_unique_constraints: DataSourceCompositeUniqueConstraint[] = composite_unique_result.map(
+			(row: any) => ({
+				name: row.constraint_name,
+				columns: row.columns.split(','),
+			}),
+		)
+
 		return {
 			table: options.table,
 			columns,
 			primary_key: columns.find(column => column.primary_key)?.field,
 			relations,
+			composite_unique_constraints,
 		}
 	}
 
@@ -338,7 +367,7 @@ export class MSSQL {
 			const schema_col = options.schema.columns.find(col => col.field === columns[c])
 
 			if (schema_col?.extra?.convert) {
- valuesString += `CAST(? AS ${schema_col.extra.convert}), `
+				valuesString += `CAST(? AS ${schema_col.extra.convert}), `
 			} else {
 				valuesString += `?, `
 			}
@@ -376,7 +405,6 @@ export class MSSQL {
 	 */
 
 	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
-
 		let [command, values] = this.find(options)
 
 		const results = (await this.performQuery({ sql: command, values, x_request_id })).recordset
@@ -478,7 +506,7 @@ export class MSSQL {
 			const schema_col = options.schema.columns.find(col => col.field === key)
 
 			if (schema_col?.extra?.convert) {
- command += `${key} = CAST(? AS ${schema_col.extra.convert}), `
+				command += `${key} = CAST(? AS ${schema_col.extra.convert}), `
 			} else {
 				command += `${key} = ?, `
 			}
@@ -621,10 +649,6 @@ export class MSSQL {
 
 			const uniqueColumns = options.schema.columns.filter(column => column.unique_key)
 
-			if (uniqueColumns.length === 0) {
-				return { valid: true }
-			}
-
 			for (const column of uniqueColumns) {
 				if (options.data[column.field] !== undefined) {
 					const command = `SELECT COUNT(*) as total FROM ${this.reserveWordFix(options.schema.table)} WHERE ${column.field} = ?${excludeId}`
@@ -639,6 +663,44 @@ export class MSSQL {
 							valid: false,
 							message: DatabaseErrorType.DUPLICATE_RECORD,
 							error: `Error inserting record as a duplicate already exists`,
+						}
+					}
+				}
+			}
+
+			// Check composite unique constraints
+			if (options.schema.composite_unique_constraints && options.schema.composite_unique_constraints.length > 0) {
+				for (const constraint of options.schema.composite_unique_constraints) {
+					// Check if all columns in the constraint have values in the data
+					const constraintColumns = constraint.columns.filter(col => options.data[col] !== undefined)
+
+					if (constraintColumns.length === constraint.columns.length) {
+						// Build WHERE clause for composite constraint
+						const whereConditions = constraintColumns.map(col => `${col} = ?`)
+						const whereClause = whereConditions.join(' AND ')
+
+						let finalExcludeId = ''
+						let finalExcludeValues = [...constraintColumns.map(col => options.data[col])]
+
+						if (options.id) {
+							finalExcludeId = ` AND ${options.schema.primary_key} != ?`
+							finalExcludeValues.push(options.id)
+						}
+
+						const command = `SELECT COUNT(*) as total FROM ${this.reserveWordFix(options.schema.table)} WHERE ${whereClause}${finalExcludeId}`
+						const result = await this.performQuery({
+							sql: command,
+							values: finalExcludeValues,
+							x_request_id,
+						})
+
+						if (result.recordset[0].total > 0) {
+							const columnNames = constraint.columns.join(', ')
+							return {
+								valid: false,
+								message: DatabaseErrorType.DUPLICATE_RECORD,
+								error: `Record with ${columnNames} ${constraintColumns.map(col => options.data[col]).join(', ')} already exists`,
+							}
 						}
 					}
 				}
@@ -799,7 +861,6 @@ export class MSSQL {
 						const placeholders = valueArray.map(() => `?`).join(',')
 						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders})`
 					} else {
-
 						// For other operators, we use the column directly
 						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? `?` : ''}`
 					}
