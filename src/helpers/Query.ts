@@ -362,9 +362,7 @@ export class Query {
 			case DataSourceType.AIRTABLE:
 				return await this.airtable.createTable(schema, x_request_id)
 			case DataSourceType.CASSANDRA:
-				// Note: Cassandra table creation is not implemented yet
-				this.logger.warn(`[Query] Cassandra table creation not implemented yet`)
-				return true
+				return await this.cassandra.createTable(schema, x_request_id)
 			default:
 				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)

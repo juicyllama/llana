@@ -273,6 +273,117 @@ export class Cassandra implements OnModuleInit, OnModuleDestroy {
 	}
 
 	/**
+	 * Create table from schema object
+	 */
+	async createTable(schema: DataSourceSchema, x_request_id?: string): Promise<boolean> {
+		try {
+			this.logger.debug(`[${DATABASE_TYPE}] Creating table ${schema.table}`, x_request_id)
+
+			// Check if table already exists
+			const tables = await this.listTables({ x_request_id })
+			if (tables.includes(schema.table)) {
+				this.logger.debug(`[${DATABASE_TYPE}] Table ${schema.table} already exists`, x_request_id)
+				return true
+			}
+
+			// Generate column definitions
+			const columnDefinitions: string[] = []
+			const secondaryIndexes: string[] = []
+			let primaryKeyColumn = schema.primary_key
+
+			for (const column of schema.columns) {
+				let columnDef = `${column.field} ${this.mapDataSourceTypeToCassandraType(column)}`
+
+				// Handle primary key - in Cassandra, we need to identify it for the PRIMARY KEY clause
+				if (column.primary_key) {
+					primaryKeyColumn = column.field
+				}
+
+				// For non-primary key columns that need to be queryable, we'll create secondary indexes
+				if (!column.primary_key && (column.unique_key || column.field === 'email')) {
+					secondaryIndexes.push(column.field)
+				}
+
+				columnDefinitions.push(columnDef)
+			}
+
+			// Build CREATE TABLE statement
+			let cql = `CREATE TABLE IF NOT EXISTS ${schema.table} (`
+			cql += columnDefinitions.join(', ')
+
+			// Add PRIMARY KEY clause
+			if (primaryKeyColumn) {
+				cql += `, PRIMARY KEY (${primaryKeyColumn})`
+			}
+
+			cql += ')'
+
+			// Execute table creation
+			await this.performQuery({
+				cql,
+				params: [],
+				x_request_id,
+			})
+
+			this.logger.debug(`[${DATABASE_TYPE}] Table ${schema.table} created successfully`, x_request_id)
+
+			// Create secondary indexes for queryable columns
+			for (const indexColumn of secondaryIndexes) {
+				const indexName = `${schema.table}_${indexColumn}_idx`
+				const indexCql = `CREATE INDEX IF NOT EXISTS ${indexName} ON ${schema.table} (${indexColumn})`
+
+				try {
+					await this.performQuery({
+						cql: indexCql,
+						params: [],
+						x_request_id,
+					})
+					this.logger.debug(`[${DATABASE_TYPE}] Index ${indexName} created successfully`, x_request_id)
+				} catch (indexError) {
+					this.logger.warn(`[${DATABASE_TYPE}] Failed to create index ${indexName}: ${indexError.message}`, x_request_id)
+					// Don't fail table creation if index creation fails
+				}
+			}
+
+			return true
+		} catch (e) {
+			this.logger.error(`[${DATABASE_TYPE}] Error creating table ${schema.table}: ${e.message}`, x_request_id)
+			return false
+		}
+	}
+
+	/**
+	 * Map DataSource column type to Cassandra CQL type
+	 */
+	private mapDataSourceTypeToCassandraType(column: DataSourceSchemaColumn): string {
+		switch (column.type) {
+			case DataSourceColumnType.STRING:
+				return 'TEXT'
+			case DataSourceColumnType.NUMBER:
+				// For primary keys or auto-increment, use UUID
+				if (column.primary_key || column.auto_increment) {
+					return 'UUID'
+				}
+				// For decimal numbers
+				if (column.extra && 'decimal' in column.extra && column.extra.decimal > 0) {
+					return 'DECIMAL'
+				}
+				// Default to INT for whole numbers
+				return 'INT'
+			case DataSourceColumnType.BOOLEAN:
+				return 'BOOLEAN'
+			case DataSourceColumnType.DATE:
+				return 'TIMESTAMP'
+			case DataSourceColumnType.JSON:
+				return 'TEXT' // Store JSON as text in Cassandra
+			case DataSourceColumnType.ENUM:
+				return 'TEXT' // Store enums as text in Cassandra
+			default:
+				return 'TEXT'
+		}
+	}
+
+	/**
 	 * Find Many Records
 	 */
 	async findMany(options: DataSourceFindManyOptions, x_request_id?: string): Promise<FindManyResponseObject> {

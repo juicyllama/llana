@@ -178,6 +178,258 @@ describe('Cassandra Datasource', () => {
 		})
 	})
 
+	describe('createTable', () => {
+		it('should generate correct CQL for basic table creation', () => {
+			const mockSchema = {
+				table: 'TestTable',
+				primary_key: 'id',
+				columns: [
+					{
+						field: 'id',
+						type: DataSourceColumnType.NUMBER,
+						primary_key: true,
+						nullable: false,
+						required: true,
+						unique_key: false,
+						foreign_key: false,
+						auto_increment: true,
+					},
+					{
+						field: 'name',
+						type: DataSourceColumnType.STRING,
+						primary_key: false,
+						nullable: false,
+						required: true,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'email',
+						type: DataSourceColumnType.STRING,
+						primary_key: false,
+						nullable: false,
+						required: true,
+						unique_key: true,
+						foreign_key: false,
+					},
+				],
+				relations: [],
+			}
+
+			// Mock the performQuery method to capture the CQL
+			let capturedCqls: string[] = []
+			jest.spyOn(cassandra as any, 'performQuery').mockImplementation(async ({ cql }) => {
+				capturedCqls.push(cql)
+				return []
+			})
+
+			// Mock listTables to return empty array (table doesn't exist)
+			jest.spyOn(cassandra, 'listTables').mockResolvedValue([])
+
+			return cassandra.createTable(mockSchema, 'test').then(() => {
+				const tableCql = capturedCqls[0] // First CQL should be table creation
+				expect(tableCql).toContain('CREATE TABLE IF NOT EXISTS TestTable')
+				expect(tableCql).toContain('id UUID')
+				expect(tableCql).toContain('name TEXT')
+				expect(tableCql).toContain('email TEXT')
+				expect(tableCql).toContain('PRIMARY KEY (id)')
+
+				// Check that index was created for email
+				expect(capturedCqls.length).toBeGreaterThan(1)
+				expect(capturedCqls[1]).toContain('CREATE INDEX IF NOT EXISTS TestTable_email_idx ON TestTable (email)')
+			})
+		})
+
+		it('should handle different data types correctly', () => {
+			const mockSchema = {
+				table: 'TypeTestTable',
+				primary_key: 'id',
+				columns: [
+					{
+						field: 'id',
+						type: DataSourceColumnType.NUMBER,
+						primary_key: true,
+						nullable: false,
+						required: true,
+						unique_key: false,
+						foreign_key: false,
+						auto_increment: true,
+					},
+					{
+						field: 'name',
+						type: DataSourceColumnType.STRING,
+						primary_key: false,
+						nullable: false,
+						required: true,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'active',
+						type: DataSourceColumnType.BOOLEAN,
+						primary_key: false,
+						nullable: true,
+						required: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'created_at',
+						type: DataSourceColumnType.DATE,
+						primary_key: false,
+						nullable: true,
+						required: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'metadata',
+						type: DataSourceColumnType.JSON,
+						primary_key: false,
+						nullable: true,
+						required: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+				],
+				relations: [],
+			}
+
+			let capturedCqls: string[] = []
+			jest.spyOn(cassandra as any, 'performQuery').mockImplementation(async ({ cql }) => {
+				capturedCqls.push(cql)
+				return []
+			})
+			jest.spyOn(cassandra, 'listTables').mockResolvedValue([])
+
+			return cassandra.createTable(mockSchema, 'test').then(() => {
+				const tableCql = capturedCqls[0]
+				expect(tableCql).toContain('id UUID')
+				expect(tableCql).toContain('name TEXT')
+				expect(tableCql).toContain('active BOOLEAN')
+				expect(tableCql).toContain('created_at TIMESTAMP')
+				expect(tableCql).toContain('metadata TEXT')
+			})
+		})
+
+		it('should skip table creation if table already exists', async () => {
+			const mockSchema = {
+				table: 'ExistingTable',
+				primary_key: 'id',
+				columns: [
+					{
+						field: 'id',
+						type: DataSourceColumnType.NUMBER,
+						primary_key: true,
+						nullable: false,
+						required: true,
+						unique_key: false,
+						foreign_key: false,
+						auto_increment: true,
+					},
+				],
+				relations: [],
+			}
+
+			// Mock listTables to return the table as existing
+			jest.spyOn(cassandra, 'listTables').mockResolvedValue(['ExistingTable'])
+			const performQuerySpy = jest.spyOn(cassandra as any, 'performQuery')
+
+			const result = await cassandra.createTable(mockSchema, 'test')
+
+			expect(result).toBe(true)
+			expect(performQuerySpy).not.toHaveBeenCalled()
+		})
+
+		it('should handle errors gracefully', async () => {
+			const mockSchema = {
+				table: 'ErrorTable',
+				primary_key: 'id',
+				columns: [
+					{
+						field: 'id',
+						type: DataSourceColumnType.NUMBER,
+						primary_key: true,
+						nullable: false,
+						required: true,
+						unique_key: false,
+						foreign_key: false,
+						auto_increment: true,
+					},
+				],
+				relations: [],
+			}
+
+			jest.spyOn(cassandra, 'listTables').mockResolvedValue([])
+			jest.spyOn(cassandra as any, 'performQuery').mockRejectedValue(new Error('Database error'))
+
+			const result = await cassandra.createTable(mockSchema, 'test')
+
+			expect(result).toBe(false)
+		})
+	})
+
+	describe('mapDataSourceTypeToCassandraType', () => {
+		it('should map STRING to TEXT', () => {
+			const column = { type: DataSourceColumnType.STRING, primary_key: false, auto_increment: false }
+			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
+			expect(result).toBe('TEXT')
+		})
+
+		it('should map NUMBER with primary_key to UUID', () => {
+			const column = { type: DataSourceColumnType.NUMBER, primary_key: true, auto_increment: false }
+			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
+			expect(result).toBe('UUID')
+		})
+
+		it('should map NUMBER with auto_increment to UUID', () => {
+			const column = { type: DataSourceColumnType.NUMBER, primary_key: false, auto_increment: true }
+			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
+			expect(result).toBe('UUID')
+		})
+
+		it('should map NUMBER with decimal to DECIMAL', () => {
+			const column = {
+				type: DataSourceColumnType.NUMBER,
+				primary_key: false,
+				auto_increment: false,
+				extra: { decimal: 2 }
+			}
+			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
+			expect(result).toBe('DECIMAL')
+		})
+
+		it('should map regular NUMBER to INT', () => {
+			const column = { type: DataSourceColumnType.NUMBER, primary_key: false, auto_increment: false }
+			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
+			expect(result).toBe('INT')
+		})
+
+		it('should map BOOLEAN to BOOLEAN', () => {
+			const column = { type: DataSourceColumnType.BOOLEAN, primary_key: false, auto_increment: false }
+			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
+			expect(result).toBe('BOOLEAN')
+		})
+
+		it('should map DATE to TIMESTAMP', () => {
+			const column = { type: DataSourceColumnType.DATE, primary_key: false, auto_increment: false }
+			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
+			expect(result).toBe('TIMESTAMP')
+		})
+
+		it('should map JSON to TEXT', () => {
+			const column = { type: DataSourceColumnType.JSON, primary_key: false, auto_increment: false }
+			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
+			expect(result).toBe('TEXT')
+		})
+
+		it('should map ENUM to TEXT', () => {
+			const column = { type: DataSourceColumnType.ENUM, primary_key: false, auto_increment: false }
+			const result = (cassandra as any).mapDataSourceTypeToCassandraType(column)
+			expect(result).toBe('TEXT')
+		})
+	})
+
 	describe('Integration Tests', () => {
 		// Note: These tests would require a running Cassandra instance
 		// They are skipped by default but can be enabled for integration testing
@@ -197,6 +449,157 @@ describe('Cassandra Datasource', () => {
 			expect(schema).toBeDefined()
 			expect(schema.table).toBe('User')
 			expect(Array.isArray(schema.columns)).toBe(true)
+		})
+
+		it.skip('should create table successfully', async () => {
+			const testSchema = {
+				table: 'TestCreateTable',
+				primary_key: 'id',
+				columns: [
+					{
+						field: 'id',
+						type: DataSourceColumnType.NUMBER,
+						primary_key: true,
+						nullable: false,
+						required: true,
+						unique_key: false,
+						foreign_key: false,
+						auto_increment: true,
+					},
+					{
+						field: 'name',
+						type: DataSourceColumnType.STRING,
+						primary_key: false,
+						nullable: false,
+						required: true,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'email',
+						type: DataSourceColumnType.STRING,
+						primary_key: false,
+						nullable: false,
+						required: true,
+						unique_key: true,
+						foreign_key: false,
+					},
+				],
+				relations: [],
+			}
+
+			const result = await cassandra.createTable(testSchema, 'test')
+			expect(result).toBe(true)
+
+			// Verify table was created
+			const tables = await cassandra.listTables({ x_request_id: 'test' })
+			expect(tables).toContain('TestCreateTable')
+
+			// Verify schema
+			const schema = await cassandra.getSchema({ table: 'TestCreateTable', x_request_id: 'test' })
+			expect(schema.table).toBe('TestCreateTable')
+			expect(schema.columns.length).toBeGreaterThan(0)
+		})
+
+		it.skip('should create system tables successfully', async () => {
+			// Test creating a User table similar to what Llana creates
+			const userSchema = {
+				table: 'TestUser',
+				primary_key: 'id',
+				columns: [
+					{
+						field: 'id',
+						type: DataSourceColumnType.NUMBER,
+						primary_key: true,
+						nullable: false,
+						required: true,
+						unique_key: true,
+						foreign_key: false,
+						auto_increment: true,
+					},
+					{
+						field: 'email',
+						type: DataSourceColumnType.STRING,
+						primary_key: false,
+						nullable: false,
+						required: true,
+						unique_key: true,
+						foreign_key: false,
+					},
+					{
+						field: 'password',
+						type: DataSourceColumnType.STRING,
+						primary_key: false,
+						nullable: false,
+						required: true,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'role',
+						type: DataSourceColumnType.ENUM,
+						primary_key: false,
+						nullable: false,
+						required: true,
+						unique_key: false,
+						foreign_key: false,
+						enums: ['ADMIN', 'USER'],
+					},
+					{
+						field: 'firstName',
+						type: DataSourceColumnType.STRING,
+						primary_key: false,
+						nullable: true,
+						required: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'lastName',
+						type: DataSourceColumnType.STRING,
+						primary_key: false,
+						nullable: true,
+						required: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'createdAt',
+						type: DataSourceColumnType.DATE,
+						primary_key: false,
+						nullable: true,
+						required: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'updatedAt',
+						type: DataSourceColumnType.DATE,
+						primary_key: false,
+						nullable: true,
+						required: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+					{
+						field: 'deletedAt',
+						type: DataSourceColumnType.DATE,
+						primary_key: false,
+						nullable: true,
+						required: false,
+						unique_key: false,
+						foreign_key: false,
+					},
+				],
+				relations: [],
+			}
+
+			const result = await cassandra.createTable(userSchema, 'test')
+			expect(result).toBe(true)
+
+			// Verify table was created
+			const tables = await cassandra.listTables({ x_request_id: 'test' })
+			expect(tables).toContain('TestUser')
 		})
 
 		it.skip('should perform CRUD operations', async () => {
