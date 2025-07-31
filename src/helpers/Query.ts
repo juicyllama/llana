@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import { Airtable } from '../datasources/airtable.datasource'
+import { Cassandra } from '../datasources/cassandra.datasource'
 import { Mongo } from '../datasources/mongo.datasource'
 import { MSSQL } from '../datasources/mssql.datasource'
 import { MySQL } from '../datasources/mysql.datasource'
@@ -48,6 +49,7 @@ export class Query {
 		private readonly postgres: Postgres,
 		private readonly mongo: Mongo,
 		private readonly airtable: Airtable,
+		private readonly cassandra: Cassandra,
 		private readonly circuitBreaker: CircuitBreaker,
 	) {}
 
@@ -359,6 +361,8 @@ export class Query {
 				return await this.mssql.createTable(schema, x_request_id)
 			case DataSourceType.AIRTABLE:
 				return await this.airtable.createTable(schema, x_request_id)
+			case DataSourceType.CASSANDRA:
+				return await this.cassandra.createTable(schema, x_request_id)
 			default:
 				this.logger.error(`Database type ${this.configService.get<string>('database.type')} not supported yet`)
 				throw new Error(`Database type ${this.configService.get<string>('database.type')} not supported`)
@@ -387,6 +391,9 @@ export class Query {
 				break
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.createOne(options, x_request_id)
+				break
+			case DataSourceType.CASSANDRA:
+				result = await this.cassandra.createOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -423,6 +430,9 @@ export class Query {
 				break
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.findOne(options, x_request_id)
+				break
+			case DataSourceType.CASSANDRA:
+				result = await this.cassandra.findOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -464,6 +474,9 @@ export class Query {
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.findMany(options, x_request_id)
 				break
+			case DataSourceType.CASSANDRA:
+				result = await this.cassandra.findMany(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -500,6 +513,9 @@ export class Query {
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.updateOne(options, x_request_id)
 				break
+			case DataSourceType.CASSANDRA:
+				result = await this.cassandra.updateOne(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
@@ -535,6 +551,9 @@ export class Query {
 				break
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.deleteOne(options, x_request_id)
+				break
+			case DataSourceType.CASSANDRA:
+				result = await this.cassandra.deleteOne(options, x_request_id)
 				break
 			default:
 				this.logger.error(
@@ -573,6 +592,9 @@ export class Query {
 			case DataSourceType.AIRTABLE:
 				result = await this.airtable.uniqueCheck(options, x_request_id)
 				break
+			case DataSourceType.CASSANDRA:
+				result = await this.cassandra.isUnique(options, x_request_id)
+				break
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported ${x_request_id ?? ''}`,
@@ -606,6 +628,9 @@ export class Query {
 				return await this.mssql.truncate(table_name)
 			case DataSourceType.AIRTABLE:
 				return await this.airtable.truncate(table_name)
+			case DataSourceType.CASSANDRA:
+				this.logger.error(`[Query] Cassandra truncate not implemented yet`, x_request_id)
+				throw new Error('Truncate operation is not yet implemented for Cassandra')
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${x_request_id ?? ''}`,
@@ -652,6 +677,8 @@ export class Query {
 				return await this.mssql.checkConnection({ x_request_id: options.x_request_id })
 			case DataSourceType.AIRTABLE:
 				return await this.airtable.checkConnection({ x_request_id: options.x_request_id })
+			case DataSourceType.CASSANDRA:
+				return await this.cassandra.checkConnection({ x_request_id: options.x_request_id })
 			default:
 				this.logger.error(
 					`[Query] Database type ${this.configService.get<string>('database.type')} not supported yet ${options.x_request_id ?? ''}`,
@@ -685,6 +712,9 @@ export class Query {
 				break
 			case DataSourceType.AIRTABLE:
 				tables = await this.airtable.listTables({ x_request_id })
+				break
+			case DataSourceType.CASSANDRA:
+				tables = await this.cassandra.listTables({ x_request_id })
 				break
 			default:
 				this.logger.error(

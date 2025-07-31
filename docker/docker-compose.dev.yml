@@ -18,6 +18,9 @@ volumes:
     llana-mssql-data:
         name: llana-mssql-data
         driver: local
+    llana-cassandra-data:
+        name: llana-cassandra-data
+        driver: local
     llana-redis-cache: #To be used for caching not as a data source
         name: llana-redis-cache
         driver: local
@@ -128,6 +131,31 @@ services:
                 echo "Script Execution is complete. Waiting for MS SQL Process to terminate 🎉"
 
                 wait $$pid
+
+    llana-cassandra:
+        image: cassandra:5.0
+        restart: always
+        container_name: llana-cassandra
+        ports:
+            - '9042:9042'
+            - '7199:7199'
+        environment:
+            CASSANDRA_CLUSTER_NAME: 'llana-cluster'
+            CASSANDRA_DC: 'datacenter1'
+            CASSANDRA_RACK: 'rack1'
+            CASSANDRA_ENDPOINT_SNITCH: 'GossipingPropertyFileSnitch'
+            CASSANDRA_NUM_TOKENS: '128'
+        volumes:
+            - llana-cassandra-data:/var/lib/cassandra
+            - ../demo/databases/cassandra.cql:/docker-entrypoint-initdb.d/init.cql
+        networks:
+            - llana-network
+        healthcheck:
+            test: ["CMD-SHELL", "cqlsh -e 'describe cluster'"]
+            interval: 30s
+            timeout: 10s
+            retries: 10
+            start_period: 60s
 
     llana-redis-cache:
         image: redis

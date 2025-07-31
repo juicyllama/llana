@@ -6,6 +6,7 @@ export enum DataSourceType {
 	MONGODB = 'mongodb',
 	MSSQL = 'mssql',
 	AIRTABLE = 'airtable',
+	CASSANDRA = 'cassandra',
 }
 
 export enum DataSourceNaming {
