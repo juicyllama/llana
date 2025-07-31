@@ -13,7 +13,6 @@ import { Pagination } from '../helpers/Pagination'
 import { DatabaseErrorType } from '../types/datasource.types'
 import {
 	DataSourceColumnType,
-	DataSourceCompositeUniqueConstraint,
 	DataSourceCreateOneOptions,
 	DataSourceDeleteOneOptions,
 	DataSourceFindManyOptions,
@@ -898,8 +897,8 @@ export class Airtable {
 
 			for (const column of uniqueColumns) {
 				if (options.data[column.field] !== undefined) {
- const safeValue = String(options.data[column.field]).replace(/"/g, '""')  // Airtable escaping
- let filterByFormula = `{${column.field}} = "${safeValue}"`
+					const safeValue = String(options.data[column.field]).replace(/"/g, '""') // Airtable escaping
+					let filterByFormula = `{${column.field}} = "${safeValue}"`
 
 					if (options.id) {
 						filterByFormula = `AND(${filterByFormula}, RECORD_ID() != "${options.id}")`

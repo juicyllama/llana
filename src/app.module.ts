@@ -39,9 +39,9 @@ import { Response } from './helpers/Response'
 import { Roles } from './helpers/Roles'
 import { Schema } from './helpers/Schema'
 import { Webhook } from './helpers/Webhook'
-import { RobotsMiddleware } from './middleware/Robots'
 import { HostCheckMiddleware } from './middleware/HostCheck'
 import { RequestPathLoggerMiddleware } from './middleware/request-path-logger.middleware'
+import { RobotsMiddleware } from './middleware/Robots'
 import { REDIS_CACHE_TOKEN } from './modules/cache/dataCache.constants'
 import { DataCacheService } from './modules/cache/dataCache.service'
 import { RedisMockWithPubSub } from './modules/websocket/redis-mock-with-pub-sub'
@@ -162,8 +162,6 @@ function createRedisCache() {
 })
 export class AppModule implements NestModule {
 	configure(consumer: MiddlewareConsumer) {
-		consumer
-			.apply(HostCheckMiddleware, RequestPathLoggerMiddleware, RobotsMiddleware)
-			.forRoutes('*')
+		consumer.apply(HostCheckMiddleware, RequestPathLoggerMiddleware, RobotsMiddleware).forRoutes('*')
 	}
 }

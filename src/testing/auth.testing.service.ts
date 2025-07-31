@@ -4,7 +4,6 @@ import { Auth, AuthJWT, AuthType } from 'src/types/auth.types'
 
 import { LLANA_PUBLIC_TABLES, LLANA_ROLES_TABLE } from '../app.constants'
 import { AuthService } from '../app.service.auth'
-import { UserTestingService } from './user.testing.service'
 import { FindOneResponseObject } from '../dtos/response.dto'
 import { Query } from '../helpers/Query'
 import { Schema } from '../helpers/Schema'
@@ -16,6 +15,7 @@ import {
 	WhereOperator,
 } from '../types/datasource.types'
 import { RolePermission } from '../types/roles.types'
+import { UserTestingService } from './user.testing.service'
 
 @Injectable()
 export class AuthTestingService {
@@ -64,7 +64,7 @@ export class AuthTestingService {
 			schema,
 			where,
 		})
-		
+
 		if (!user) {
 			if (process.env.NODE_ENV === 'test') {
 				console.warn(`[Test Environment] User not found for ${username}, using mock user`)
@@ -73,7 +73,7 @@ export class AuthTestingService {
 			}
 			throw new Error(`User not found for ${username}`)
 		}
-		
+
 		return [user, user[schema.primary_key]]
 	}
 

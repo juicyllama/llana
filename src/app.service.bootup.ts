@@ -150,16 +150,16 @@ export class AppBootup implements OnApplicationBootstrap {
 			}
 
 			if (this.configService.get<string>('SOFT_DELETE_COLUMN')) {
-					schema.columns.push({
-						field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
-						type: DataSourceColumnType.STRING,
-						nullable: true,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: null,
-					})
+				schema.columns.push({
+					field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
+					type: DataSourceColumnType.STRING,
+					nullable: true,
+					required: false,
+					primary_key: false,
+					unique_key: false,
+					foreign_key: false,
+					default: null,
+				})
 			}
 
 			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
@@ -297,17 +297,17 @@ export class AppBootup implements OnApplicationBootstrap {
 			}
 
 			if (this.configService.get<string>('SOFT_DELETE_COLUMN')) {
-					schema.columns.push({
-						field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
-						type: DataSourceColumnType.STRING,
-						nullable: true,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: null,
-					})
-				}
+				schema.columns.push({
+					field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
+					type: DataSourceColumnType.STRING,
+					nullable: true,
+					required: false,
+					primary_key: false,
+					unique_key: false,
+					foreign_key: false,
+					default: null,
+				})
+			}
 
 			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
@@ -434,17 +434,17 @@ export class AppBootup implements OnApplicationBootstrap {
 			}
 
 			if (this.configService.get<string>('SOFT_DELETE_COLUMN')) {
-					schema.columns.push({
-						field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
-						type: DataSourceColumnType.STRING,
-						nullable: true,
-						required: false,
-						primary_key: false,
-						unique_key: false,
-						foreign_key: false,
-						default: null,
-					})
-				}
+				schema.columns.push({
+					field: this.configService.get<string>('SOFT_DELETE_COLUMN'),
+					type: DataSourceColumnType.STRING,
+					nullable: true,
+					required: false,
+					primary_key: false,
+					unique_key: false,
+					foreign_key: false,
+					default: null,
+				})
+			}
 
 			const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
 
@@ -902,13 +902,16 @@ export class AppBootup implements OnApplicationBootstrap {
 
 				try {
 					const created = await this.query.perform(QueryPerform.CREATE_TABLE, { schema }, APP_BOOT_CONTEXT)
-					
+
 					if (!created && process.env.NODE_ENV !== 'test') {
 						throw new Error('Failed to create _llana_webhook_log table')
 					}
 				} catch (e) {
 					if (process.env.NODE_ENV === 'test') {
-						this.logger.warn(`Skipping webhook log table creation in test environment: ${e.message}`, APP_BOOT_CONTEXT)
+						this.logger.warn(
+							`Skipping webhook log table creation in test environment: ${e.message}`,
+							APP_BOOT_CONTEXT,
+						)
 					} else {
 						throw e
 					}

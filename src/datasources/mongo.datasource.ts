@@ -14,7 +14,6 @@ import { Pagination } from '../helpers/Pagination'
 import { DatabaseErrorType } from '../types/datasource.types'
 import {
 	DataSourceColumnType,
-	DataSourceCompositeUniqueConstraint,
 	DataSourceCreateOneOptions,
 	DataSourceDeleteOneOptions,
 	DataSourceFindManyOptions,

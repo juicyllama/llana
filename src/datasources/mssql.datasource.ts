@@ -314,10 +314,12 @@ export class MSSQL {
 			})
 		).recordset
 
-		const composite_unique_constraints = composite_unique_result.map((row: any) => ({
-			name: row.constraint_name,
-			columns: row.columns.split(','),
-		}))
+		const composite_unique_constraints: DataSourceCompositeUniqueConstraint[] = composite_unique_result.map(
+			(row: any) => ({
+				name: row.constraint_name,
+				columns: row.columns.split(','),
+			}),
+		)
 
 		return {
 			table: options.table,
@@ -365,7 +367,7 @@ export class MSSQL {
 			const schema_col = options.schema.columns.find(col => col.field === columns[c])
 
 			if (schema_col?.extra?.convert) {
- valuesString += `CAST(? AS ${schema_col.extra.convert}), `
+				valuesString += `CAST(? AS ${schema_col.extra.convert}), `
 			} else {
 				valuesString += `?, `
 			}
@@ -403,7 +405,6 @@ export class MSSQL {
 	 */
 
 	async findOne(options: DataSourceFindOneOptions, x_request_id: string): Promise<FindOneResponseObject | undefined> {
-
 		let [command, values] = this.find(options)
 
 		const results = (await this.performQuery({ sql: command, values, x_request_id })).recordset
@@ -505,7 +506,7 @@ export class MSSQL {
 			const schema_col = options.schema.columns.find(col => col.field === key)
 
 			if (schema_col?.extra?.convert) {
- command += `${key} = CAST(? AS ${schema_col.extra.convert}), `
+				command += `${key} = CAST(? AS ${schema_col.extra.convert}), `
 			} else {
 				command += `${key} = ?, `
 			}
@@ -860,7 +861,6 @@ export class MSSQL {
 						const placeholders = valueArray.map(() => `?`).join(',')
 						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator === WhereOperator.in ? 'IN' : 'NOT IN'} (${placeholders})`
 					} else {
-
 						// For other operators, we use the column directly
 						return `${w.column.includes('.') ? w.column : this.reserveWordFix(table_name) + '.' + this.reserveWordFix(w.column)} ${w.operator} ${w.operator !== WhereOperator.not_null && w.operator !== WhereOperator.null ? `?` : ''}`
 					}

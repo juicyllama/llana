@@ -239,10 +239,12 @@ export class Postgres {
 			x_request_id: options.x_request_id,
 		})
 
-		const composite_unique_constraints = composite_unique_result.map((row: any) => ({
-			name: row.constraint_name,
-			columns: row.columns,
-		}))
+		const composite_unique_constraints: DataSourceCompositeUniqueConstraint[] = composite_unique_result.map(
+			(row: any) => ({
+				name: row.constraint_name,
+				columns: row.columns,
+			}),
+		)
 
 		return {
 			table: options.table,
